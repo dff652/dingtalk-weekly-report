@@ -50,3 +50,4 @@ python3 print_form_rows.py weeks/week_report_20260713.json
       **停在提交前人工点提交**（加 `--submit` 才自动提交）。前置：确认表单 URL（宜搭域名）。
 - [ ] **P3（路径 A，可选）**：宜搭 OpenAPI 直提（`POST /v1.0/yida/formInstances`）。
       前置条件与验证步骤见设计文档 §3.1；需要企业应用凭证 + 宜搭 systemToken。
+# dingtalk-weekly-report
