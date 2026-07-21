@@ -12,6 +12,15 @@
 **纯 stdlib，零第三方依赖**（本机 python 受 PEP 668 管制、无 python3-venv，xlsx 用自带的
 `xlsxlite.py` 生成）。独立个人项目，不进 ts-platform 团队仓库。
 
+## 推荐入口：Claude Code Skill `/weekly-report`
+
+skill 正文 = `skills/weekly-report/SKILL.md`（本仓单一事实源），已软链接装载到
+`~/.claude/skills/weekly-report`（新会话生效）。每周在 Claude Code 里一句
+`/weekly-report`（或带周一日期 `/weekly-report 2026-07-20`）即触发下方 SOP 的
+agent 版：内容草稿人审 → 附件 → 落草稿 → 贴截图 → 提醒提交。三条铁律内置：
+只落草稿不提交 / 内容必须人审 / 落草稿前提醒删同周旧草稿。
+同事复用：复制 `skills/weekly-report/` 到其 `~/.claude/skills/` 并改自己的 config。
+
 ## 每周 SOP（周一 17:00 前；半自动闭环约 5 分钟人工）
 
 ```bash
@@ -91,6 +100,7 @@ python3 print_form_rows.py weeks/week_report_YYYYMMDD.json
 ## 路线图
 
 - [x] **P1（路径 C）**：内容生成 + 附件 xlsx + 人工粘贴（当前形态）
+- [x] **P-A（产品化）**：Claude Code Skill `/weekly-report`（skills/weekly-report/，用户级软链接装载）
 - [x] **P2（路径 B）**：`fill_form.py` Playwright 半自动，**真机联调已通**（2026-07-21：token 免扫码登录、
       新增、开始日期、附件上传、10 行子表含关联项目选择与负责人联动全走通；坑与选择器事实源见
       `FIELDS.md`「P2 真机联调发现」）。默认只填不存，`--draft` 落草稿（推荐）、`--submit` 直接提交。
