@@ -49,8 +49,16 @@ python3 print_form_rows.py weeks/week_report_20260713.json
 ## 路线图
 
 - [x] **P1（路径 C）**：内容生成 + 附件 xlsx + 人工粘贴（当前形态）
-- [ ] **P2（路径 B）**：`fill_form.py` Playwright 半自动——扫码登录持久化、自动填表+传附件，
-      **停在提交前人工点提交**（加 `--submit` 才自动提交）。前置：确认表单 URL（宜搭域名）。
+- [~] **P2（路径 B）**：`fill_form.py` Playwright 半自动，**代码骨架已落地、待真表单联调**。
+      环境：`uv venv .venv && uv pip install playwright && .venv/bin/playwright install chromium`（已装好）。
+      无显示器服务器工作流：
+      1. `config.json` 填 `form_url`（钉钉里复制「报工周报-新增」链接）
+      2. `.venv/bin/python fill_form.py --login` → VSCode 打开 `output/shots/login.png` 手机钉钉扫码
+         → 登录态存 `~/.config/dtwr/state.json`（0600，勿入 git）
+      3. `.venv/bin/python fill_form.py weeks/week_report_*.json` → 自动填表+传附件 → 截图核对
+         → 终端输 `yes` 才提交（`--submit` 跳过确认）；失败自动截图 `output/shots/99-error.png` 供联调
+      ⚠️ 宜搭 DOM 选择器按 label 文本定位，属实验性；首次运行大概率要按报错截图微调选择器。
 - [ ] **P3（路径 A，可选）**：宜搭 OpenAPI 直提（`POST /v1.0/yida/formInstances`）。
-      前置条件与验证步骤见设计文档 §3.1；需要企业应用凭证 + 宜搭 systemToken。
+      组件 ID 已从导出文件拿到（见 `FIELDS.md`），仅剩企业应用凭证 + 宜搭 systemToken 两个卡点；
+      验证步骤见设计文档 §3.1。
 # dingtalk-weekly-report
