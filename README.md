@@ -34,8 +34,10 @@ python3 print_form_rows.py weeks/week_report_20260713.json
 | `print_form_rows.py` | ② json → 表单粘贴块（content 有 TODO 会拒绝出块） |
 | `xlsxlite.py` | 极简 xlsx 写入器（stdlib zipfile + 手写 OOXML） |
 | `FIELDS.md` | **表单字段事实源**：宜搭组件 ID + 合法枚举值 + 真实填报风格（逆向自数据管理页导出文件） |
+| `fill_form.py` | ③ P2：Playwright 半自动填表（`--login` 扫码 / `--dump` 诊断 / 填表+截图确认提交） |
+| `tests/mock_form.html` + `tests/run_mock_test.sh` | 本地仿真宜搭表单 e2e（改 fill_form 后跑它回归） |
 | `weeks/` | 每周 json（入库留痕） |
-| `output/` | 生成的附件（gitignored） |
+| `output/` | 生成的附件与截图（gitignored） |
 
 ## 表单硬规则（工具自查清单已内置）
 
@@ -57,7 +59,9 @@ python3 print_form_rows.py weeks/week_report_20260713.json
          → 登录态存 `~/.config/dtwr/state.json`（0600，勿入 git）
       3. `.venv/bin/python fill_form.py weeks/week_report_*.json` → 自动填表+传附件 → 截图核对
          → 终端输 `yes` 才提交（`--submit` 跳过确认）；失败自动截图 `output/shots/99-error.png` 供联调
-      ⚠️ 宜搭 DOM 选择器按 label 文本定位，属实验性；首次运行大概率要按报错截图微调选择器。
+      填表逻辑已过本地仿真 e2e（`bash tests/run_mock_test.sh`，10 行全字段断言）；子表单元格按
+      「列头文本→列号」定位不猜 DOM 顺序。真实页面首轮先跑 `fill_form.py --dump` 拿
+      HTML/截图/字段清单，再按差异微调选择器（仿真≠真实 DOM，联调 1-2 轮预期内）。
 - [ ] **P3（路径 A，可选）**：宜搭 OpenAPI 直提（`POST /v1.0/yida/formInstances`）。
       组件 ID 已从导出文件拿到（见 `FIELDS.md`），仅剩企业应用凭证 + 宜搭 systemToken 两个卡点；
       验证步骤见设计文档 §3.1。

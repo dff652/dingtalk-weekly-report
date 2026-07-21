@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<title>报工周报-新增（仿真）</title>
+<style>
+  body { font-family: sans-serif; margin: 20px; }
+  .next-form-item { margin: 10px 0; }
+  label { font-weight: bold; margin-right: 8px; }
+  table { border-collapse: collapse; margin-top: 10px; }
+  th, td { border: 1px solid #ccc; padding: 4px 8px; min-width: 90px; }
+  .next-select { display: inline-block; border: 1px solid #999; padding: 2px 18px 2px 6px; cursor: pointer; min-width: 90px; min-height: 1em; background: #fafafa; }
+  #dropdown { position: fixed; top: 40%; left: 40%; background: #fff; border: 1px solid #666; list-style: none; padding: 4px; margin: 0; display: none; z-index: 9; }
+  #dropdown li { padding: 4px 10px; cursor: pointer; }
+  #dropdown li:hover { background: #eef; }
+  #result { margin-top: 16px; white-space: pre-wrap; background: #f5f5f5; padding: 8px; }
+</style>
+</head>
+<body>
+<h2>报工周报-新增（本地仿真，DOM 类名对齐宜搭 Fusion 结构）</h2>
+
+<div class="next-form-item">
+  <label>报工开始日期</label>
+  <input type="text" id="startDate">
+</div>
+
+<div class="next-form-item">
+  <label>工作计划及完成情况</label>
+  <input type="file" id="attach">
+</div>
+
+<div class="next-form-item">
+  <label>本周特殊情况说明</label>
+  <textarea id="note"></textarea>
+</div>
+
+<div class="next-form-item">
+  <label>工作详情</label>
+  <button type="button" onclick="addRow()">新增</button>
+  <table>
+    <thead>
+      <tr>
+        <th>报工日期*</th><th>星期</th><th>项目类型*</th><th>项目/产品名称*</th>
+        <th>工作状态*</th><th>工作时长（小时）*</th><th>主要工作内容*</th><th>操作</th>
+      </tr>
+    </thead>
+    <tbody id="rows"></tbody>
+  </table>
+</div>
+
+<button type="button" onclick="submitForm()">提交</button>
+<ul id="dropdown"></ul>
+<div id="result"></div>
+
+<script>
+const OPTIONS = {
+  "项目类型": ["产品研发", "交付项目", "售前活动", "知识产权", "公司和部门运营活动", "其他"],
+  "项目/产品名称": ["D-PD-26002    工业数据智能标注平台 v3.0    王晓明", "D-PD-26001    其它产品    张三"],
+  "工作状态": ["算法开发", "内部会议", "内外部会议", "休假", "其它"],
+};
+let activeSelect = null;
+
+function makeSelect(kind) {
+  const div = document.createElement("div");
+  div.className = "next-select";
+  div.dataset.kind = kind;
+  div.onclick = (e) => {
+    e.stopPropagation();
+    activeSelect = div;
+    const ul = document.getElementById("dropdown");
+    ul.innerHTML = "";
+    for (const opt of OPTIONS[kind]) {
+      const li = document.createElement("li");
+      li.className = "next-menu-item";
+      li.textContent = opt;
+      li.onclick = (ev) => { ev.stopPropagation(); activeSelect.textContent = opt; ul.style.display = "none"; };
+      ul.appendChild(li);
+    }
+    ul.style.display = "block";
+  };
+  return div;
+}
+
+function addRow() {
+  const tr = document.createElement("tr");
+  tr.className = "next-table-row";
+  const tds = [];
+  for (let i = 0; i < 8; i++) { tds.push(document.createElement("td")); tr.appendChild(tds[i]); }
+  const dateInp = document.createElement("input"); dateInp.className = "cell-date";
+  tds[0].appendChild(dateInp);
+  tds[1].textContent = "自动";
+  tds[2].appendChild(makeSelect("项目类型"));
+  tds[3].appendChild(makeSelect("项目/产品名称"));
+  tds[4].appendChild(makeSelect("工作状态"));
+  const hoursInp = document.createElement("input"); hoursInp.className = "cell-hours";
+  tds[5].appendChild(hoursInp);
+  const ta = document.createElement("textarea"); ta.className = "cell-content";
+  tds[6].appendChild(ta);
+  tds[7].textContent = "…";
+  document.getElementById("rows").appendChild(tr);
+}
+
+function submitForm() {
+  const rows = [];
+  for (const tr of document.querySelectorAll("#rows tr")) {
+    const tds = tr.querySelectorAll("td");
+    rows.push([
+      tds[0].querySelector("input").value,
+      tds[2].querySelector(".next-select").textContent,
+      tds[3].querySelector(".next-select").textContent,
+      tds[4].querySelector(".next-select").textContent,
+      tds[5].querySelector("input").value,
+      tds[6].querySelector("textarea").value.slice(0, 24),
+    ].join("|"));
+  }
+  const attach = document.getElementById("attach").files[0];
+  document.getElementById("result").textContent = JSON.stringify({
+    start: document.getElementById("startDate").value,
+    attach: attach ? attach.name : "",
+    note: document.getElementById("note").value,
+    rows: rows,
+  }, null, 0);
+}
+document.body.addEventListener("click", () => { document.getElementById("dropdown").style.display = "none"; });
+</script>
+</body>
+</html>
