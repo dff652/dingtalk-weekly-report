@@ -230,7 +230,10 @@ def do_fill(report_path, url, action):
                         warnings.append(f"行{i+1} 项目/产品名称「{d['project']}」下拉无数据，已跳过（草稿里人工补）")
                 pick_dropdown(fr, page, row.locator(F["row_status"]).first, d["status"])
                 row.locator(f'{F["row_hours"]} input').first.fill(str(d["hours"]))
-                row.locator(f'{F["row_content"]} textarea, {F["row_content"]} input').first.fill(d.get("content", ""))
+                content = d.get("content", "")
+                if len(content) > 200:
+                    warnings.append(f"行{i+1} 主要工作内容 {len(content)} 字超 200 上限，控件会截断——回 json 精简")
+                row.locator(f'{F["row_content"]} textarea, {F["row_content"]} input').first.fill(content)
 
             shot(page, "20-filled-review")
             for msg in warnings:

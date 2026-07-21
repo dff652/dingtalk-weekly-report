@@ -1,0 +1,26 @@
+{
+  "name": "窦丰丰",
+  "form_project": "D-PD-26002    工业数据智能标注平台 v3.0    王晓明",
+  "attach_project": "D-DP-25002 工智酷博(CyberCube)-工业智能模型研发平台",
+  "dept_goal": "",
+  "week": {"start": "2026-07-20", "end": "2026-07-26"},
+  "days": [
+    {"date": "2026-07-20", "project_type": "公司和部门运营活动", "project": "", "status": "内外部会议", "hours": 0.5, "content": "算法团队周例会"},
+    {"date": "2026-07-20", "project_type": "产品研发", "project": "D-PD-26002    工业数据智能标注平台 v3.0    王晓明", "status": "算法开发", "hours": 8, "content": "ts-platform 推理平台适配：1. worker08 benchmark：Qwen3.6-35B 三镜像版本矩阵（vllm-ascend 0.20/0.21/0.22 共同配置）3/3 收口 2. vLLM Bench↔AISBench 工具链桥（A-4a/A-4b）双收口 3. benchmark 总进度总表（9/17 里程碑）与节点目标/完成标准表落档"},
+    {"date": "2026-07-21", "project_type": "产品研发", "project": "D-PD-26002    工业数据智能标注平台 v3.0    王晓明", "status": "内部会议", "hours": 0.5, "content": "产品研发站会"},
+    {"date": "2026-07-21", "project_type": "产品研发", "project": "D-PD-26002    工业数据智能标注平台 v3.0    王晓明", "status": "算法开发", "hours": 8, "content": "ts-platform 推理平台适配：1. worker08 benchmark A-3 业务形态档收口（16K 输入/5K 输出，c4/c13 两档 0 failed，MTP 接受率约 97%）2. 开发工作日志补全（7/10-7/21 每日详情/周报/技术决策）3. 报工周报自动化工具开发：内容生成+附件生成+浏览器半自动填表真机联调打通并入库 GitHub"}
+  ],
+  "special_note": "",
+  "summary": {
+    "tasks": "（本周进行中，周五定稿）\nworker08 benchmark 联合测试收尾：三镜像矩阵/工具链桥/业务形态档\nV4-Flash 16-die 测试链（待独占维护窗口）\n报工周报自动化工具开发",
+    "task_type": "产品研发",
+    "deliverables": "（本周进行中，周五定稿）\nQwen3.6-35B 版本矩阵/工具链桥/A-3 业务档测试数据与归档\nbenchmark 总进度总表（9/17）\n报工周报工具（内容生成+附件+半自动填表）",
+    "done": "（截至 7/21，周五定稿）\n1. Qwen3.6-35B 三镜像版本矩阵 3/3 收口（0.20/0.21/0.22 共同配置，全部两档 0 failed）\n2. A-4a/A-4b vLLM Bench↔AISBench 工具链桥双收口\n3. A-3 业务形态档收口（16K/5120，MTP 接受率约 97%）\n4. benchmark 总进度 9/17，剩 V4 链 7 项待 16 die 维护窗口\n5. 报工周报自动化工具：调研定案+内容/附件生成+半自动填表真机联调打通",
+    "remark": ""
+  },
+  "next_week": {
+    "tasks": "（周五定稿）\nV4-Flash 16-die 测试链执行（窗口确认后：V21→V20→V22-S→VR0→VR1→VR1b→VR2）\nB0 MTP-off 严格基线\n平台开发：w8a8 精度 gate 与 MTP 输出字段抽查",
+    "task_type": "产品研发",
+    "deliverables": "（周五定稿）\nV4 版本矩阵/厂商配置/工具链桥测试报告与归档数据"
+  }
+}
