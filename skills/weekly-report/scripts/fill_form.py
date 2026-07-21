@@ -24,10 +24,13 @@ from pathlib import Path
 
 from playwright.sync_api import sync_playwright, TimeoutError as PWTimeout
 
-HERE = Path(__file__).resolve().parent
-CONFIG = json.loads((HERE / "config.json").read_text(encoding="utf-8"))
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from dtwr_common import workdir
+
+WORK = workdir()
+CONFIG = json.loads((WORK / "config.json").read_text(encoding="utf-8"))
 STATE = Path.home() / ".config" / "dtwr" / "state.json"
-SHOTS = HERE / "output" / "shots"
+SHOTS = WORK / "output" / "shots"
 
 SUBGRID_ID = "2ee34a58f62e4c81b0076a2a3623a4aa"   # 工作详情子表（见 FIELDS.md）
 SUB = f'[id="{SUBGRID_ID}"]'
@@ -170,7 +173,7 @@ def pick_dropdown(fr, page, scope, value, required=True):
 def attach_path(monday_str):
     monday = date.fromisoformat(monday_str)
     friday = monday + timedelta(days=4)
-    return HERE / "output" / (
+    return WORK / "output" / (
         f"{monday.strftime('%Y%m%d')}-{friday.strftime('%Y%m%d')}本周工作总结与下周计划.xlsx")
 
 

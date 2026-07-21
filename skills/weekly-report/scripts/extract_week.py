@@ -16,8 +16,12 @@ import sys
 from datetime import date, timedelta
 from pathlib import Path
 
-HERE = Path(__file__).resolve().parent
-CONFIG = json.loads((HERE / "config.json").read_text(encoding="utf-8"))
+import sys as _sys
+_sys.path.insert(0, str(Path(__file__).resolve().parent))
+from dtwr_common import workdir
+
+WORK = workdir()
+CONFIG = json.loads((WORK / "config.json").read_text(encoding="utf-8"))
 
 DAY_RE = re.compile(r"^### (\d{1,2})月(\d{1,2})日(?:\s*[~～]\s*(\d{1,2})月(\d{1,2})日)?(?:（(.*?)）)?", re.M)
 WEEK_RE = re.compile(r"^### Week \d+（(\d{4}-\d{2}-\d{2}) ~ ?(\d{4}-\d{2}-\d{2})?[^）]*）—\s*(.*)$", re.M)
@@ -103,7 +107,8 @@ def main():
         "next_week": {"tasks": "TODO", "task_type": CONFIG["project_type"], "deliverables": "TODO"},
     }
 
-    out = HERE / "weeks" / f"week_report_{monday.strftime('%Y%m%d')}.json"
+    out = WORK / "weeks" / f"week_report_{monday.strftime('%Y%m%d')}.json"
+    out.parent.mkdir(exist_ok=True)
     if out.exists():
         sys.exit(f"{out} 已存在，拒绝覆盖（如需重生成先手动删除）")
     out.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")

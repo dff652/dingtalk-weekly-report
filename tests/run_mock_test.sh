@@ -3,7 +3,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-OUT=$(.venv/bin/python fill_form.py weeks/week_report_20260713.json \
+OUT=$(.venv/bin/python skills/weekly-report/scripts/fill_form.py weeks/week_report_20260713.json \
       --url "file://$PWD/tests/mock_form.html" --submit 2>&1) || { echo "$OUT"; exit 1; }
 echo "$OUT" | grep -v MOCK_RESULT | tail -3
 RESULT=$(echo "$OUT" | grep "^MOCK_RESULT:" | sed 's/^MOCK_RESULT: //')
