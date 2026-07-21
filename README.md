@@ -12,21 +12,24 @@
 **纯 stdlib，零第三方依赖**（本机 python 受 PEP 668 管制、无 python3-venv，xlsx 用自带的
 `xlsxlite.py` 生成）。独立个人项目，不进 ts-platform 团队仓库。
 
-## 每周 SOP（周一 17:00 前，约 10 分钟）
+## 每周 SOP（周一 17:00 前；半自动闭环约 5 分钟人工）
 
 ```bash
 cd ~/ilabel/dingtalk-weekly-report
 
 # 0) 前提：PROGRESS_REPORT.md 已更新覆盖上周（没更新先去更新，工具不凑数）
-# 1) 生成草稿（缺省=上一个周一；也可显式传周一日期）
-python3 extract_week.py 2026-07-13
-# 2) 人工审改 weeks/week_report_20260713.json：
-#    - 逐日 content 润色（可让 Claude Code 基于 PROGRESS_REPORT 代写后过目）
-#    - 休假/调休日改 status 与说明；summary/next_week 填实
-# 3) 生成附件 + 粘贴块
-python3 gen_attachment.py weeks/week_report_20260713.json
-python3 print_form_rows.py weeks/week_report_20260713.json
-# 4) 打开钉钉「报工周报-新增」：传附件 → 按粘贴块逐行新增工作详情 → 自查 → 提交
+# 1) 生成草稿（缺省=上一个周一）→ 人工审改 json（逐日 content/休假行/summary/next_week）
+python3 extract_week.py
+# 2) 生成附件
+python3 gen_attachment.py weeks/week_report_YYYYMMDD.json
+# 3) 登录态检查：过期则重新「打印内部二维码」→ 手机钉钉扫 → 复制跳转链接 →
+.venv/bin/python fill_form.py --login-url '<h3yun entry/auth 链接>'   # token 48h 有效
+# 4) 半自动填表落草稿（填完自动截图 20-filled-review.png 可先核对）
+.venv/bin/python fill_form.py weeks/week_report_YYYYMMDD.json --draft
+# 5) 钉钉里打开该草稿 → 人工核对 → 点「提交」（提交动作永远留给人）
+
+# 回退路径（半自动不可用时）：print_form_rows.py 出粘贴块，手工填
+python3 print_form_rows.py weeks/week_report_YYYYMMDD.json
 ```
 
 ## 文件
