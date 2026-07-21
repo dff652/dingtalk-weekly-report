@@ -43,10 +43,41 @@ python3 print_form_rows.py weeks/week_report_YYYYMMDD.json
 | `print_form_rows.py` | ② json → 表单粘贴块（content 有 TODO 会拒绝出块） |
 | `xlsxlite.py` | 极简 xlsx 写入器（stdlib zipfile + 手写 OOXML） |
 | `FIELDS.md` | **表单字段事实源**：宜搭组件 ID + 合法枚举值 + 真实填报风格（逆向自数据管理页导出文件） |
-| `fill_form.py` | ③ P2：Playwright 半自动填表（`--login` 扫码 / `--dump` 诊断 / 填表+截图确认提交） |
+| `fill_form.py` | ③ P2：Playwright 半自动填表（模式速查见下表） |
 | `tests/mock_form.html` + `tests/run_mock_test.sh` | 本地仿真宜搭表单 e2e（改 fill_form 后跑它回归） |
 | `weeks/` | 每周 json（入库留痕） |
 | `output/` | 生成的附件与截图（gitignored） |
+
+## fill_form.py 模式速查
+
+| 命令 | 作用 | 何时用 |
+|---|---|---|
+| `fill_form.py weeks/xx.json` | **只填不存**：填完全页截图退出，表单零痕迹 | 测试/预览 |
+| `fill_form.py weeks/xx.json --draft` | 填完点「暂存」落**草稿** | 每周正式流程（提交由人在钉钉执行） |
+| `fill_form.py weeks/xx.json --submit` | 填完直接提交 | **政策上不用**（提交永远留给人） |
+| `fill_form.py --login-url '<链接>'` | 用「打印内部二维码」解出的 entry/auth 链接建登录态（免扫码，链接 48h 有效） | 会话失效时首选 |
+| `fill_form.py --login` | 扫码登录（二维码持续截图到 `output/shots/login.png`，手机钉钉扫） | 拿不到链接时兜底 |
+| `fill_form.py --keepalive` | 访问列表页续会话并回存 cookie | 每日 9:30 cron 自动跑（`crontab -l`；日志 `output/keepalive.log`） |
+| `fill_form.py --dump` | 存表单页 HTML/截图/字段命中数 | DOM 变化时联调 |
+
+## 维护指南（按触发条件）
+
+| 触发 | 更新什么 |
+|---|---|
+| 每周例行 | ① 上游 `PROGRESS_REPORT.md` 更新到当周（内容源头）② `weeks/week_report_*.json` 内容与周五定稿 |
+| keepalive 报「会话已失效」 | 重新「打印内部二维码」→ 手机扫 → 把 `entry/auth?token=…` 链接给 `--login-url`（30 秒） |
+| 换项目/换负责人 | `config.json` 的 `form_project` / `attach_project` |
+| HR 改表单字段 | `FIELDS.md` 编码表 + `fill_form.py` 顶部 `F` 映射与 `SUBGRID_ID` |
+| 氚云前端升级致 DOM 变化 | 跑 `--dump` 拿新结构 → 调选择器 → `bash tests/run_mock_test.sh` 回归 |
+| 附件模板要求变化 | `gen_attachment.py` 模板常量（表头/注/枚举） |
+| 机器迁移 | `uv venv .venv && uv pip install playwright && .venv/bin/playwright install chromium`（本机 PEP 668，只用 uv）+ 重建登录态 + 重挂 cron |
+
+## 调试指南
+
+- 填表失败：自动截图 `output/shots/99-error.png`（现场）；每步过程截图也在 `output/shots/`。
+- 结构疑变：`--dump` 产出 `dump.html`/`dump.png`/字段命中数。
+- 把上述截图/文件发给 Claude 即可按真实 DOM 修选择器；改完必跑 `tests/run_mock_test.sh` 回归。
+- 登录态文件 `~/.config/dtwr/state.json`（0600）= 敏感凭证，勿入 git、勿外发。
 
 ## 表单硬规则（工具自查清单已内置）
 
