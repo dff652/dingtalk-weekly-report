@@ -3,18 +3,91 @@
   "form_project": "D-PD-26002    工业数据智能标注平台 v3.0    王晓明",
   "attach_project": "D-DP-25002 工智酷博(CyberCube)-工业智能模型研发平台",
   "dept_goal": "",
-  "week": {"start": "2026-07-06", "end": "2026-07-12"},
+  "week": {
+    "start": "2026-07-06",
+    "end": "2026-07-12"
+  },
   "days": [
-    {"date": "2026-07-06", "project_type": "公司和部门运营活动", "project": "", "status": "内外部会议", "hours": 0.5, "content": "算法团队周例会"},
-    {"date": "2026-07-06", "project_type": "产品研发", "project": "D-PD-26002    工业数据智能标注平台 v3.0    王晓明", "status": "算法开发", "hours": 8, "content": "ts-platform 推理平台适配：1. worker08 三层性能优化阶段 0 收官：定位并修复批处理串行根因（GDN×前缀缓存），单引擎聚合吞吐 6.5 倍并推广生产 2. 测前归位工具开发，消除 8 台 35B 引擎 MTP 配置漂移 3. 瓶颈裁决为 host 下发，确定图模式优先路线"},
-    {"date": "2026-07-07", "project_type": "产品研发", "project": "", "status": "内部会议", "hours": 0.5, "content": "产品研发站会"},
-    {"date": "2026-07-07", "project_type": "产品研发", "project": "D-PD-26002    工业数据智能标注平台 v3.0    王晓明", "status": "算法开发", "hours": 8, "content": "ts-platform 推理平台适配：1. 性能优化阶段 1 全编队上线：图模式+W8A8+MTP，整链单条吞吐约 9 倍（5→42-50 tok/s）2. rc27 定版与深度审查，P0×5 当天修复 3. CI 单测门禁收口全绿 4. GDN 前缀缓存后端硬拦截防复发"},
-    {"date": "2026-07-08", "project_type": "产品研发", "project": "", "status": "内部会议", "hours": 0.5, "content": "产品研发站会"},
-    {"date": "2026-07-08", "project_type": "产品研发", "project": "D-PD-26002    工业数据智能标注平台 v3.0    王晓明", "status": "算法开发", "hours": 8, "content": "ts-platform 推理平台适配：1. 平台 12 维度全面审计：62 条发现，18 条 P0/P1 当天全部修复收官 2. Playground 通用对话多模态图片上传与调用审计增强 3. 工作流中心独立分支 Phase 3 落地并自审修复 7 个 P0"},
-    {"date": "2026-07-09", "project_type": "产品研发", "project": "", "status": "内部会议", "hours": 0.5, "content": "产品研发站会"},
-    {"date": "2026-07-09", "project_type": "产品研发", "project": "D-PD-26002    工业数据智能标注平台 v3.0    王晓明", "status": "算法开发", "hours": 8, "content": "ts-platform 推理平台适配：1. 全面审计 P2 高价值 6 项修复收尾 2. rc30 发版（交叉构建+部署卡交付）3. SGLang(Ascend) 引擎平台正式接入（含对抗式审查 3 项修复）"},
-    {"date": "2026-07-10", "project_type": "产品研发", "project": "", "status": "内部会议", "hours": 0.5, "content": "产品研发站会"},
-    {"date": "2026-07-10", "project_type": "产品研发", "project": "D-PD-26002    工业数据智能标注平台 v3.0    王晓明", "status": "算法开发", "hours": 8, "content": "ts-platform 推理平台适配：1. SGLang 接入审查 15 项落档，P0×5 当天修复 2. 离线升级 alembic 迁移竞态根治（advisory lock+就绪门）3. rc32→rc34 三连定版：配置漂移扫描进部署诊断、防混淆产品化批 4. worker08 SGLang UI 真机验通与路径 B 迁移收尾"}
+    {
+      "date": "2026-07-06",
+      "project_type": "公司和部门运营活动",
+      "project": "",
+      "status": "内外部会议",
+      "hours": 0.5,
+      "content": "算法团队周例会"
+    },
+    {
+      "date": "2026-07-06",
+      "project_type": "产品研发",
+      "project": "D-PD-26002    工业数据智能标注平台 v3.0    王晓明",
+      "status": "算法开发",
+      "hours": 8,
+      "content": "ts-platform 推理平台适配：1. worker08 三层性能优化阶段 0 收官：定位并修复批处理串行根因（GDN×前缀缓存），单引擎聚合吞吐 6.5 倍并推广生产 2. 测前归位工具开发，消除 8 台 35B 引擎 MTP 配置漂移 3. 瓶颈裁决为 host 下发，确定图模式优先路线"
+    },
+    {
+      "date": "2026-07-07",
+      "project_type": "产品研发",
+      "project": "D-PD-26002    工业数据智能标注平台 v3.0    王晓明",
+      "status": "内部会议",
+      "hours": 0.5,
+      "content": "产品研发站会"
+    },
+    {
+      "date": "2026-07-07",
+      "project_type": "产品研发",
+      "project": "D-PD-26002    工业数据智能标注平台 v3.0    王晓明",
+      "status": "算法开发",
+      "hours": 8,
+      "content": "ts-platform 推理平台适配：1. 性能优化阶段 1 全编队上线：图模式+W8A8+MTP，整链单条吞吐约 9 倍（5→42-50 tok/s）2. rc27 定版与深度审查，P0×5 当天修复 3. CI 单测门禁收口全绿 4. GDN 前缀缓存后端硬拦截防复发"
+    },
+    {
+      "date": "2026-07-08",
+      "project_type": "产品研发",
+      "project": "D-PD-26002    工业数据智能标注平台 v3.0    王晓明",
+      "status": "内部会议",
+      "hours": 0.5,
+      "content": "产品研发站会"
+    },
+    {
+      "date": "2026-07-08",
+      "project_type": "产品研发",
+      "project": "D-PD-26002    工业数据智能标注平台 v3.0    王晓明",
+      "status": "算法开发",
+      "hours": 8,
+      "content": "ts-platform 推理平台适配：1. 平台 12 维度全面审计：62 条发现，18 条 P0/P1 当天全部修复收官 2. Playground 通用对话多模态图片上传与调用审计增强 3. 工作流中心独立分支 Phase 3 落地并自审修复 7 个 P0"
+    },
+    {
+      "date": "2026-07-09",
+      "project_type": "产品研发",
+      "project": "D-PD-26002    工业数据智能标注平台 v3.0    王晓明",
+      "status": "内部会议",
+      "hours": 0.5,
+      "content": "产品研发站会"
+    },
+    {
+      "date": "2026-07-09",
+      "project_type": "产品研发",
+      "project": "D-PD-26002    工业数据智能标注平台 v3.0    王晓明",
+      "status": "算法开发",
+      "hours": 8,
+      "content": "ts-platform 推理平台适配：1. 全面审计 P2 高价值 6 项修复收尾 2. rc30 发版（交叉构建+部署卡交付）3. SGLang(Ascend) 引擎平台正式接入（含对抗式审查 3 项修复）"
+    },
+    {
+      "date": "2026-07-10",
+      "project_type": "产品研发",
+      "project": "D-PD-26002    工业数据智能标注平台 v3.0    王晓明",
+      "status": "内部会议",
+      "hours": 0.5,
+      "content": "产品研发站会"
+    },
+    {
+      "date": "2026-07-10",
+      "project_type": "产品研发",
+      "project": "D-PD-26002    工业数据智能标注平台 v3.0    王晓明",
+      "status": "算法开发",
+      "hours": 8,
+      "content": "ts-platform 推理平台适配：1. SGLang 接入审查 15 项落档，P0×5 当天修复 2. 离线升级 alembic 迁移竞态根治（advisory lock+就绪门）3. rc32→rc34 三连定版：配置漂移扫描进部署诊断、防混淆产品化批 4. worker08 SGLang UI 真机验通与路径 B 迁移收尾"
+    }
   ],
   "special_note": "",
   "summary": {

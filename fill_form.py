@@ -1,18 +1,19 @@
 #!/usr/bin/env python3
-"""P2（路径 B）：Playwright 半自动填写钉钉宜搭「报工周报」。
+"""P2（路径 B）：Playwright 半自动填写钉钉「报工周报」（氚云 H3yun 表单）。
 
-无显示器服务器工作流：
-  1) 首次登录（扫码）:  .venv/bin/python fill_form.py --login
-     浏览器 headless 打开表单页 → 登录二维码持续截图到 output/shots/login.png
-     → 在 VSCode 里打开该图，用手机钉钉扫码 → 登录态存 ~/.config/dtwr/state.json
-  2) 填表:            .venv/bin/python fill_form.py weeks/week_report_20260713.json
-     自动填开始日期/附件/特殊说明/工作详情逐行 → 全页截图核对
-     → 终端输入 yes 才点「提交」（或加 --submit 跳过确认）。任何一步失败截图留证。
-  3) 诊断:            .venv/bin/python fill_form.py --dump
-     保存表单页 HTML + 截图 + 识别到的字段清单，供选择器联调。
+真机已验证（2026-07-21，worker dev box headless chromium）：
+  登录态(token 链接免扫码)/新增打开/报工开始日期(结束日期联动)/子表行日期(星期联动)/
+  项目类型与工作状态下拉选中/工时(系统字段联动)/主要工作内容 —— 全部走通。
+  「项目/产品名称」关联下拉暂不出数据（前端不发数据查询，原因待与手工行为对比），
+  填不上时告警跳过，由人工在草稿里补。
 
-子表按「列头文本 → 列号」定位单元格（不猜 DOM 顺序）；本地仿真表单 e2e 见 tests/。
-⚠️ 真实宜搭页面首轮联调仍可能要按 --dump/报错截图微调选择器。
+用法：
+  登录(免扫码):   .venv/bin/python fill_form.py --login-url '<打印内部二维码解出的 entry/auth 链接>'
+  登录(扫码):     .venv/bin/python fill_form.py --login   # 二维码截图 output/shots/login.png
+  填表:           .venv/bin/python fill_form.py weeks/week_report_20260713.json
+                  默认填完截图停下；--draft 点「暂存」（推荐：钉钉里人工核对草稿后再提交）；
+                  --submit 点「提交」。
+  诊断:           .venv/bin/python fill_form.py --dump
 """
 import argparse
 import json
@@ -28,7 +29,19 @@ CONFIG = json.loads((HERE / "config.json").read_text(encoding="utf-8"))
 STATE = Path.home() / ".config" / "dtwr" / "state.json"
 SHOTS = HERE / "output" / "shots"
 
-DETAIL_COLS = ["报工日期", "项目类型", "项目/产品名称", "工作状态", "工作时长", "主要工作内容"]
+SUBGRID_ID = "2ee34a58f62e4c81b0076a2a3623a4aa"   # 工作详情子表（见 FIELDS.md）
+SUB = f'[id="{SUBGRID_ID}"]'
+F = {  # 字段 id → 控件 DOM id（氚云直接用字段编码做 id）
+    "start_date": "#F0000001",
+    "attach": "#F0000062",
+    "note": "#F0000068",
+    "row_date": "#F0000003",
+    "row_type": "#F0000005",
+    "row_project": "#F0000041",
+    "row_status": "#F0000004",
+    "row_hours": "#F0000012",
+    "row_content": "#F0000009",
+}
 
 
 def log(msg):
@@ -45,7 +58,7 @@ def shot(page, name):
 def resolve_url(args):
     url = args.url or CONFIG.get("form_url", "")
     if not url:
-        sys.exit("缺表单 URL：config.json 填 form_url，或 --url 传入（钉钉里复制「报工周报-新增」链接）")
+        sys.exit("缺表单 URL：config.json 填 form_url，或 --url 传入")
     return url
 
 
@@ -55,6 +68,24 @@ def is_mock(url):
 
 # ---------------- 登录 ----------------
 
+def do_login_url(auth_url):
+    """带 token 的一次性登录链接（打印内部二维码解出，48h 有效）直接建立登录态，免扫码。"""
+    STATE.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+    with sync_playwright() as pw:
+        browser = pw.chromium.launch(headless=True)
+        ctx = browser.new_context(viewport={"width": 1700, "height": 1100})
+        page = ctx.new_page()
+        page.goto(auth_url, wait_until="domcontentloaded")
+        page.wait_for_timeout(6000)
+        shot(page, "login-url-landed")
+        if "entry/auth" in page.url or "login" in page.url.lower():
+            sys.exit(f"登录链接未完成跳转（现在在 {page.url}），token 可能过期；重新打印二维码取新链接")
+        ctx.storage_state(path=str(STATE))
+        STATE.chmod(0o600)
+        log(f"登录态已保存: {STATE}")
+        browser.close()
+
+
 def do_login(url):
     STATE.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
     with sync_playwright() as pw:
@@ -62,84 +93,76 @@ def do_login(url):
         ctx = browser.new_context(viewport={"width": 1440, "height": 900})
         page = ctx.new_page()
         page.goto(url, wait_until="domcontentloaded")
-        log("等待扫码：VSCode 打开 output/shots/login.png，用手机钉钉扫码并确认（5 分钟内）")
+        log("等待扫码：VSCode 打开 output/shots/login.png，手机钉钉扫码确认（5 分钟内）")
         deadline = time.time() + 300
-        ok = False
         while time.time() < deadline:
             shot(page, "login")
-            if "login" not in page.url and ("aliwork" in page.url or "yida" in page.url):
+            if "login" not in page.url.lower() and "h3yun" in page.url:
                 page.wait_for_timeout(3000)
-                if "login" not in page.url:
-                    ok = True
-                    break
+                if "login" not in page.url.lower():
+                    ctx.storage_state(path=str(STATE))
+                    STATE.chmod(0o600)
+                    shot(page, "login-ok")
+                    log(f"登录态已保存: {STATE}")
+                    browser.close()
+                    return
             page.wait_for_timeout(2500)
-        if not ok:
-            shot(page, "login-timeout")
-            sys.exit("300s 内未完成扫码登录；重跑 --login")
-        ctx.storage_state(path=str(STATE))
-        STATE.chmod(0o600)
-        shot(page, "login-ok")
-        log(f"登录态已保存: {STATE}")
-        browser.close()
+        shot(page, "login-timeout")
+        sys.exit("300s 内未完成扫码登录；重跑 --login")
 
 
-# ---------------- 页面操作原语 ----------------
+# ---------------- 表单定位 ----------------
 
-def form_item(page, label):
-    """按字段 label 文本定位表单项容器。"""
-    for sel in (
-        f'div.next-form-item:has(label:has-text("{label}"))',
-        f'div[class*="form-item"]:has(label:has-text("{label}"))',
-        f'div[class*="field"]:has(:text("{label}"))',
-    ):
-        loc = page.locator(sel).first
-        if loc.count():
-            return loc
-    raise RuntimeError(f"找不到字段: {label}")
-
-
-def detail_table(page):
-    t = page.locator('table:has(th:has-text("报工日期"))').first
-    if not t.count():
-        raise RuntimeError("找不到工作详情子表（无「报工日期」列头的 table）")
-    return t
-
-
-def column_map(table):
-    """列头文本(contains) → 列号。"""
-    ths = table.locator("thead th")
-    texts = [ths.nth(i).inner_text().strip() for i in range(ths.count())]
-    cols = {}
-    for want in DETAIL_COLS:
-        for i, t in enumerate(texts):
-            if want in t:
-                cols[want] = i
-                break
-        else:
-            raise RuntimeError(f"子表缺列: {want}（现有列头: {texts}）")
-    return cols
+def open_new_form(page, url, mock):
+    """打开列表页→点新增→返回表单所在 frame（真机=FormAdapter iframe；mock=主 frame）。"""
+    page.goto(url, wait_until="domcontentloaded" if mock else "networkidle")
+    if mock:
+        return page.main_frame
+    if "login" in page.url.lower():
+        shot(page, "state-expired")
+        sys.exit("登录态过期，重跑 --login / --login-url")
+    page.get_by_text("新增", exact=False).first.click()
+    for _ in range(30):
+        page.wait_for_timeout(1000)
+        fr = next((f for f in page.frames if "FormAdapter" in f.url), None)
+        if fr and fr.get_by_text("报工开始日期").count():
+            page.wait_for_timeout(1500)
+            return fr
+    shot(page, "form-not-rendered")
+    sys.exit("30s 内表单未渲染（FormAdapter frame 无字段）；看 form-not-rendered.png")
 
 
-def cell(row, cols, name):
-    return row.locator("td").nth(cols[name])
+def fill_ant_date(fr, page, scope, value):
+    """ant-calendar readonly input：点开 → 面板输入框敲日期 → Enter。"""
+    scope.locator("input").first.click()
+    page.wait_for_timeout(600)
+    cal = fr.locator(".ant-calendar-input")
+    if not cal.count():
+        raise RuntimeError("日期面板未弹出（.ant-calendar-input 不存在）")
+    cal.first.fill(value)
+    page.keyboard.press("Enter")
+    page.wait_for_timeout(500)
 
 
-def pick_select(scope, page, value, type_first=None):
-    """点开下拉并按文本选值；type_first 给搜索型下拉先敲关键字。"""
-    scope.locator('[class*="select"]').first.click()
-    if type_first:
-        page.keyboard.type(type_first)
-        page.wait_for_timeout(600)
-    key = (type_first or value)[:14]
-    page.locator(f'li[class*="menu-item"]:has-text("{key}")').first.click()
+def pick_dropdown(fr, page, scope, value, required=True):
+    """氚云 h3-dropdown：点开控件 → 按选项文本精确点选。
 
-
-def fill_input(scope, page, value, press_enter=False):
-    inp = scope.locator("input").first
-    inp.click()
-    inp.fill(str(value))
-    if press_enter:
-        page.keyboard.press("Enter")
+    同名选项会以隐藏 li 残留在此前行的菜单里（ant-select 菜单不销毁），
+    必须从后往前找**可见**的那个命中项。
+    """
+    scope.click()
+    page.wait_for_timeout(1000)
+    opt = fr.get_by_text(value, exact=True)
+    for k in range(opt.count() - 1, -1, -1):
+        el = opt.nth(k)
+        if el.is_visible():
+            el.click()
+            page.wait_for_timeout(500)
+            return True
+    page.keyboard.press("Escape")
+    if required:
+        raise RuntimeError(f"下拉无可见选项「{value}」")
+    return False
 
 
 # ---------------- 填表 ----------------
@@ -151,7 +174,7 @@ def attach_path(monday_str):
         f"{monday.strftime('%Y%m%d')}-{friday.strftime('%Y%m%d')}本周工作总结与下周计划.xlsx")
 
 
-def do_fill(report_path, url, auto_submit):
+def do_fill(report_path, url, action):
     report = json.loads(Path(report_path).read_text(encoding="utf-8"))
     w = report["week"]
     attach = attach_path(w["start"])
@@ -159,66 +182,74 @@ def do_fill(report_path, url, auto_submit):
         sys.exit(f"附件不存在: {attach}（先跑 gen_attachment.py）")
     mock = is_mock(url)
     if not mock and not STATE.exists():
-        sys.exit("无登录态，先跑: fill_form.py --login")
+        sys.exit("无登录态，先跑: fill_form.py --login / --login-url")
 
+    warnings = []
     with sync_playwright() as pw:
         browser = pw.chromium.launch(headless=True)
         ctx = browser.new_context(
             storage_state=None if mock else str(STATE),
-            viewport={"width": 1600, "height": 1000})
+            viewport={"width": 1700, "height": 1100})
         page = ctx.new_page()
         try:
-            page.goto(url, wait_until="domcontentloaded" if mock else "networkidle")
-            if not mock and "login" in page.url:
-                shot(page, "state-expired")
-                sys.exit("登录态过期，重跑 --login")
+            fr = open_new_form(page, url, mock)
             shot(page, "00-form-open")
 
-            log("填报工开始日期")
-            fill_input(form_item(page, "报工开始日期"), page, w["start"], press_enter=True)
+            log(f"报工开始日期 {w['start']}")
+            fill_ant_date(fr, page, fr.locator(F["start_date"]), w["start"])
 
             log(f"上传附件 {attach.name}")
-            form_item(page, "工作计划及完成情况").locator('input[type="file"]').first.set_input_files(str(attach))
-            page.wait_for_timeout(500 if mock else 3000)
+            fr.locator(f'{F["attach"]} input[type="file"], input[type="file"]').first.set_input_files(str(attach))
+            page.wait_for_timeout(500 if mock else 4000)
 
             note = report.get("special_note", "")
             if note:
-                log("填特殊情况说明")
-                form_item(page, "本周特殊情况说明").locator("textarea, input").first.fill(note)
+                log("特殊情况说明")
+                fr.locator(f'{F["note"]} textarea, {F["note"]} input').first.fill(note)
 
             log(f"工作详情 {len(report['days'])} 行")
-            table = detail_table(page)
-            cols = column_map(table)
-            for i, d in enumerate(report["days"], 1):
-                page.get_by_role("button", name="新增").last.click()
-                page.wait_for_timeout(200 if mock else 800)
-                row = table.locator("tbody tr").last
-                log(f"  行{i}: {d['date']} {d['status']} {d['hours']}h")
-                fill_input(cell(row, cols, "报工日期"), page, d["date"], press_enter=True)
-                pick_select(cell(row, cols, "项目类型"), page, d["project_type"])
+            # 只取外层行：行内滚动容器与行同名 .subgrid-sheet__row，直匹配会翻倍并覆盖上一行
+            rows = fr.locator(f"{SUB} .ant-spin-container > .subgrid-sheet__row")
+            for i, d in enumerate(report["days"]):
+                if i >= rows.count():  # 首行表单自带，后续行点「新增」并确认行数真的涨了
+                    for attempt in range(3):
+                        fr.locator(SUB).get_by_text("新增", exact=False).first.click()
+                        page.wait_for_timeout(300 if mock else 1200)
+                        if rows.count() >= i + 1:
+                            break
+                    else:
+                        raise RuntimeError(f"点「新增」3 次后子表仍只有 {rows.count()} 行（期望 ≥{i+1}）")
+                row = rows.nth(i)
+                log(f"  行{i+1}: {d['date']} {d['status']} {d['hours']}h")
+                fill_ant_date(fr, page, row.locator(F["row_date"]), d["date"])
+                pick_dropdown(fr, page, row.locator(F["row_type"]).first, d["project_type"])
                 if d.get("project"):
-                    pick_select(cell(row, cols, "项目/产品名称"), page, d["project"],
-                                type_first=d["project"][:10])
-                pick_select(cell(row, cols, "工作状态"), page, d["status"])
-                fill_input(cell(row, cols, "工作时长"), page, d["hours"])
-                cell(row, cols, "主要工作内容").locator("textarea, input").first.fill(d.get("content", ""))
+                    ok = pick_dropdown(fr, page, row.locator(F["row_project"]).first,
+                                       d["project"], required=False)
+                    if not ok:
+                        warnings.append(f"行{i+1} 项目/产品名称「{d['project']}」下拉无数据，已跳过（草稿里人工补）")
+                pick_dropdown(fr, page, row.locator(F["row_status"]).first, d["status"])
+                row.locator(f'{F["row_hours"]} input').first.fill(str(d["hours"]))
+                row.locator(f'{F["row_content"]} textarea, {F["row_content"]} input').first.fill(d.get("content", ""))
 
             shot(page, "20-filled-review")
-            log("已填完。核对 output/shots/20-filled-review.png")
-            if not auto_submit:
-                ans = input("确认提交? 输入 yes 提交，其它任意键放弃: ").strip().lower()
-                if ans != "yes":
-                    log("已放弃提交（表单未保存）")
-                    return
-            page.get_by_role("button", name="提交").first.click()
+            for msg in warnings:
+                log(f"⚠ {msg}")
+            log("已填完，核对 output/shots/20-filled-review.png")
+
+            if action == "review":
+                log("未保存（默认只填不存）。要落草稿加 --draft，直接提交加 --submit")
+                return
+            btn_name = "暂 存" if action == "draft" else "提 交"
+            fr.get_by_text(btn_name, exact=True).first.click()
             page.wait_for_timeout(500 if mock else 4000)
-            shot(page, "30-submitted")
+            shot(page, "30-saved")
             if mock:
-                print("MOCK_RESULT:", page.locator("#result").inner_text())
-            log("已点提交，看 30-submitted.png 确认结果")
+                print("MOCK_RESULT:", fr.locator("#result").inner_text())
+            log(f"已点「{btn_name.replace(' ', '')}」，看 30-saved.png 确认结果")
         except (PWTimeout, RuntimeError) as e:
             shot(page, "99-error")
-            sys.exit(f"失败: {e}（截图 output/shots/99-error.png，发给 Claude 联调选择器）")
+            sys.exit(f"失败: {e}（截图 output/shots/99-error.png 发给 Claude 联调）")
         finally:
             browser.close()
 
@@ -230,17 +261,16 @@ def do_dump(url):
     with sync_playwright() as pw:
         browser = pw.chromium.launch(headless=True)
         ctx = browser.new_context(storage_state=None if mock or not STATE.exists() else str(STATE),
-                                  viewport={"width": 1600, "height": 1000})
+                                  viewport={"width": 1700, "height": 1100})
         page = ctx.new_page()
-        page.goto(url, wait_until="domcontentloaded" if mock else "networkidle")
-        page.wait_for_timeout(2000)
+        fr = open_new_form(page, url, mock)
         SHOTS.mkdir(parents=True, exist_ok=True)
-        (SHOTS / "dump.html").write_text(page.content(), encoding="utf-8")
+        (SHOTS / "dump.html").write_text(fr.content(), encoding="utf-8")
         shot(page, "dump")
-        labels = page.locator("label").all_inner_texts()
+        found = {k: fr.locator(v).count() for k, v in F.items()}
         log(f"URL: {page.url}")
-        log(f"识别到 label: {[t.strip() for t in labels if t.strip()]}")
-        log("已存 output/shots/dump.html + dump.png，发给 Claude 即可精调选择器")
+        log(f"字段命中: {found}")
+        log("已存 output/shots/dump.html + dump.png")
         browser.close()
 
 
@@ -248,16 +278,21 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("report_json", nargs="?")
     ap.add_argument("--login", action="store_true")
-    ap.add_argument("--dump", action="store_true", help="保存表单页 HTML/截图/字段清单供联调")
+    ap.add_argument("--login-url", help="带 token 的一次性登录链接（免扫码；token 勿入 git）")
+    ap.add_argument("--dump", action="store_true")
     ap.add_argument("--url", help="覆盖 config.form_url（联调/仿真用）")
-    ap.add_argument("--submit", action="store_true", help="跳过终端确认直接提交")
+    ap.add_argument("--draft", action="store_true", help="填完点「暂存」落草稿（推荐）")
+    ap.add_argument("--submit", action="store_true", help="填完直接点「提交」")
     args = ap.parse_args()
-    if args.login:
+    if args.login_url:
+        do_login_url(args.login_url)
+    elif args.login:
         do_login(resolve_url(args))
     elif args.dump:
         do_dump(resolve_url(args))
     elif args.report_json:
-        do_fill(args.report_json, resolve_url(args), args.submit)
+        action = "submit" if args.submit else ("draft" if args.draft else "review")
+        do_fill(args.report_json, resolve_url(args), action)
     else:
         ap.print_help()
 

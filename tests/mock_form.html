@@ -2,126 +2,125 @@
 <html lang="zh">
 <head>
 <meta charset="utf-8">
-<title>报工周报-新增（仿真）</title>
+<title>报工周报-新增（氚云结构仿真）</title>
 <style>
   body { font-family: sans-serif; margin: 20px; }
-  .next-form-item { margin: 10px 0; }
-  label { font-weight: bold; margin-right: 8px; }
-  table { border-collapse: collapse; margin-top: 10px; }
-  th, td { border: 1px solid #ccc; padding: 4px 8px; min-width: 90px; }
-  .next-select { display: inline-block; border: 1px solid #999; padding: 2px 18px 2px 6px; cursor: pointer; min-width: 90px; min-height: 1em; background: #fafafa; }
-  #dropdown { position: fixed; top: 40%; left: 40%; background: #fff; border: 1px solid #666; list-style: none; padding: 4px; margin: 0; display: none; z-index: 9; }
-  #dropdown li { padding: 4px 10px; cursor: pointer; }
-  #dropdown li:hover { background: #eef; }
-  #result { margin-top: 16px; white-space: pre-wrap; background: #f5f5f5; padding: 8px; }
+  .control-adapter { margin: 10px 0; }
+  .subgrid-sheet__row { border: 1px solid #ccc; margin: 4px 0; padding: 4px; display: flex; gap: 8px; }
+  .h3-dropdown { display: inline-block; border: 1px solid #999; padding: 2px 16px 2px 6px; min-width: 110px; min-height: 1.2em; background: #fafafa; cursor: pointer; }
+  #dd-panel { position: fixed; bottom: 10px; right: 10px; background: #fff; border: 1px solid #666; padding: 4px; display: none; z-index: 9; }
+  #dd-panel div { padding: 3px 10px; cursor: pointer; }
+  #cal-wrap { position: fixed; top: 10px; right: 10px; background: #fff; border: 1px solid #666; padding: 6px; display: none; z-index: 9; }
+  #result { margin-top: 14px; white-space: pre-wrap; background: #f5f5f5; padding: 8px; }
 </style>
 </head>
 <body>
-<h2>报工周报-新增（本地仿真，DOM 类名对齐宜搭 Fusion 结构）</h2>
+<h3>报工周报-新增（仿真：字段 id=氚云编码 / subgrid / ant-calendar / h3-dropdown）</h3>
+<div>报工开始日期</div>
 
-<div class="next-form-item">
-  <label>报工开始日期</label>
-  <input type="text" id="startDate">
-</div>
+<div id="F0000001" class="control-adapter"><input readonly placeholder="年-月-日" class="ant-calendar-picker-input"></div>
+<div id="F0000062" class="control-adapter"><input type="file"></div>
+<div id="F0000068" class="control-adapter"><textarea placeholder="本周特殊情况说明"></textarea></div>
 
-<div class="next-form-item">
-  <label>工作计划及完成情况</label>
-  <input type="file" id="attach">
-</div>
-
-<div class="next-form-item">
-  <label>本周特殊情况说明</label>
-  <textarea id="note"></textarea>
-</div>
-
-<div class="next-form-item">
-  <label>工作详情</label>
+<div id="2ee34a58f62e4c81b0076a2a3623a4aa" class="subgrid-control-adapter">
   <button type="button" onclick="addRow()">新增</button>
-  <table>
-    <thead>
-      <tr>
-        <th>报工日期*</th><th>星期</th><th>项目类型*</th><th>项目/产品名称*</th>
-        <th>工作状态*</th><th>工作时长（小时）*</th><th>主要工作内容*</th><th>操作</th>
-      </tr>
-    </thead>
-    <tbody id="rows"></tbody>
-  </table>
+  <div class="subgrid-sheet__body"><div class="ant-spin-container"></div></div>
 </div>
 
-<button type="button" onclick="submitForm()">提交</button>
-<ul id="dropdown"></ul>
+<button type="button" onclick="save('draft')">暂 存</button>
+<button type="button" onclick="save('submit')">提 交</button>
+
+<div id="cal-wrap"><input class="ant-calendar-input" placeholder="输入日期"></div>
+<div id="dd-panel"></div>
 <div id="result"></div>
 
 <script>
 const OPTIONS = {
-  "项目类型": ["产品研发", "交付项目", "售前活动", "知识产权", "公司和部门运营活动", "其他"],
-  "项目/产品名称": ["D-PD-26002    工业数据智能标注平台 v3.0    王晓明", "D-PD-26001    其它产品    张三"],
-  "工作状态": ["算法开发", "内部会议", "内外部会议", "休假", "其它"],
+  F0000005: ["产品研发", "交付项目", "售前活动", "知识产权", "公司和部门运营活动", "其他"],
+  F0000041: ["D-PD-26002    工业数据智能标注平台 v3.0    王晓明", "D-PD-26001    其它产品    张三"],
+  F0000004: ["算法开发", "内部会议", "内外部会议", "休假", "其它"],
 };
-let activeSelect = null;
+let calTarget = null, ddTarget = null;
 
-function makeSelect(kind) {
+document.body.addEventListener("click", (e) => {
+  const inp = e.target.closest("input.ant-calendar-picker-input");
+  if (inp) {
+    calTarget = inp;
+    const w = document.getElementById("cal-wrap");
+    w.style.display = "block";
+    const ci = w.querySelector("input"); ci.value = ""; ci.focus();
+  }
+});
+document.querySelector("#cal-wrap input").addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && calTarget) {
+    calTarget.value = e.target.value;
+    document.getElementById("cal-wrap").style.display = "none";
+  }
+});
+
+function makeDropdown(fid) {
   const div = document.createElement("div");
-  div.className = "next-select";
-  div.dataset.kind = kind;
+  div.className = "h3-dropdown";
+  div.dataset.fid = fid;
   div.onclick = (e) => {
     e.stopPropagation();
-    activeSelect = div;
-    const ul = document.getElementById("dropdown");
-    ul.innerHTML = "";
-    for (const opt of OPTIONS[kind]) {
-      const li = document.createElement("li");
-      li.className = "next-menu-item";
-      li.textContent = opt;
-      li.onclick = (ev) => { ev.stopPropagation(); activeSelect.textContent = opt; ul.style.display = "none"; };
-      ul.appendChild(li);
+    ddTarget = div;
+    const p = document.getElementById("dd-panel");
+    p.innerHTML = "";
+    for (const opt of OPTIONS[fid]) {
+      const o = document.createElement("div");
+      o.textContent = opt;
+      o.onclick = (ev) => { ev.stopPropagation(); ddTarget.textContent = opt; p.style.display = "none"; };
+      p.appendChild(o);
     }
-    ul.style.display = "block";
+    p.style.display = "block";
   };
   return div;
 }
 
 function addRow() {
-  const tr = document.createElement("tr");
-  tr.className = "next-table-row";
-  const tds = [];
-  for (let i = 0; i < 8; i++) { tds.push(document.createElement("td")); tr.appendChild(tds[i]); }
-  const dateInp = document.createElement("input"); dateInp.className = "cell-date";
-  tds[0].appendChild(dateInp);
-  tds[1].textContent = "自动";
-  tds[2].appendChild(makeSelect("项目类型"));
-  tds[3].appendChild(makeSelect("项目/产品名称"));
-  tds[4].appendChild(makeSelect("工作状态"));
-  const hoursInp = document.createElement("input"); hoursInp.className = "cell-hours";
-  tds[5].appendChild(hoursInp);
-  const ta = document.createElement("textarea"); ta.className = "cell-content";
-  tds[6].appendChild(ta);
-  tds[7].textContent = "…";
-  document.getElementById("rows").appendChild(tr);
+  const row = document.createElement("div");
+  row.className = "subgrid-sheet__row";
+  // 复刻真实 DOM 的坑：行内还有一个同名 class 的滚动容器
+  const inner = document.createElement("div");
+  inner.className = "subgrid-sheet__row horizontal-scrollbar";
+  row.appendChild(inner);
+  const dateBox = document.createElement("div"); dateBox.id = "F0000003";
+  const di = document.createElement("input"); di.readOnly = true; di.className = "ant-calendar-picker-input";
+  dateBox.appendChild(di); row.appendChild(dateBox);
+  for (const fid of ["F0000005", "F0000041", "F0000004"]) {
+    const box = document.createElement("div"); box.id = fid;
+    box.appendChild(makeDropdown(fid)); row.appendChild(box);
+  }
+  const hb = document.createElement("div"); hb.id = "F0000012";
+  const hi = document.createElement("input"); hb.appendChild(hi); row.appendChild(hb);
+  const cb = document.createElement("div"); cb.id = "F0000009";
+  const ta = document.createElement("textarea"); cb.appendChild(ta); row.appendChild(cb);
+  document.querySelector(".subgrid-sheet__body .ant-spin-container").appendChild(row);
 }
+addRow(); // 表单自带首行
 
-function submitForm() {
+function save(kind) {
   const rows = [];
-  for (const tr of document.querySelectorAll("#rows tr")) {
-    const tds = tr.querySelectorAll("td");
+  for (const r of document.querySelectorAll(".ant-spin-container > .subgrid-sheet__row")) {
     rows.push([
-      tds[0].querySelector("input").value,
-      tds[2].querySelector(".next-select").textContent,
-      tds[3].querySelector(".next-select").textContent,
-      tds[4].querySelector(".next-select").textContent,
-      tds[5].querySelector("input").value,
-      tds[6].querySelector("textarea").value.slice(0, 24),
+      r.querySelector("#F0000003 input").value,
+      r.querySelector('[data-fid="F0000005"]').textContent,
+      r.querySelector('[data-fid="F0000041"]').textContent,
+      r.querySelector('[data-fid="F0000004"]').textContent,
+      r.querySelector("#F0000012 input").value,
+      r.querySelector("#F0000009 textarea").value.slice(0, 24),
     ].join("|"));
   }
-  const attach = document.getElementById("attach").files[0];
+  const attach = document.querySelector("#F0000062 input").files[0];
   document.getElementById("result").textContent = JSON.stringify({
-    start: document.getElementById("startDate").value,
+    kind: kind,
+    start: document.querySelector("#F0000001 input").value,
     attach: attach ? attach.name : "",
-    note: document.getElementById("note").value,
+    note: document.querySelector("#F0000068 textarea").value,
     rows: rows,
-  }, null, 0);
+  });
 }
-document.body.addEventListener("click", () => { document.getElementById("dropdown").style.display = "none"; });
 </script>
 </body>
 </html>

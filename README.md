@@ -1,8 +1,13 @@
 # dingtalk-weekly-report — 钉钉「报工周报」填写工具
 
 基于 ts-platform 的 `docs/report/PROGRESS_REPORT.md` 生成钉钉「工作申请 → 报工周报」所需的
-附件 xlsx 与表单粘贴内容。设计与调研见
+附件 xlsx 与表单粘贴内容，并可 Playwright 半自动填表。设计与调研见
 `~/ilabel/ts-platform/docs/designs/design-dingtalk-weekly-report-tool.md`。
+
+> **平台判定修正（2026-07-21）**：报工周报实为**氚云（H3yun, www.h3yun.com）**表单，
+> 非最初判定的宜搭——「打印内部二维码」解出 h3yun 域名坐实；导出文件的 `F0000001` 字段编码
+> 也是氚云约定。P3 全自动路线对应改为氚云 OpenApi（`POST /OpenApi/Invoke`，
+> 需 EngineCode（已从 URL 拿到）+ EngineSecret（需管理员））。字段/枚举/DOM 事实源=`FIELDS.md`。
 
 **纯 stdlib，零第三方依赖**（本机 python 受 PEP 668 管制、无 python3-venv，xlsx 用自带的
 `xlsxlite.py` 生成）。独立个人项目，不进 ts-platform 团队仓库。
@@ -51,7 +56,9 @@ python3 print_form_rows.py weeks/week_report_20260713.json
 ## 路线图
 
 - [x] **P1（路径 C）**：内容生成 + 附件 xlsx + 人工粘贴（当前形态）
-- [~] **P2（路径 B）**：`fill_form.py` Playwright 半自动，**代码骨架已落地、待真表单联调**。
+- [x] **P2（路径 B）**：`fill_form.py` Playwright 半自动，**真机联调已通**（2026-07-21：token 免扫码登录、
+      新增、开始日期、附件上传、10 行子表含关联项目选择与负责人联动全走通；坑与选择器事实源见
+      `FIELDS.md`「P2 真机联调发现」）。默认只填不存，`--draft` 落草稿（推荐）、`--submit` 直接提交。
       环境：`uv venv .venv && uv pip install playwright && .venv/bin/playwright install chromium`（已装好）。
       无显示器服务器工作流：
       1. `config.json` 填 `form_url`（钉钉里复制「报工周报-新增」链接）

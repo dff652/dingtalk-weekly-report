@@ -3,18 +3,91 @@
   "form_project": "D-PD-26002    工业数据智能标注平台 v3.0    王晓明",
   "attach_project": "D-DP-25002 工智酷博(CyberCube)-工业智能模型研发平台",
   "dept_goal": "",
-  "week": {"start": "2026-07-13", "end": "2026-07-19"},
+  "week": {
+    "start": "2026-07-13",
+    "end": "2026-07-19"
+  },
   "days": [
-    {"date": "2026-07-13", "project_type": "公司和部门运营活动", "project": "", "status": "内外部会议", "hours": 0.5, "content": "算法团队周例会"},
-    {"date": "2026-07-13", "project_type": "产品研发", "project": "D-PD-26002    工业数据智能标注平台 v3.0    王晓明", "status": "算法开发", "hours": 8, "content": "ts-platform 推理平台适配：1. 引擎配置对账产品化三连（rc36→rc38）：有效引擎配置展示/审计/命令行脱敏 2. 启动配置三层状态机（期望↔已启动↔运行中）与前端对账横幅 3. 产出三张部署卡供 worker08 按序保数据原地升级"},
-    {"date": "2026-07-14", "project_type": "产品研发", "project": "", "status": "内部会议", "hours": 0.5, "content": "产品研发站会"},
-    {"date": "2026-07-14", "project_type": "产品研发", "project": "D-PD-26002    工业数据智能标注平台 v3.0    王晓明", "status": "算法开发", "hours": 8, "content": "ts-platform 推理平台适配：1. rc38 部署 worker08 生产上线（图模式/W8A8/MTP 全编队+配置对账进生产，配置漂移台账销账）2. 审查批 15 项修复落地 rc39 3. 文档体系治理（目录收敛/28 篇归档/长效校验机制）4. 华为对接会材料定稿+联合测试方案与 P0 复现（TERM/KILL 双组）收口"},
-    {"date": "2026-07-15", "project_type": "产品研发", "project": "", "status": "内部会议", "hours": 0.5, "content": "产品研发站会"},
-    {"date": "2026-07-15", "project_type": "产品研发", "project": "D-PD-26002    工业数据智能标注平台 v3.0    王晓明", "status": "算法开发", "hours": 8, "content": "ts-platform 推理平台适配：1. Ops/Debug MCP v1+P1（14 个只读诊断 tools）落地并合入主线，含调试页与真实客户端验证 2. 前端信息架构/UX 治理批 3. 引擎配置域代码重构 4. benchmark 工具归口 scripts/bench/ 并组装 worker08 一体化上传包"},
-    {"date": "2026-07-16", "project_type": "产品研发", "project": "", "status": "内部会议", "hours": 0.5, "content": "产品研发站会"},
-    {"date": "2026-07-16", "project_type": "产品研发", "project": "D-PD-26002    工业数据智能标注平台 v3.0    王晓明", "status": "算法开发", "hours": 8, "content": "ts-platform 推理平台适配：benchmark 一体化上传包传输 worker08 并完成真机测试准备（三镜像 load、全包 SHA 校验、现场环境与被测引擎配置核对）"},
-    {"date": "2026-07-17", "project_type": "产品研发", "project": "", "status": "内部会议", "hours": 0.5, "content": "产品研发站会"},
-    {"date": "2026-07-17", "project_type": "产品研发", "project": "D-PD-26002    工业数据智能标注平台 v3.0    王晓明", "status": "算法开发", "hours": 8, "content": "ts-platform 推理平台适配：1. worker08 benchmark 真机启动与排障 2. 测试脚本硬化五项（smoke 门禁/孤儿负载守卫/离线 tokenizer 等）3. Qwen3.6-35B×vllm-ascend 0.21 版本矩阵首档收口（两档 0 failed，指标与公式落档）"}
+    {
+      "date": "2026-07-13",
+      "project_type": "公司和部门运营活动",
+      "project": "",
+      "status": "内外部会议",
+      "hours": 0.5,
+      "content": "算法团队周例会"
+    },
+    {
+      "date": "2026-07-13",
+      "project_type": "产品研发",
+      "project": "D-PD-26002    工业数据智能标注平台 v3.0    王晓明",
+      "status": "算法开发",
+      "hours": 8,
+      "content": "ts-platform 推理平台适配：1. 引擎配置对账产品化三连（rc36→rc38）：有效引擎配置展示/审计/命令行脱敏 2. 启动配置三层状态机（期望↔已启动↔运行中）与前端对账横幅 3. 产出三张部署卡供 worker08 按序保数据原地升级"
+    },
+    {
+      "date": "2026-07-14",
+      "project_type": "产品研发",
+      "project": "D-PD-26002    工业数据智能标注平台 v3.0    王晓明",
+      "status": "内部会议",
+      "hours": 0.5,
+      "content": "产品研发站会"
+    },
+    {
+      "date": "2026-07-14",
+      "project_type": "产品研发",
+      "project": "D-PD-26002    工业数据智能标注平台 v3.0    王晓明",
+      "status": "算法开发",
+      "hours": 8,
+      "content": "ts-platform 推理平台适配：1. rc38 部署 worker08 生产上线（图模式/W8A8/MTP 全编队+配置对账进生产，配置漂移台账销账）2. 审查批 15 项修复落地 rc39 3. 文档体系治理（目录收敛/28 篇归档/长效校验机制）4. 华为对接会材料定稿+联合测试方案与 P0 复现（TERM/KILL 双组）收口"
+    },
+    {
+      "date": "2026-07-15",
+      "project_type": "产品研发",
+      "project": "D-PD-26002    工业数据智能标注平台 v3.0    王晓明",
+      "status": "内部会议",
+      "hours": 0.5,
+      "content": "产品研发站会"
+    },
+    {
+      "date": "2026-07-15",
+      "project_type": "产品研发",
+      "project": "D-PD-26002    工业数据智能标注平台 v3.0    王晓明",
+      "status": "算法开发",
+      "hours": 8,
+      "content": "ts-platform 推理平台适配：1. Ops/Debug MCP v1+P1（14 个只读诊断 tools）落地并合入主线，含调试页与真实客户端验证 2. 前端信息架构/UX 治理批 3. 引擎配置域代码重构 4. benchmark 工具归口 scripts/bench/ 并组装 worker08 一体化上传包"
+    },
+    {
+      "date": "2026-07-16",
+      "project_type": "产品研发",
+      "project": "D-PD-26002    工业数据智能标注平台 v3.0    王晓明",
+      "status": "内部会议",
+      "hours": 0.5,
+      "content": "产品研发站会"
+    },
+    {
+      "date": "2026-07-16",
+      "project_type": "产品研发",
+      "project": "D-PD-26002    工业数据智能标注平台 v3.0    王晓明",
+      "status": "算法开发",
+      "hours": 8,
+      "content": "ts-platform 推理平台适配：benchmark 一体化上传包传输 worker08 并完成真机测试准备（三镜像 load、全包 SHA 校验、现场环境与被测引擎配置核对）"
+    },
+    {
+      "date": "2026-07-17",
+      "project_type": "产品研发",
+      "project": "D-PD-26002    工业数据智能标注平台 v3.0    王晓明",
+      "status": "内部会议",
+      "hours": 0.5,
+      "content": "产品研发站会"
+    },
+    {
+      "date": "2026-07-17",
+      "project_type": "产品研发",
+      "project": "D-PD-26002    工业数据智能标注平台 v3.0    王晓明",
+      "status": "算法开发",
+      "hours": 8,
+      "content": "ts-platform 推理平台适配：1. worker08 benchmark 真机启动与排障 2. 测试脚本硬化五项（smoke 门禁/孤儿负载守卫/离线 tokenizer 等）3. Qwen3.6-35B×vllm-ascend 0.21 版本矩阵首档收口（两档 0 failed，指标与公式落档）"
+    }
   ],
   "special_note": "",
   "summary": {
