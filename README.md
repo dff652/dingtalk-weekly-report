@@ -14,12 +14,18 @@
 
 ## 推荐入口：Claude Code Skill `/weekly-report`
 
-skill 正文 = `skills/weekly-report/SKILL.md`（本仓单一事实源），已软链接装载到
-`~/.claude/skills/weekly-report`（新会话生效）。每周在 Claude Code 里一句
-`/weekly-report`（或带周一日期 `/weekly-report 2026-07-20`）即触发下方 SOP 的
-agent 版：内容草稿人审 → 附件 → 落草稿 → 贴截图 → 提醒提交。三条铁律内置：
-只落草稿不提交 / 内容必须人审 / 落草稿前提醒删同周旧草稿。
-同事复用：复制 `skills/weekly-report/` 到其 `~/.claude/skills/` 并改自己的 config。
+skill 正文 = `skills/weekly-report/SKILL.md`（本仓单一事实源），软链接装载到
+`~/.claude/skills/weekly-report`。每周在 Claude Code 里一句 `/weekly-report`
+（或带周一日期）即触发下方 SOP 的 agent 版。三条铁律内置：只落草稿不提交 /
+内容必须人审 / 落草稿前提醒删同周旧草稿。
+
+**开箱即用与多用户安全**（2026-07-21 重写）：skill 全文**无硬编码个人路径**——
+`$ROOT` 经 `~/.config/dtwr/root` 指针/常见位置探测解析，首次使用自动引导安装
+（clone→uv 环境→config 访谈→登录→写指针）；每用户身份/项目/内容源全部来自各自的
+`config.json`（模板=`config.example.json`）。**属主安全闸**：`$ROOT` 与
+`~/.config/dtwr/` 属主≠当前用户即拒绝运行——共享机上严禁用他人 checkout/凭证
+（等于以他人身份向 HR 填报）；本仓目录建议 `chmod 700`，登录态 `state.json` 恒 0600。
+同事复用：复制 `skills/weekly-report/` 到其 `~/.claude/skills/` → `/weekly-report` 自动走安装。
 
 ## 每周 SOP（周一 17:00 前；半自动闭环约 5 分钟人工）
 

@@ -1,0 +1,14 @@
+{
+  "_说明": "复制为 config.json 后逐项填写。form_project=表单「项目/产品名称」下拉的完整原文（从历史周报导出或下拉里抄，空格都要一致）；attach_project=附件里「所关联的项目/活动」；progress_report=个人工作日志路径（没有则留空，走访谈式内容收集）。",
+  "name": "你的姓名",
+  "form_url": "https://www.h3yun.com/application/Ad874ea0a778e4234a9c5fdb0aab20c5c/b6c595343e4d41158fdcb2711402578b?enginecode=sg1suv82aei5j4fafl0qz3pj7&shardkey2=Vessel17&corpid=dingc0578fc59cd2ba1c35c2f4657eb6378f",
+  "form_project": "D-PD-XXXXX    项目全名    负责人",
+  "attach_project": "D-DP-XXXXX 项目全名",
+  "dept_goal": "",
+  "project_type": "产品研发",
+  "status": "算法开发",
+  "hours": 8,
+  "standup": {"content": "产品研发站会", "hours": 0.5, "status": "内部会议"},
+  "monday_meeting": {"content": "算法团队周例会", "hours": 0.5, "status": "内外部会议", "project_type": "公司和部门运营活动"},
+  "progress_report": ""
+}
