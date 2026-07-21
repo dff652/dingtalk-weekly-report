@@ -53,7 +53,17 @@ def main():
             titles[d1] = m.group(5) or ""
 
     days, missing = [], []
-    for d in workdays:
+    for i, d in enumerate(workdays):
+        # 周一=算法团队周例会，其余=产品研发站会（历史填报模式，可在 json 里增删）
+        meet = CONFIG["monday_meeting"] if i == 0 else CONFIG["standup"]
+        days.append({
+            "date": str(d),
+            "project_type": meet.get("project_type", CONFIG["project_type"]),
+            "project": "" if meet.get("project_type") == "公司和部门运营活动" else CONFIG["form_project"],
+            "status": meet["status"],
+            "hours": meet["hours"],
+            "content": meet["content"],
+        })
         title = titles.get(d, "")
         if not title:
             missing.append(str(d))
@@ -61,7 +71,7 @@ def main():
         days.append({
             "date": str(d),
             "project_type": CONFIG["project_type"],
-            "project": CONFIG["project"],
+            "project": CONFIG["form_project"],
             "status": CONFIG["status"],
             "hours": CONFIG["hours"],
             "content": title,
@@ -77,7 +87,8 @@ def main():
 
     report = {
         "name": CONFIG["name"],
-        "project": CONFIG["project"],
+        "form_project": CONFIG["form_project"],
+        "attach_project": CONFIG["attach_project"],
         "dept_goal": CONFIG["dept_goal"],
         "week": {"start": str(monday), "end": str(monday + timedelta(days=6))},
         "days": days,

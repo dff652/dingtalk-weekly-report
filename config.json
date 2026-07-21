@@ -1,9 +1,12 @@
 {
   "name": "窦丰丰",
-  "project": "D-DP-25002 工智酷博(CyberCube)-工业智能模型研发平台",
+  "form_project": "D-PD-26002    工业数据智能标注平台 v3.0    王晓明",
+  "attach_project": "D-DP-25002 工智酷博(CyberCube)-工业智能模型研发平台",
   "dept_goal": "",
   "project_type": "产品研发",
-  "status": "正常",
+  "status": "算法开发",
   "hours": 8,
+  "standup": {"content": "产品研发站会", "hours": 0.5, "status": "内部会议"},
+  "monday_meeting": {"content": "算法团队周例会", "hours": 0.5, "status": "内外部会议", "project_type": "公司和部门运营活动"},
   "progress_report": "/home/ym/ilabel/ts-platform/docs/report/PROGRESS_REPORT.md"
 }

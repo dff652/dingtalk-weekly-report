@@ -1,56 +1,27 @@
 {
   "name": "窦丰丰",
-  "project": "D-DP-25002 工智酷博(CyberCube)-工业智能模型研发平台",
+  "form_project": "D-PD-26002    工业数据智能标注平台 v3.0    王晓明",
+  "attach_project": "D-DP-25002 工智酷博(CyberCube)-工业智能模型研发平台",
   "dept_goal": "",
   "week": {"start": "2026-07-13", "end": "2026-07-19"},
   "days": [
-    {
-      "date": "2026-07-13",
-      "project_type": "产品研发",
-      "project": "D-DP-25002 工智酷博(CyberCube)-工业智能模型研发平台",
-      "status": "正常",
-      "hours": 8,
-      "content": "引擎配置对账产品化三连（v2.2.3 rc36→rc38）：升级链 GPU Agent 重载与引擎启动耗时暴露；有效引擎配置展示/审计/命令行脱敏；引擎启动配置对账三层状态机（期望↔已启动↔运行中）与前端对账横幅；产出三张部署卡供 worker08 按序保数据原地升级。"
-    },
-    {
-      "date": "2026-07-14",
-      "project_type": "产品研发",
-      "project": "D-DP-25002 工智酷博(CyberCube)-工业智能模型研发平台",
-      "status": "正常",
-      "hours": 8,
-      "content": "rc38 部署 worker08 生产上线（图模式/W8A8/MTP 全编队+配置对账进生产，配置漂移台账销账）；R6 代码审查批 15 项修复落地 rc39；文档体系治理（review 目录收敛、28 篇已收口 handoff 归档、分类单一事实源+自动校验长效机制）；华为对接会材料定稿+联合测试方案与 P0 复现（TERM/KILL 双组）收口。"
-    },
-    {
-      "date": "2026-07-15",
-      "project_type": "产品研发",
-      "project": "D-DP-25002 工智酷博(CyberCube)-工业智能模型研发平台",
-      "status": "正常",
-      "hours": 8,
-      "content": "Ops/Debug MCP v1+P1（14 个只读诊断 tools）一日落地并合入主线，含 /system/mcp 调试页与真实客户端分诊验证；前端信息架构/UX 治理批（侧栏分组折叠、工作空间资源链路排序、主操作按钮收敛）；引擎配置域代码重构；benchmark 工具归口 scripts/bench/ 并组装 worker08 一体化上传包。"
-    },
-    {
-      "date": "2026-07-16",
-      "project_type": "产品研发",
-      "project": "D-DP-25002 工智酷博(CyberCube)-工业智能模型研发平台",
-      "status": "正常",
-      "hours": 8,
-      "content": "benchmark 一体化上传包传输 worker08 并完成真机测试准备：三镜像 load、全包 SHA 校验、现场环境与被测引擎配置核对。"
-    },
-    {
-      "date": "2026-07-17",
-      "project_type": "产品研发",
-      "project": "D-DP-25002 工智酷博(CyberCube)-工业智能模型研发平台",
-      "status": "正常",
-      "hours": 8,
-      "content": "worker08 benchmark 真机启动与排障；测试脚本硬化五项（smoke 门禁、孤儿负载客户端守卫、离线 tokenizer、进度展示、脚本角色打印）；Qwen3.6-35B×vllm-ascend 0.21 版本矩阵首档收口（c1/c32 两档 0 failed，指标与计算公式落档）。"
-    }
+    {"date": "2026-07-13", "project_type": "公司和部门运营活动", "project": "", "status": "内外部会议", "hours": 0.5, "content": "算法团队周例会"},
+    {"date": "2026-07-13", "project_type": "产品研发", "project": "D-PD-26002    工业数据智能标注平台 v3.0    王晓明", "status": "算法开发", "hours": 8, "content": "ts-platform 推理平台适配：1. 引擎配置对账产品化三连（rc36→rc38）：有效引擎配置展示/审计/命令行脱敏 2. 启动配置三层状态机（期望↔已启动↔运行中）与前端对账横幅 3. 产出三张部署卡供 worker08 按序保数据原地升级"},
+    {"date": "2026-07-14", "project_type": "产品研发", "project": "", "status": "内部会议", "hours": 0.5, "content": "产品研发站会"},
+    {"date": "2026-07-14", "project_type": "产品研发", "project": "D-PD-26002    工业数据智能标注平台 v3.0    王晓明", "status": "算法开发", "hours": 8, "content": "ts-platform 推理平台适配：1. rc38 部署 worker08 生产上线（图模式/W8A8/MTP 全编队+配置对账进生产，配置漂移台账销账）2. 审查批 15 项修复落地 rc39 3. 文档体系治理（目录收敛/28 篇归档/长效校验机制）4. 华为对接会材料定稿+联合测试方案与 P0 复现（TERM/KILL 双组）收口"},
+    {"date": "2026-07-15", "project_type": "产品研发", "project": "", "status": "内部会议", "hours": 0.5, "content": "产品研发站会"},
+    {"date": "2026-07-15", "project_type": "产品研发", "project": "D-PD-26002    工业数据智能标注平台 v3.0    王晓明", "status": "算法开发", "hours": 8, "content": "ts-platform 推理平台适配：1. Ops/Debug MCP v1+P1（14 个只读诊断 tools）落地并合入主线，含调试页与真实客户端验证 2. 前端信息架构/UX 治理批 3. 引擎配置域代码重构 4. benchmark 工具归口 scripts/bench/ 并组装 worker08 一体化上传包"},
+    {"date": "2026-07-16", "project_type": "产品研发", "project": "", "status": "内部会议", "hours": 0.5, "content": "产品研发站会"},
+    {"date": "2026-07-16", "project_type": "产品研发", "project": "D-PD-26002    工业数据智能标注平台 v3.0    王晓明", "status": "算法开发", "hours": 8, "content": "ts-platform 推理平台适配：benchmark 一体化上传包传输 worker08 并完成真机测试准备（三镜像 load、全包 SHA 校验、现场环境与被测引擎配置核对）"},
+    {"date": "2026-07-17", "project_type": "产品研发", "project": "", "status": "内部会议", "hours": 0.5, "content": "产品研发站会"},
+    {"date": "2026-07-17", "project_type": "产品研发", "project": "D-PD-26002    工业数据智能标注平台 v3.0    王晓明", "status": "算法开发", "hours": 8, "content": "ts-platform 推理平台适配：1. worker08 benchmark 真机启动与排障 2. 测试脚本硬化五项（smoke 门禁/孤儿负载守卫/离线 tokenizer 等）3. Qwen3.6-35B×vllm-ascend 0.21 版本矩阵首档收口（两档 0 failed，指标与公式落档）"}
   ],
   "special_note": "",
   "summary": {
-    "tasks": "ts-platform 推理平台开发：\nv2.2.3 rc36→rc39（引擎配置对账产品化 + 三轮代码审查修复批）\nworker08 rc38 生产部署上线\nOps/Debug MCP（AI 工具接平台调试）落地\n华为对接材料与 benchmark 联合测试真机执行",
+    "tasks": "ts-platform 推理平台开发：\nv2.2.3 rc36→rc39（引擎配置对账产品化 + 审查修复批）\nworker08 rc38 生产部署上线\nOps/Debug MCP（AI 工具接平台调试）落地\n华为对接材料与 benchmark 联合测试真机执行",
     "task_type": "产品研发",
     "deliverables": "ts-platform v2.2.3-rc39（rc38 已部署 worker08 生产）\nOps/Debug MCP v1+P1（14 tools，已合主线）\n华为对接会材料+联合测试方案定稿\nbenchmark 工具集 scripts/bench/ + worker08 上传包",
-    "done": "1. 引擎配置对账产品化（rc36→rc38：有效配置展示/审计/脱敏 + 期望↔已启动↔运行中三层状态机），R6 审查 15 项修复落地 rc39\n2. rc38 部署 worker08 生产上线：图模式/W8A8/MTP 推理加速全编队进生产（单条吞吐较优化前约 9 倍），配置漂移台账销账\n3. 文档体系治理：review 目录 5→1 收敛、28 篇已收口 handoff 归档、分类单一事实源 + docs-check 自动校验长效机制\n4. 华为对接会材料定稿 + 联合测试方案自包含化；性能 A-1/A-2 两档回填，P0 复现 TERM/KILL 双组干净收口（复现条件收窄为三要素）\n5. Ops/Debug MCP v1+P1 落地并合主线（14 只读 tools + 前端调试页 + 真实客户端分诊验证通过）\n6. 前端信息架构/UX 治理批（侧栏分组折叠/工作空间资源链路排序/主操作按钮收敛）\n7. benchmark 工具归口与真机开跑：上传包 worker08 就位、测试脚本真机硬化、Qwen3.6-35B×0.21 版本矩阵首档收口",
+    "done": "1. 引擎配置对账产品化（rc36→rc38：有效配置展示/审计/脱敏 + 期望↔已启动↔运行中三层状态机），审查 15 项修复落地 rc39\n2. rc38 部署 worker08 生产上线：图模式/W8A8/MTP 推理加速全编队进生产（单条吞吐较优化前约 9 倍），配置漂移台账销账\n3. 文档体系治理：review 目录 5→1 收敛、28 篇已收口 handoff 归档、分类单一事实源 + docs-check 自动校验长效机制\n4. 华为对接会材料定稿 + 联合测试方案自包含化；性能 A-1/A-2 两档回填，P0 复现 TERM/KILL 双组干净收口（复现条件收窄为三要素）\n5. Ops/Debug MCP v1+P1 落地并合主线（14 只读 tools + 前端调试页 + 真实客户端分诊验证通过）\n6. 前端信息架构/UX 治理批（侧栏分组折叠/工作空间资源链路排序/主操作按钮收敛）\n7. benchmark 工具归口与真机开跑：上传包 worker08 就位、测试脚本真机硬化、Qwen3.6-35B×0.21 版本矩阵首档收口",
     "remark": ""
   },
   "next_week": {

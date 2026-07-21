@@ -58,9 +58,10 @@ def build(report: dict, out_dir: Path) -> Path:
     for c, h in enumerate(THIS_HEADERS, 1):
         sh.cell(r, c, h, style=2)
     r += 1
+    attach_project = report.get("attach_project", report.get("project", ""))
     row_vals = [1, report.get("name", ""), s["tasks"], s.get("task_type", "产品研发"),
                 s["deliverables"], s["done"], s.get("remark", ""),
-                report.get("project", ""), report.get("dept_goal", "")]
+                attach_project, report.get("dept_goal", "")]
     for c, v in enumerate(row_vals, 1):
         sh.cell(r, c, v, style=1)
     sh.row_heights[r] = est_height(s["tasks"], s["deliverables"], s["done"])
@@ -76,7 +77,7 @@ def build(report: dict, out_dir: Path) -> Path:
         sh.cell(r, c, h, style=2)
     r += 1
     nxt_vals = [1, report.get("name", ""), n["tasks"], n.get("task_type", "产品研发"),
-                n["deliverables"], report.get("project", ""), report.get("dept_goal", "")]
+                n["deliverables"], attach_project, report.get("dept_goal", "")]
     for c, v in enumerate(nxt_vals, 1):
         sh.cell(r, c, v, style=1)
     sh.row_heights[r] = est_height(n["tasks"], n["deliverables"])

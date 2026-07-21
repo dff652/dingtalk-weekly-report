@@ -33,6 +33,7 @@ python3 print_form_rows.py weeks/week_report_20260713.json
 | `gen_attachment.py` | ② json → `output/YYYYMMDD-YYYYMMDD本周工作总结与下周计划.xlsx` |
 | `print_form_rows.py` | ② json → 表单粘贴块（content 有 TODO 会拒绝出块） |
 | `xlsxlite.py` | 极简 xlsx 写入器（stdlib zipfile + 手写 OOXML） |
+| `FIELDS.md` | **表单字段事实源**：宜搭组件 ID + 合法枚举值 + 真实填报风格（逆向自数据管理页导出文件） |
 | `weeks/` | 每周 json（入库留痕） |
 | `output/` | 生成的附件（gitignored） |
 
@@ -42,6 +43,8 @@ python3 print_form_rows.py weeks/week_report_20260713.json
 - 法定节假日/休假当天需报 8h，状态选「休假」；正常周末与调休放假**不报工**
 - 任务类型枚举：产品研发 / 交付项目 / 售前活动 / 知识产权 / 其他
 - 附件 ≤10MB，命名 `YYYYMMDD-YYYYMMDD本周工作总结与下周计划.xlsx`（周一-周五）
+- 工作详情**一天可多行**（站会 0.5h + 开发主行 + 临时会议），字段合法取值见 `FIELDS.md`；
+  表单「项目/产品名称」选 D-PD-26002 标注平台（≠附件里的 D-DP-25002 工智酷博，两处编号不同是常态）
 
 ## 路线图
 

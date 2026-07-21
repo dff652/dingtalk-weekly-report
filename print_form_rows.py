@@ -2,6 +2,7 @@
 """week_report.json → 钉钉「报工周报」表单粘贴块（路径 C 的人工填表助手）。
 
 用法: python3 print_form_rows.py weeks/week_report_20260713.json
+days 是「行」列表（同一天可多行：站会/开发/临时会议/休假），字段与表单工作详情逐列对应。
 """
 import json
 import sys
@@ -16,7 +17,7 @@ def main():
         sys.exit("用法: python3 print_form_rows.py weeks/week_report_YYYYMMDD.json")
     r = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
     w = r["week"]
-    todo = [d["date"] for d in r["days"] if "TODO" in d["content"]]
+    todo = [d["date"] for d in r["days"] if "TODO" in d.get("content", "")]
     if todo:
         sys.exit(f"content 仍有 TODO 占位未补齐: {', '.join(todo)}——先改 json 再出粘贴块")
 
@@ -30,17 +31,23 @@ def main():
     note = r.get("special_note", "")
     print(f"本周特殊情况说明: {note if note else '(空，不填)'}")
     print()
-    print("工作详情（逐行新增，字段顺序: 报工日期 | 项目类型 | 项目/产品名称 | 工作状态 | 工时 | 主要工作内容）")
+    print("工作详情（逐行「新增」，同一天可多行；列: 报工日期|项目类型|项目/产品名称|工作状态|工时|主要工作内容）")
     print("-" * 72)
+    cur = None
     for i, d in enumerate(r["days"], 1):
-        wd = WEEKDAY[date.fromisoformat(d["date"]).weekday()]
-        print(f"[{i}] {d['date']} 星期{wd} | {d['project_type']} | {d['status']} | {d['hours']}h")
-        print(f"    项目: {d['project']}")
-        print(f"    内容: {d['content']}")
-        print()
+        dt = date.fromisoformat(d["date"])
+        if d["date"] != cur:
+            cur = d["date"]
+            print(f"—— {d['date']} 星期{WEEKDAY[dt.weekday()]} ——")
+        proj = d.get("project", "")
+        print(f"[{i}] {d['project_type']} | {d['status']} | {d['hours']}h"
+              + (f" | 项目: {proj}" if proj else " | 项目: (空)"))
+        if d.get("content"):
+            print(f"    内容: {d['content']}")
+    print()
     total = sum(d["hours"] for d in r["days"])
     print(f"合计工时 {total}h（表单系统字段自动统计，此处仅核对）")
-    print("提交前检查: ① 周一 17:00 前 ② 附件已传 ③ 休假日状态已选「休假」且 8h ④ 周末未报")
+    print("提交前检查: ① 周一 17:00 前 ② 附件已传 ③ 休假日状态「休假」8h ④ 周末未报")
 
 
 if __name__ == "__main__":
