@@ -257,6 +257,31 @@ def do_fill(report_path, url, action):
             browser.close()
 
 
+# ---------------- 会话保活 ----------------
+
+def do_keepalive(url):
+    """每日 cron 调用：带登录态访问列表页，回存刷新后的 cookie 让会话滚动续命。
+    失效时 fail-loud（cron 日志可见），此时需要用户重新给「打印内部二维码」链接。"""
+    if not STATE.exists():
+        sys.exit("keepalive: 无登录态文件")
+    with sync_playwright() as pw:
+        browser = pw.chromium.launch(headless=True)
+        ctx = browser.new_context(storage_state=str(STATE), viewport={"width": 1440, "height": 900})
+        page = ctx.new_page()
+        try:
+            page.goto(url, wait_until="networkidle")
+            page.wait_for_timeout(3000)
+            if "login" in page.url.lower() or "entry/auth" in page.url:
+                sys.exit(f"keepalive: 会话已失效（落在 {page.url[:80]}）——需重新提供打印内部二维码链接")
+            if not page.get_by_text("报工周报").count():
+                sys.exit("keepalive: 页面未出现「报工周报」，会话状态可疑")
+            ctx.storage_state(path=str(STATE))
+            STATE.chmod(0o600)
+            print(f"keepalive OK: {time.strftime('%F %T')} 会话有效，cookie 已回存")
+        finally:
+            browser.close()
+
+
 # ---------------- 诊断 ----------------
 
 def do_dump(url):
@@ -283,6 +308,7 @@ def main():
     ap.add_argument("--login", action="store_true")
     ap.add_argument("--login-url", help="带 token 的一次性登录链接（免扫码；token 勿入 git）")
     ap.add_argument("--dump", action="store_true")
+    ap.add_argument("--keepalive", action="store_true", help="访问列表页续会话并回存 cookie（cron 用）")
     ap.add_argument("--url", help="覆盖 config.form_url（联调/仿真用）")
     ap.add_argument("--draft", action="store_true", help="填完点「暂存」落草稿（推荐）")
     ap.add_argument("--submit", action="store_true", help="填完直接点「提交」")
@@ -291,6 +317,8 @@ def main():
         do_login_url(args.login_url)
     elif args.login:
         do_login(resolve_url(args))
+    elif args.keepalive:
+        do_keepalive(resolve_url(args))
     elif args.dump:
         do_dump(resolve_url(args))
     elif args.report_json:

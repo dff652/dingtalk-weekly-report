@@ -22,8 +22,9 @@ cd ~/ilabel/dingtalk-weekly-report
 python3 extract_week.py
 # 2) 生成附件
 python3 gen_attachment.py weeks/week_report_YYYYMMDD.json
-# 3) 登录态检查：过期则重新「打印内部二维码」→ 手机钉钉扫 → 复制跳转链接 →
-.venv/bin/python fill_form.py --login-url '<h3yun entry/auth 链接>'   # token 48h 有效
+# 3) 登录态：每日 9:30 cron 自动 keepalive 滚动续命（crontab -l 可见；output/keepalive.log 看记录）。
+#    仅当 keepalive 报「会话已失效」时才需人工续期：重新「打印内部二维码」→ 手机钉钉扫 →
+.venv/bin/python fill_form.py --login-url '<h3yun entry/auth 链接>'   # 链接本身 48h 有效
 # 4) 半自动填表落草稿（填完自动截图 20-filled-review.png 可先核对）
 .venv/bin/python fill_form.py weeks/week_report_YYYYMMDD.json --draft
 # 5) 钉钉里打开该草稿 → 人工核对 → 点「提交」（提交动作永远留给人）
