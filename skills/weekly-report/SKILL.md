@@ -88,7 +88,8 @@ git 操作（若 $WORK 配了仓库）必须 `git -C $WORK`。每用户差异（
 
 ## 首次安装（$WORK 不存在时；技能包自带全部代码，无需 clone）
 
-1. 问用户工作目录放哪（默认 `~/dingtalk-weekly-report`），`mkdir -p` 之。
+1. 问用户工作目录放哪（默认 `~/weekly-report-data`；它只存个人运行数据
+   config/weeks/output/.venv，**不是代码目录**——代码在技能包里），`mkdir -p` 之。
 2. 环境（机器受 PEP 668 管制时用 uv）：在 `$WORK` 下
    `uv venv .venv && uv pip install --python .venv/bin/python playwright && .venv/bin/playwright install chromium`
 3. `cp "$SKILL/assets/config.example.json" "$WORK/config.json"`，逐项访谈填写：姓名、
