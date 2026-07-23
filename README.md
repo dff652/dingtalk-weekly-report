@@ -9,63 +9,69 @@
 > 也是氚云约定。P3 全自动路线对应改为氚云 OpenApi（`POST /OpenApi/Invoke`，
 > 需 EngineCode（已从 URL 拿到）+ EngineSecret（需管理员））。字段/枚举/DOM 事实源=`FIELDS.md`。
 
-**纯 stdlib，零第三方依赖**（本机 python 受 PEP 668 管制、无 python3-venv，xlsx 用自带的
-`xlsxlite.py` 生成）。独立个人项目，不进 ts-platform 团队仓库。
+**依赖**：内容生成/附件 xlsx 为纯 stdlib（`xlsxlite.py`，适配 PEP 668）；半自动填表需
+`playwright` + Chromium（`$WORK/.venv`）。独立个人项目，不进 ts-platform 团队仓库。
+
+## 目录与职责
+
+| 路径 | 职责 | 是否进 zip |
+|---|---|---|
+| `skills/dingtalk-weekly-report/` | **技能包**（`$SKILL`）：SKILL.md、install.sh、scripts、FIELDS、config 模板 | 是（平铺为 zip 根目录） |
+| 仓库根 `config.json` / `weeks/` / `output/` / `.venv/` | 维护者本机 **`$WORK` 实例**（个人数据） | 否 |
+| `~/.config/dtwr/` | 每用户指针 `root` + 登录态 `state.json`（0600） | 否 |
+| `pack-skill.sh` / 根 `install.sh` | 维护仓打包入口 / 转调技能自安装 | 否（根 install 不进包） |
+| `tests/` | 维护仓仿真 e2e | 否 |
+| `dist/*.zip` | 分发物（gitignored） | — |
+
+同事默认 `$WORK` = `~/weekly-report-data`（与仓库名刻意区分）；维护者可把本仓本身当作 `$WORK`。
 
 ## 推荐入口：Claude Code Skill `/dingtalk-weekly-report`
 
 skill 正文 = `skills/dingtalk-weekly-report/SKILL.md`（本仓单一事实源）。每周在 Claude Code 里
-一句 `/dingtalk-weekly-report`（或带周一日期）即触发下方 SOP 的 agent 版。三条铁律内置：
-只落草稿不提交 / 内容必须人审 / 落草稿前提醒删同周旧草稿。
+一句 `/dingtalk-weekly-report`（或带周一日期）即触发 SOP 的 agent 版。三条铁律：只落草稿不提交 /
+内容必须人审 / 落草稿前提醒删同周旧草稿。
 
-**自包含技能包与多用户安全**（2026-07-21 定稿，安装契约 2026-07-23 收口）：
-`skills/dingtalk-weekly-report/` 按标准 Skill 结构自带全部执行资源
-（`SKILL.md` + `install.sh` + `scripts/` + `references/FIELDS.md` + `assets/config.example.json`）。
-skill 全文无硬编码个人路径：只读技能包（`$SKILL`）与每用户运行态工作目录（`$WORK`，经
-`~/.config/dtwr/root` 指针解析，缺省建议 `~/weekly-report-data`——刻意与仓库名区分，
-工作目录只存个人数据非代码）彻底分离；脚本以 `DTWR_HOME`/cwd 定位工作目录。
-首次使用自动引导安装（建 `$WORK`→uv 环境→config 访谈→登录→写指针）。**属主安全闸**：`$WORK`
-与 `~/.config/dtwr/` 属主≠当前用户即拒绝运行——共享机上严禁用他人工作目录/凭证（等于以他人
-身份向 HR 填报）；工作目录建议 `chmod 700`，登录态 `state.json` 恒 0600。
-本仓库 = 维护仓 + 我自己的 `$WORK`（config.json/weeks/ 是我的实例数据，分发时不带）。
+**自包含与安全**（安装契约 2026-07-23 收口）：技能包无硬编码个人路径；`$SKILL` 只读、
+`$WORK` 经 `~/.config/dtwr/root` 解析。属主安全闸：`$WORK` 与 `~/.config/dtwr/` 属主必须是
+当前用户，否则拒绝运行（共享机禁止用他人目录/凭证填 HR 表）。工作目录建议 `chmod 700`。
 
-### 安装（单一契约）
+### 安装与分发（单一契约）
 
 | 角色 | 命令 | 效果 |
 |---|---|---|
 | **同事（推荐）** | `unzip dingtalk-weekly-report-skill-*.zip && bash dingtalk-weekly-report/install.sh` | 复制到 `~/.claude/skills/dingtalk-weekly-report/`；若有 `~/.codex` 则写桥接 prompt |
-| **维护仓** | 在本仓库根目录 `bash install.sh --link` | 软链到仓内技能目录，改代码即时生效 |
-| **升级 / 覆盖** | 同上命令加 `--force`（改软链：`--link --force`） | 覆盖已有安装；并清理旧名 `weekly-report` 技能与 Codex prompt |
+| **维护仓** | 仓库根目录 `bash install.sh --link` | 软链到仓内技能目录，改代码即时生效 |
+| **升级 / 覆盖** | 同上加 `--force`（改软链：`--link --force`） | 覆盖已有安装；清理旧名 `weekly-report` 技能与 Codex prompt |
+| **维护者打 zip** | `bash pack-skill.sh` | 产出 `dist/dingtalk-weekly-report-skill-YYYYMMDD.zip`（平铺技能包） |
 
-- 触发：Claude Code 新会话 `/dingtalk-weekly-report`；Codex 为 `/dingtalk-weekly-report`（仅手动斜杠，无自动路由）。
-- 脚本层（python3 + uv venv）与 agent 无绑定，任何终端也能按下方 SOP 手动跑。
-- 根目录 `install.sh` 只是转调 `skills/dingtalk-weekly-report/install.sh`，方便维护仓；zip 里只有技能目录。
-
-**分发**：`bash pack-skill.sh` → `dist/dingtalk-weekly-report-skill-YYYYMMDD.zip`
-（**平铺**自安装技能包，零个人数据）。本仓私有+目录 700，同事**拿 zip 不拿仓库**；
-包内含公司表单结构，仅限公司内部分发。
+- 触发：Claude Code `/dingtalk-weekly-report`；Codex 同名（仅手动斜杠，无自动路由）。
+- 装完技能后**第一次**跑 skill：按 `SKILL.md`「首次安装」建 `$WORK`、uv 环境、config、登录。
+- 脚本层与 agent 无绑定；也可在 `$WORK` 下按下方命令手动跑。
+- 本仓私有 + 目录 700，同事**拿 zip 不拿仓库**；包内含公司表单结构，**仅限公司内部分发**。
 
 ## 每周 SOP（周一 17:00 前；半自动闭环约 5 分钟人工）
 
-```bash
-cd ~/ilabel/dingtalk-weekly-report
+下列命令以**维护仓即 `$WORK`** 为例（路径含 `skills/…`）。同事在独立 `$WORK` 下应使用
+`"$SKILL/scripts/…"`（由 skill/agent 解析；或 `~/.claude/skills/dingtalk-weekly-report/scripts/…`）。
 
-# 0) 前提：PROGRESS_REPORT.md 已更新覆盖上周（没更新先去更新，工具不凑数）
+```bash
+cd ~/ilabel/dingtalk-weekly-report   # 或 cd $WORK
+
+# 0) 前提：PROGRESS_REPORT.md 已更新覆盖目标周（没更新先去更新，工具不凑数）
 # 1) 生成草稿（缺省=上一个周一）→ 人工审改 json（逐日 content/休假行/summary/next_week）
 python3 skills/dingtalk-weekly-report/scripts/extract_week.py
 # 2) 生成附件
 python3 skills/dingtalk-weekly-report/scripts/gen_attachment.py weeks/week_report_YYYYMMDD.json
-# 3) 登录态：每日 9:30 cron 自动 keepalive 滚动续命（crontab -l 可见；output/keepalive.log 看记录）。
-#    仅当 keepalive 报「会话已失效」时才需人工续期：重新「打印内部二维码」→ 手机钉钉扫 →
-.venv/bin/python skills/dingtalk-weekly-report/scripts/fill_form.py --login-url '<h3yun entry/auth 链接>'   # 链接本身 48h 有效
-# 4) 半自动填表落草稿（填完自动截图 20-filled-review.png 可先核对）
+# 3) 登录态：每日 9:30 cron keepalive 滚动续命（crontab -l；output/keepalive.log）。
+#    仅当报「会话已失效」：钉钉「打印内部二维码」→ 手机扫 →
+.venv/bin/python skills/dingtalk-weekly-report/scripts/fill_form.py --login-url '<h3yun entry/auth 链接>'   # 链接 48h 有效
+# 4) 半自动填表落草稿（截图 20-filled-review.png / 30-saved.png 可先核对）
 .venv/bin/python skills/dingtalk-weekly-report/scripts/fill_form.py weeks/week_report_YYYYMMDD.json --draft
-# 5) 钉钉里打开该草稿 → 人工核对 → 点「提交」（提交动作永远留给人）
+# 5) 钉钉打开该草稿 → 人工核对 → 点「提交」（提交永远留给人）
 
-# 回退路径（半自动不可用时）：print_form_rows.py 出粘贴块，手工填
+# 回退：print_form_rows.py 出粘贴块，手工填
 python3 skills/dingtalk-weekly-report/scripts/print_form_rows.py weeks/week_report_YYYYMMDD.json
 ```
-
 ## 文件
 
 | 文件 | 作用 |
@@ -108,7 +114,9 @@ python3 skills/dingtalk-weekly-report/scripts/print_form_rows.py weeks/week_repo
 | HR 改表单字段 | `FIELDS.md` 编码表 + `fill_form.py` 顶部 `F` 映射与 `SUBGRID_ID` |
 | 氚云前端升级致 DOM 变化 | 跑 `--dump` 拿新结构 → 调选择器 → `bash tests/run_mock_test.sh` 回归 |
 | 附件模板要求变化 | `gen_attachment.py` 模板常量（表头/注/枚举） |
-| 机器迁移 | `uv venv .venv && uv pip install playwright && .venv/bin/playwright install chromium`（本机 PEP 668，只用 uv）+ 重建登录态 + 重挂 cron |
+| 改技能脚本后分发给同事 | `bash tests/run_mock_test.sh`（若动 fill_form）→ `bash pack-skill.sh` → 发 zip；对方 `install.sh --force` |
+| 本机重挂技能（维护仓） | `bash install.sh --link`（已对齐则无需再跑；换模式加 `--force`） |
+| 机器迁移 | `uv venv .venv && uv pip install playwright && .venv/bin/playwright install chromium`（PEP 668 用 uv）+ 重建登录态 + 重挂 cron + 重跑 `install.sh` |
 
 ## 调试指南
 
