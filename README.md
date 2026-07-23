@@ -14,37 +14,36 @@
 
 ## 推荐入口：Claude Code Skill `/dingtalk-weekly-report`
 
-skill 正文 = `skills/dingtalk-weekly-report/SKILL.md`（本仓单一事实源），软链接装载到
-`~/.claude/skills/dingtalk-weekly-report`。每周在 Claude Code 里一句 `/dingtalk-weekly-report`
-（或带周一日期）即触发下方 SOP 的 agent 版。三条铁律内置：只落草稿不提交 /
-内容必须人审 / 落草稿前提醒删同周旧草稿。
+skill 正文 = `skills/dingtalk-weekly-report/SKILL.md`（本仓单一事实源）。每周在 Claude Code 里
+一句 `/dingtalk-weekly-report`（或带周一日期）即触发下方 SOP 的 agent 版。三条铁律内置：
+只落草稿不提交 / 内容必须人审 / 落草稿前提醒删同周旧草稿。
 
-**自包含技能包与多用户安全**（2026-07-21 定稿）：`skills/dingtalk-weekly-report/` 按标准 Skill 结构
-自带全部执行资源（`SKILL.md` + `scripts/` 五脚本 + `references/FIELDS.md` + `assets/config.example.json`），
-**分发 = 只复制这一个目录**到对方 `~/.claude/skills/`，无需 clone 本仓库。skill 全文无硬编码
-个人路径：只读技能包（`$SKILL`）与每用户运行态工作目录（`$WORK`，经 `~/.config/dtwr/root`
-指针解析，缺省建议 `~/weekly-report-data`——刻意与仓库名区分，工作目录只存个人数据非代码）
-彻底分离；脚本以 `DTWR_HOME`/cwd 定位工作目录。
+**自包含技能包与多用户安全**（2026-07-21 定稿，安装契约 2026-07-23 收口）：
+`skills/dingtalk-weekly-report/` 按标准 Skill 结构自带全部执行资源
+（`SKILL.md` + `install.sh` + `scripts/` + `references/FIELDS.md` + `assets/config.example.json`）。
+skill 全文无硬编码个人路径：只读技能包（`$SKILL`）与每用户运行态工作目录（`$WORK`，经
+`~/.config/dtwr/root` 指针解析，缺省建议 `~/weekly-report-data`——刻意与仓库名区分，
+工作目录只存个人数据非代码）彻底分离；脚本以 `DTWR_HOME`/cwd 定位工作目录。
 首次使用自动引导安装（建 `$WORK`→uv 环境→config 访谈→登录→写指针）。**属主安全闸**：`$WORK`
 与 `~/.config/dtwr/` 属主≠当前用户即拒绝运行——共享机上严禁用他人工作目录/凭证（等于以他人
 身份向 HR 填报）；工作目录建议 `chmod 700`，登录态 `state.json` 恒 0600。
 本仓库 = 维护仓 + 我自己的 `$WORK`（config.json/weeks/ 是我的实例数据，分发时不带）。
 
-**安装方式（两种 agent CLI）**：
+### 安装（单一契约）
 
-| CLI | 安装 | 触发 |
+| 角色 | 命令 | 效果 |
 |---|---|---|
-| Claude Code | 把 `skills/dingtalk-weekly-report/` 整目录复制（或软链接）到 `~/.claude/skills/dingtalk-weekly-report/` | 新会话里 `/dingtalk-weekly-report`，description 也参与自动路由 |
-| Codex CLI | Codex 无原生 SKILL.md 机制，用自定义 prompt 桥接：建 `~/.codex/prompts/dingtalk-weekly-report.md`，内容一句话——「严格阅读并执行 <技能包绝对路径>/SKILL.md」+ 三铁律提醒 | Codex 里 `/dingtalk-weekly-report`（仅手动斜杠触发，无自动路由） |
+| **同事（推荐）** | `unzip dingtalk-weekly-report-skill-*.zip && bash dingtalk-weekly-report/install.sh` | 复制到 `~/.claude/skills/dingtalk-weekly-report/`；若有 `~/.codex` 则写桥接 prompt |
+| **维护仓** | 在本仓库根目录 `bash install.sh --link` | 软链到仓内技能目录，改代码即时生效 |
+| **升级 / 覆盖** | 同上命令加 `--force`（改软链：`--link --force`） | 覆盖已有安装；并清理旧名 `weekly-report` 技能与 Codex prompt |
 
-脚本层（python3 + uv venv）与 agent 无绑定，任何终端也能按 README SOP 手动跑。
+- 触发：Claude Code 新会话 `/dingtalk-weekly-report`；Codex 为 `/dingtalk-weekly-report`（仅手动斜杠，无自动路由）。
+- 脚本层（python3 + uv venv）与 agent 无绑定，任何终端也能按下方 SOP 手动跑。
+- 根目录 `install.sh` 只是转调 `skills/dingtalk-weekly-report/install.sh`，方便维护仓；zip 里只有技能目录。
 
 **分发**：`bash pack-skill.sh` → `dist/dingtalk-weekly-report-skill-YYYYMMDD.zip`
-（技能包 + `install.sh`，零个人数据），钉钉/共享盘发给同事；对方两行命令完成安装：
-`unzip dingtalk-weekly-report-skill-*.zip -d dtwr && bash dtwr/install.sh`
-（自动装 Claude Code 技能目录，检测到 Codex CLI 则同时生成桥接 prompt）。
-本仓是私有仓+目录 700，同事**拿 zip 不拿仓库**；包内含公司表单结构，仅限公司内部分发。
-「下载→安装→使用→填表→看结果」全链路已用隔离环境仿真新用户实测通过（2026-07-22）。
+（**平铺**自安装技能包，零个人数据）。本仓私有+目录 700，同事**拿 zip 不拿仓库**；
+包内含公司表单结构，仅限公司内部分发。
 
 ## 每周 SOP（周一 17:00 前；半自动闭环约 5 分钟人工）
 
@@ -72,6 +71,7 @@ python3 skills/dingtalk-weekly-report/scripts/print_form_rows.py weeks/week_repo
 | 文件 | 作用 |
 |---|---|
 | `skills/dingtalk-weekly-report/SKILL.md` | 技能指令（Claude Code 入口，`$SKILL`/`$WORK` 双路径模型） |
+| `skills/dingtalk-weekly-report/install.sh` | 技能自安装（copy / `--link` / `--force`；清理旧名；Codex 桥接） |
 | `skills/dingtalk-weekly-report/scripts/extract_week.py` | ① 工作日志 → `weeks/week_report_*.json` 草稿（拒绝覆盖已有文件） |
 | `skills/dingtalk-weekly-report/scripts/gen_attachment.py` | ② json → `output/YYYYMMDD-YYYYMMDD本周工作总结与下周计划.xlsx` |
 | `skills/dingtalk-weekly-report/scripts/print_form_rows.py` | ② json → 表单粘贴块（回退路径） |
@@ -80,6 +80,8 @@ python3 skills/dingtalk-weekly-report/scripts/print_form_rows.py weeks/week_repo
 | `skills/dingtalk-weekly-report/scripts/dtwr_common.py` | 工作目录解析（`DTWR_HOME`/cwd，缺 config.json 即 fail-loud） |
 | `skills/dingtalk-weekly-report/references/FIELDS.md` | **表单字段事实源**：氚云字段编码 + 合法枚举值 + DOM 坑 |
 | `skills/dingtalk-weekly-report/assets/config.example.json` | 个人配置模板 |
+| `install.sh` | 维护仓入口，转调技能包 `install.sh` |
+| `pack-skill.sh` | 打平铺 zip 到 `dist/`（分发用） |
 | `config.json` / `weeks/` | 我的实例数据（每用户各有一份，工作目录内） |
 | `tests/mock_form.html` + `tests/run_mock_test.sh` | 维护仓的仿真表单 e2e（改 fill_form 后必跑回归） |
 | `output/` | 生成的附件与截图（gitignored） |
@@ -127,7 +129,7 @@ python3 skills/dingtalk-weekly-report/scripts/print_form_rows.py weeks/week_repo
 ## 路线图
 
 - [x] **P1（路径 C）**：内容生成 + 附件 xlsx + 人工粘贴（当前形态）
-- [x] **P-A（产品化）**：Claude Code Skill `/dingtalk-weekly-report`（skills/dingtalk-weekly-report/，用户级软链接装载）
+- [x] **P-A（产品化）**：Claude Code Skill `/dingtalk-weekly-report`（自安装技能包 + 维护仓 `--link`）
 - [x] **P2（路径 B）**：`fill_form.py` Playwright 半自动，**真机联调已通**（2026-07-21：token 免扫码登录、
       新增、开始日期、附件上传、10 行子表含关联项目选择与负责人联动全走通；坑与选择器事实源见
       `FIELDS.md`「P2 真机联调发现」）。默认只填不存，`--draft` 落草稿（推荐）、`--submit` 直接提交。
@@ -144,4 +146,3 @@ python3 skills/dingtalk-weekly-report/scripts/print_form_rows.py weeks/week_repo
 - [ ] **P3（路径 A，可选）**：氚云 OpenApi 直提（`POST https://www.h3yun.com/OpenApi/Invoke`）。
       字段编码已从导出文件拿到（见 `skills/dingtalk-weekly-report/references/FIELDS.md`），EngineCode 已知，
       仅剩 EngineSecret（需氚云管理员）一个卡点。
-# dingtalk-weekly-report
