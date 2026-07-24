@@ -2,6 +2,9 @@
 
 面向克隆本仓库的维护者。用户安装与每周使用见 [../skills/dingtalk-weekly-report/USER_GUIDE.md](../skills/dingtalk-weekly-report/USER_GUIDE.md) 与根 [README.md](../README.md)。
 
+文档分层：用户看根 [README.md](../README.md)（Install / 给 AI / Verify / Use）；细节在技能包
+`USER_GUIDE.md`；本文件仅维护者。
+
 ## 仓库角色
 
 | 路径 | 职责 | 进 zip？ |

@@ -70,12 +70,18 @@ bash ~/.claude/skills/dingtalk-weekly-report/bootstrap.sh
 ## Verify（装完自检）
 
 ```bash
-test -f ~/.claude/skills/dingtalk-weekly-report/SKILL.md && echo "Claude skill OK"
-test -f ~/.codex/skills/dingtalk-weekly-report/SKILL.md && echo "Codex skill OK" \
-  || test -f ~/.agents/skills/dingtalk-weekly-report/SKILL.md && echo "Agents skill OK (Codex 可能读这里)"
-test -f ~/weekly-report-data/config.json && echo "config OK"
-test -f ~/.config/dtwr/root && echo "dtwr root: $(cat ~/.config/dtwr/root)"
-~/weekly-report-data/.venv/bin/python -c "import playwright; print('playwright OK')"
+[ -f ~/.claude/skills/dingtalk-weekly-report/SKILL.md ] && echo "Claude skill OK" || echo "Claude skill MISSING"
+if [ -f ~/.codex/skills/dingtalk-weekly-report/SKILL.md ]; then
+  echo "Codex skill OK (~/.codex/skills)"
+elif [ -f ~/.agents/skills/dingtalk-weekly-report/SKILL.md ]; then
+  echo "Agents skill OK (~/.agents/skills；Codex 可能读这里，建议仍补链到 ~/.codex/skills)"
+else
+  echo "Codex/Agents skill MISSING"
+fi
+[ -f ~/weekly-report-data/config.json ] && echo "config OK" || echo "config MISSING（先 bootstrap）"
+[ -f ~/.config/dtwr/root ] && echo "dtwr root: $(cat ~/.config/dtwr/root)" || echo "dtwr root MISSING"
+~/weekly-report-data/.venv/bin/python -c "import playwright; print('playwright OK')" 2>/dev/null \
+  || echo "playwright MISSING（先 bootstrap）"
 ```
 
 可选：`npx skills list -g` 应能看到 `dingtalk-weekly-report`。

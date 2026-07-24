@@ -112,8 +112,10 @@ git 操作（若 $WORK 配了仓库）必须 `git -C $WORK`。每用户差异（
    - Linux/mac: cron `30 9 * * * cd <WORK> && .venv/bin/python <SKILL>/scripts/fill_form.py --keepalive >> output/keepalive.log 2>&1`
    - Windows: 计划任务调用同一命令（路径用 `Scripts\python.exe`）。
 
-**技能升级**（新 zip）：解压后 `bash install.sh --force`（Win: `.\install.ps1 -Force`）；
-`$WORK`/config/登录态保留。环境损坏：`bash bootstrap.sh --force-venv`。
+**技能升级**（保留 `$WORK`/config/登录态）：
+- 生态：`npx skills update dingtalk-weekly-report -g -y`（必要时重做 Codex 补链）
+- zip / 本地：`bash install.sh --force`（Win: `.\install.ps1 -Force`）
+环境损坏：`bash bootstrap.sh --force-venv`。
 
 ## 出错处理
 

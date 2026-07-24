@@ -74,12 +74,18 @@ Windows：`.\install.ps1` → `.\bootstrap.ps1`
 ### 2.5 Verify（自检）
 
 ```bash
-test -f ~/.claude/skills/dingtalk-weekly-report/SKILL.md && echo "Claude skill OK"
-test -f ~/.codex/skills/dingtalk-weekly-report/SKILL.md && echo "Codex skill OK" \
-  || test -f ~/.agents/skills/dingtalk-weekly-report/SKILL.md && echo "Agents skill OK"
-test -f ~/weekly-report-data/config.json && echo "config OK"
-echo "dtwr: $(cat ~/.config/dtwr/root 2>/dev/null)"
-~/weekly-report-data/.venv/bin/python -c "import playwright; print('playwright OK')"
+[ -f ~/.claude/skills/dingtalk-weekly-report/SKILL.md ] && echo "Claude skill OK" || echo "Claude skill MISSING"
+if [ -f ~/.codex/skills/dingtalk-weekly-report/SKILL.md ]; then
+  echo "Codex skill OK"
+elif [ -f ~/.agents/skills/dingtalk-weekly-report/SKILL.md ]; then
+  echo "Agents skill OK（建议补链到 ~/.codex/skills）"
+else
+  echo "Codex/Agents skill MISSING"
+fi
+[ -f ~/weekly-report-data/config.json ] && echo "config OK" || echo "config MISSING"
+[ -f ~/.config/dtwr/root ] && echo "dtwr: $(cat ~/.config/dtwr/root)" || echo "dtwr MISSING"
+~/weekly-report-data/.venv/bin/python -c "import playwright; print('playwright OK')" 2>/dev/null \
+  || echo "playwright MISSING"
 ```
 
 ### 2.6 首次配置
