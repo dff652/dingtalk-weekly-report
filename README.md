@@ -15,6 +15,8 @@
 ## Install（skills.sh / skills CLI）
 
 需要 [Node.js](https://nodejs.org/)（`npx`）与 [uv](https://docs.astral.sh/uv/)。
+本次验收使用的 `skills@1.5.20` 要求 Node.js `>=22.20.0`；Node 18 会在
+`node:util.styleText` 处启动失败。
 这里使用的是官方开放生态的 `npx skills add` 安装方式；它只安装 skill 文件，
 随后仍需运行本项目的 bootstrap 安装 Python/Chromium 运行时。
 

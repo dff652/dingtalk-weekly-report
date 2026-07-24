@@ -15,7 +15,7 @@ SKILL = Path(os.environ.get(
 SCRIPTS = SKILL / "scripts"
 sys.path.insert(0, str(SCRIPTS))
 
-from dtwr_common import require_owned
+from dtwr_common import require_owned, workdir
 from dtwr_fields import ATTACHMENT_TASK_TYPES, PROJECT_TYPES, STATUSES
 from dtwr_validation import ValidationError, validate_config, validate_report
 from dtwr_week import date_near_week, pick_monday
@@ -78,6 +78,35 @@ class CoreTests(unittest.TestCase):
                        return_value=os.geteuid() + 1):
                 with self.assertRaisesRegex(SystemExit, "不属于当前用户"):
                     require_owned(Path(directory), "测试目录")
+
+    def test_workdir_uses_user_root_pointer(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            home = root / "home"
+            work = root / "work"
+            pointer = home / ".config" / "dtwr" / "root"
+            pointer.parent.mkdir(parents=True)
+            work.mkdir()
+            (work / "config.json").write_text("{}", encoding="utf-8")
+            pointer.write_text(f"{work}\n", encoding="utf-8")
+            with patch.dict(os.environ, {"HOME": str(home)}, clear=False):
+                os.environ.pop("DTWR_HOME", None)
+                os.environ.pop("XDG_CONFIG_HOME", None)
+                with patch("dtwr_common.Path.home", return_value=home):
+                    self.assertEqual(workdir(), work.resolve())
+
+    def test_workdir_rejects_empty_root_pointer(self):
+        with tempfile.TemporaryDirectory() as directory:
+            home = Path(directory)
+            pointer = home / ".config" / "dtwr" / "root"
+            pointer.parent.mkdir(parents=True)
+            pointer.write_text("\n", encoding="utf-8")
+            with patch.dict(os.environ, {"HOME": str(home)}, clear=False):
+                os.environ.pop("DTWR_HOME", None)
+                os.environ.pop("XDG_CONFIG_HOME", None)
+                with patch("dtwr_common.Path.home", return_value=home):
+                    with self.assertRaisesRegex(SystemExit, "指针.*为空"):
+                        workdir()
 
     def test_report_fixture_is_valid(self):
         validate_report(self.report)

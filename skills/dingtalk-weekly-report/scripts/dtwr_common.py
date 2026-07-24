@@ -2,7 +2,8 @@
 
 脚本随技能包分发（只读），运行态数据（config.json/weeks/output/.venv/登录态）
 全部放在**每用户的工作目录**里，二者彻底分离：
-  工作目录 = $DTWR_HOME 环境变量，缺省 = 当前目录（cwd）。
+  工作目录 = $DTWR_HOME 环境变量；否则读 ~/.config/dtwr/root；
+  指针不存在时兼容当前目录（cwd）。
   判定标准 = 目录里有 config.json；没有则 fail-loud 指向首次安装。
 """
 import os
@@ -19,7 +20,22 @@ def require_owned(path: Path, label: str) -> None:
 
 
 def workdir() -> Path:
-    d = Path(os.environ.get("DTWR_HOME") or Path.cwd()).resolve()
+    configured = os.environ.get("DTWR_HOME")
+    if configured:
+        d = Path(configured).expanduser().resolve()
+    else:
+        config_home = Path(
+            os.environ.get("XDG_CONFIG_HOME") or Path.home() / ".config")
+        pointer = config_home / "dtwr" / "root"
+        if pointer.exists():
+            require_owned(pointer.parent, "登录态目录")
+            require_owned(pointer, "工作目录指针")
+            configured = pointer.read_text(encoding="utf-8").strip()
+            if not configured:
+                sys.exit(f"工作目录指针 {pointer} 为空——请重新运行 bootstrap")
+            d = Path(configured).expanduser().resolve()
+        else:
+            d = Path.cwd().resolve()
     if not (d / "config.json").exists():
         sys.exit(
             f"工作目录 {d} 缺 config.json——请 cd 到工作目录（或设 DTWR_HOME）；"

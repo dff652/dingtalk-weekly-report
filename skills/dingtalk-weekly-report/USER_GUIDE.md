@@ -9,7 +9,7 @@ Agent 流程见同目录 `SKILL.md`；字段见 `references/FIELDS.md`。
 | 必备 | 说明 |
 |------|------|
 | Claude Code 和/或 Codex | 或纯 CLI |
-| [Node.js](https://nodejs.org/)（`npx`） | **推荐**生态安装；无 Node 用 zip/`install.sh` |
+| [Node.js](https://nodejs.org/)（`npx`） | **推荐**生态安装；`skills@1.5.20` 需 `>=22.20.0`；无 Node 用 zip/`install.sh` |
 | [uv](https://docs.astral.sh/uv/) | bootstrap 用 |
 | 手机钉钉 | 扫「打印内部二维码」 |
 | 表单项目原文 | 下拉「项目/产品名称」**完整字符串** |
@@ -141,6 +141,7 @@ python3 "$SKILL/scripts/print_form_rows.py" weeks/week_report_YYYYMMDD.json   # 
 | 现象 | 处理 |
 |------|------|
 | Codex 无 skill | 做 §2.1 补链；或 `install.sh --force` |
+| `node:util` 缺 `styleText` / `EBADENGINE` | Node 过旧；`skills@1.5.20` 升到 Node `>=22.20.0` |
 | `npx skills` 找不到 skill | 确认仓库 public 且含 `skills/dingtalk-weekly-report/SKILL.md` |
 | extract 拒绝写 | json 已存在 |
 | 会话失效 | 内部二维码 → `--login-url` |
