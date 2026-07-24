@@ -94,6 +94,10 @@ git push origin main
 bash tests/run_release_acceptance.sh
 ```
 
+正式发行验收不得设置 `DTWR_ALLOW_DIRTY=1` 或把 `DTWR_RELEASE_REMOTE` 指向本地仓库；
+这两个变量只供候选脚本尚未 push 时做开发态自测。发行脚本固定使用
+`skills@1.5.20`，并校验 `.agents` / `.claude` 中实际安装的副本。
+
 只有三项都通过，且安装输出中的安全审计无未处理的 Critical/High，才可宣布该提交通过
 公开发行验收。审计可能缓存旧提交；推送修复后需重新安装并等待平台重扫。
 

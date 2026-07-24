@@ -195,12 +195,19 @@ bootstrap、核心 18 项、填表逻辑 11 项、附件和 mock draft 全部通
 02:34/02:35 的旧 Snyk/Socket 报告而按设计失败。旧报告仍描述已经删除的管道安装和 argv
 传 token，故当前阻塞是等待重扫，不是功能测试失败。
 
+同日对加固后的发行脚本再次做开发态复验：固定调用 `skills@1.5.20`，成功发现
+`~/.agents/skills` 与 `~/.claude/skills`，并确认两份安装内容一致。其后的 bootstrap、
+核心 18 项、填表逻辑 11 项、附件和 mock draft 均通过，最后仍由旧 `Critical Risk`
+报告 fail-closed。由于候选提交尚未 push，本次使用 `DTWR_RELEASE_REMOTE=.` 与
+`DTWR_ALLOW_DIRTY=1` 只验证脚本改动；它不构成正式 `RELEASE ACCEPTANCE PASS`。
+push 后必须不带这两个开发覆盖变量重新运行。
+
 ## 尚未完成
 
 | 项目 | 状态 | 原因 |
 |---|---|---|
 | Windows PowerShell 实机 | 未验证 | 当前环境无 PowerShell |
-| Skills.sh 安全重扫 | 等待 push 后复验 | 当前公开报告仍对应 `98a3326` |
+| Skills.sh 安全重扫 | 等待平台重扫与正式复验 | 当前公开报告仍对应 `98a3326` |
 | 真实氚云暂存验收 | 等待人工 | 当前周报缺 2026-07-22 至 2026-07-24 内容，且需用户确认旧草稿 |
 | 钉钉最终提交 | 不自动测试 | 设计上只能由用户人工执行 |
 
