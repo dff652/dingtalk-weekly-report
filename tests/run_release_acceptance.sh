@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # 远端发行验收：GitHub 下载 → skills CLI 安装 → bootstrap → 配置夹具 → 仿真草稿 → 安全审计门禁。
 # 不触达真实氚云。要求 Node >=22.20；可用 DTWR_TEST_BROWSERS_PATH 复用可信的同版本浏览器缓存。
+# 安全审计门禁依赖 skills@1.5.20 的英文输出结构；升级版本时必须同步复验下方解析规则。
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -9,6 +10,7 @@ cd "$ROOT"
 SOURCE="${DTWR_RELEASE_SOURCE:-https://github.com/dff652/dingtalk-weekly-report}"
 REMOTE="${DTWR_RELEASE_REMOTE:-origin}"
 BRANCH="${DTWR_RELEASE_BRANCH:-main}"
+SKILLS_CLI_PACKAGE="skills@1.5.20"
 LOCAL_SHA=$(git rev-parse HEAD)
 REMOTE_SHA=$(git ls-remote "$REMOTE" "refs/heads/$BRANCH" | awk '{print $1}')
 
@@ -56,18 +58,30 @@ echo "commit=$LOCAL_SHA source=$SOURCE"
 
 echo "======== 2) GitHub download + skills CLI install ========"
 INSTALL_LOG="$TMP/skills-add.log"
-npx --yes skills add "$SOURCE" \
+npx --yes "$SKILLS_CLI_PACKAGE" add "$SOURCE" \
   --skill dingtalk-weekly-report \
   --agent claude-code \
   --agent codex \
   --global --yes --copy 2>&1 | tee "$INSTALL_LOG"
-npx --yes skills list --global
+npx --yes "$SKILLS_CLI_PACKAGE" list --global
 
-SKILL="$HOME/.agents/skills/dingtalk-weekly-report"
-test -f "$SKILL/SKILL.md"
+AGENTS_SKILL="$HOME/.agents/skills/dingtalk-weekly-report"
+CLAUDE_SKILL="$HOME/.claude/skills/dingtalk-weekly-report"
+if [ -f "$AGENTS_SKILL/SKILL.md" ]; then
+  SKILL="$AGENTS_SKILL"
+elif [ -f "$CLAUDE_SKILL/SKILL.md" ]; then
+  SKILL="$CLAUDE_SKILL"
+else
+  echo "FAIL: .agents 与 .claude 均未发现已安装的 dingtalk-weekly-report" >&2
+  exit 1
+fi
+if [ -f "$AGENTS_SKILL/SKILL.md" ] && [ -f "$CLAUDE_SKILL/SKILL.md" ]; then
+  diff -qr --exclude="__pycache__" "$AGENTS_SKILL" "$CLAUDE_SKILL"
+  echo "OK .agents and .claude skill copies match"
+fi
 diff -qr --exclude="__pycache__" \
   "$ROOT/skills/dingtalk-weekly-report" "$SKILL"
-echo "OK remote skill matches commit $LOCAL_SHA"
+echo "OK remote skill at $SKILL matches commit $LOCAL_SHA"
 
 AUDIT_LOG="$TMP/skills-audit.txt"
 sed -E 's/\x1B\[[0-9;?]*[ -/]*[@-~]//g' "$INSTALL_LOG" > "$AUDIT_LOG"

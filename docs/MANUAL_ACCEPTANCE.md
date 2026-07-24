@@ -32,13 +32,21 @@
 
 ```bash
 export WORK="$(cat ~/.config/dtwr/root)"
-if [ -f ~/.agents/skills/dingtalk-weekly-report/SKILL.md ]; then
-  export SKILL=~/.agents/skills/dingtalk-weekly-report
+AGENTS_SKILL="$HOME/.agents/skills/dingtalk-weekly-report"
+CLAUDE_SKILL="$HOME/.claude/skills/dingtalk-weekly-report"
+if [ -f "$AGENTS_SKILL/SKILL.md" ]; then
+  export SKILL="$AGENTS_SKILL"
+elif [ -f "$CLAUDE_SKILL/SKILL.md" ]; then
+  export SKILL="$CLAUDE_SKILL"
 else
-  export SKILL=~/.claude/skills/dingtalk-weekly-report
+  echo "未发现已安装的 dingtalk-weekly-report" >&2
+  return 1 2>/dev/null || exit 1
 fi
-npx skills list --global
+npx --yes skills@1.5.20 list --global
 test -f "$SKILL/SKILL.md"
+if [ -f "$AGENTS_SKILL/SKILL.md" ] && [ -f "$CLAUDE_SKILL/SKILL.md" ]; then
+  diff -qr --exclude="__pycache__" "$AGENTS_SKILL" "$CLAUDE_SKILL"
+fi
 stat -c '%U %a %n' "$WORK" ~/.config/dtwr ~/.config/dtwr/root
 "$WORK/.venv/bin/python" -c "import playwright; print('playwright OK')"
 ```
@@ -47,6 +55,7 @@ stat -c '%U %a %n' "$WORK" ~/.config/dtwr ~/.config/dtwr/root
 
 - 列表中有 `dingtalk-weekly-report`，目标 Agent 可发现；
 - `$SKILL` 指向实际安装副本；
+- `.agents` 与 `.claude` 同时存在时，两份安装内容一致；
 - root 指向当前用户的真实 `$WORK`；
 - `$WORK` 与登录态目录属于当前用户；
 - venv 与 Playwright 可加载。

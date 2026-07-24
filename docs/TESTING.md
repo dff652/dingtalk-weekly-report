@@ -14,6 +14,10 @@
 | 远程发现 | `npx skills add dff652/dingtalk-weekly-report --list` | 发现 1 个 skill |
 | 本地 skills CLI 安装 | Node 22.23.1 / `skills@1.5.20` / 隔离 HOME | PASS |
 
+发行验收固定使用 `skills@1.5.20`，因为安全门禁解析该版本的英文安装输出；升级 CLI
+时必须同步复验风险文案匹配。脚本优先使用 `~/.agents/skills`，缺失时回退
+`~/.claude/skills`；两份同时存在则要求内容一致。
+
 完整自动验收覆盖：
 
 `打包 → 隔离 HOME 安装到 Claude/Codex/Agents → bootstrap → 独立 venv → 锁定 Playwright →
@@ -88,7 +92,7 @@ node -v
 先用 CLI 自检：
 
 ```bash
-HOME="$ACCEPT/home" npx --yes skills list --global
+HOME="$ACCEPT/home" npx --yes skills@1.5.20 list --global
 find "$ACCEPT/home" -path '*/dingtalk-weekly-report/SKILL.md' -print
 ```
 
