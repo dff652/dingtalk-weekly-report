@@ -126,7 +126,7 @@ fi
 | [skills/…/references/FIELDS.md](skills/dingtalk-weekly-report/references/FIELDS.md) | 表单字段事实源 |
 | [docs/MAINTAINER.md](docs/MAINTAINER.md) | 维护仓：打包、测试、调试、路线图 |
 | [docs/PUBLISHING.md](docs/PUBLISHING.md) | skills.sh 安装、公开发布与内部私有分发 |
-| [docs/TESTING.md](docs/TESTING.md) | 自动测试覆盖、最近结果与人工验收边界 |
+| [docs/TESTING.md](docs/TESTING.md) | 自动测试覆盖、安装踩坑排查、最近结果与人工验收边界 |
 | [docs/](docs/) | 文档索引 |
 
 维护者：`bash tests/run_smoke.sh` 快速回归；`bash tests/run_full_acceptance.sh` 做隔离安装到仿真暂存的完整验收。更多见 [MAINTAINER.md](docs/MAINTAINER.md)。

@@ -77,7 +77,8 @@ npx skills add dff652/dingtalk-weekly-report -s dingtalk-weekly-report -a claude
 
 ## 测试覆盖
 
-最近一次结果与尚未完成的真实人工验收见 [TESTING.md](TESTING.md)。
+最近一次结果、2026-07-24 真实安装踩坑与解决过程、尚未完成的人工边界见
+[TESTING.md](TESTING.md)。
 
 ```bash
 bash tests/run_smoke.sh
@@ -92,6 +93,11 @@ bash tests/run_full_acceptance.sh
 | bootstrap + 独立 venv + 安装后仿真使用 | ✅ `run_full_acceptance.sh` |
 | 真机 keepalive | 可选 |
 | 真机 `--draft --confirmed` / 钉钉提交 | ❌ 人工 |
+
+安装验收不要只看命令是否返回：必须分别确认 Skills CLI 列表、安装文件、bootstrap root
+指针、独立 venv、Chromium 实际启动和最终测试退出码。Node/Skills CLI 版本不兼容、
+`~/.agents` 与 `~/.codex` 的发现差异、浏览器下载中断和 root 指针解析的具体排查命令见
+[TESTING.md「本机安装→使用验收记录」](TESTING.md#2026-07-24-本机安装使用验收记录)。
 
 ## 路线图
 

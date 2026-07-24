@@ -140,8 +140,11 @@ python3 "$SKILL/scripts/print_form_rows.py" weeks/week_report_YYYYMMDD.json   # 
 
 | 现象 | 处理 |
 |------|------|
+| npx 只写了 `~/.agents/skills` | 先用 `npx skills list -g` 确认 Agents 含 Codex；仅当 Codex 确实无法发现时做 §2.1 补链 |
 | Codex 无 skill | 做 §2.1 补链；或 `install.sh --force` |
 | `node:util` 缺 `styleText` / `EBADENGINE` | Node 过旧；`skills@1.5.20` 升到 Node `>=22.20.0` |
+| Chromium 下载处长时间无新输出 | 检查下载进程是否仍在运行；看到 `bootstrap 完成` 且 `~/.config/dtwr/root` 已写入才算成功，失败可原命令重跑 |
+| 已 bootstrap，换目录运行却报 cwd 缺 config | 先升级 skill；临时可 `cd $WORK` 或显式设置 `DTWR_HOME=$WORK` |
 | `npx skills` 找不到 skill | 确认仓库 public 且含 `skills/dingtalk-weekly-report/SKILL.md` |
 | extract 拒绝写 | json 已存在 |
 | 会话失效 | 内部二维码 → `--login-url` |

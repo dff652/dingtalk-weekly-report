@@ -8,7 +8,7 @@
 | [../skills/dingtalk-weekly-report/references/FIELDS.md](../skills/dingtalk-weekly-report/references/FIELDS.md) | 维护者 | 表单字段 |
 | [MAINTAINER.md](MAINTAINER.md) | 维护者 | 打包、测试、调试、路线图 |
 | [PUBLISHING.md](PUBLISHING.md) | 维护者 | skills.sh 分发、公开发布与脱敏门槛 |
-| [TESTING.md](TESTING.md) | 维护者/验收人 | 自动测试结果与真实人工验收边界 |
+| [TESTING.md](TESTING.md) | 维护者/验收人 | 自动测试结果、安装踩坑排查与真实人工验收边界 |
 | [USER_GUIDE.md](USER_GUIDE.md) | — | 跳转到技能包内正文 |
 
 ## 分发
