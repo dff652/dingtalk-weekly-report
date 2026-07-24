@@ -91,13 +91,20 @@ fi
 ### 2.6 首次配置
 
 1. 编辑 `$WORK/config.json`：`name`、`form_project`、`attach_project`、`progress_report`（可空）、`form_url`。  
-2. 登录：会话里跟 agent，或  
+2. 登录首选扫码：会话里跟 Agent，或在终端运行：
 
 ```bash
 cd ~/weekly-report-data
-.venv/bin/python ~/.claude/skills/dingtalk-weekly-report/scripts/fill_form.py \
-  --login-url 'https://www.h3yun.com/entry/auth?token=…'
+.venv/bin/python ~/.claude/skills/dingtalk-weekly-report/scripts/fill_form.py --login
 ```
+
+若必须使用内部二维码 auth 链接，由你本人在本机交互终端运行以下命令，再按隐藏提示粘贴：
+
+```bash
+.venv/bin/python ~/.claude/skills/dingtalk-weekly-report/scripts/fill_form.py --login-url
+```
+
+不要把 auth 链接发给 Agent，也不要放进命令参数、聊天、文件或 git。
 
 3. 可选保活：cron / 计划任务跑 `fill_form.py --keepalive`。  
 登录态：`~/.config/dtwr/state.json`（0600）。
@@ -134,7 +141,9 @@ python3 "$SKILL/scripts/print_form_rows.py" weeks/week_report_YYYYMMDD.json   # 
 |------|------|
 | `json` | 只填不存 |
 | `json --draft --confirmed` | 人审并检查旧草稿后，正式落草稿 |
-| `--login-url` / `--keepalive` / `--dump` | 登录 / 续期 / 诊断 |
+| `--login` | 首选扫码登录 |
+| `--login-url` | 用户本人在交互终端隐藏输入 auth 链接；不接受 URL 参数 |
+| `--keepalive` / `--dump` | 续期 / 诊断 |
 
 ## 4. FAQ
 
@@ -147,11 +156,12 @@ python3 "$SKILL/scripts/print_form_rows.py" weeks/week_report_YYYYMMDD.json   # 
 | 已 bootstrap，换目录运行却报 cwd 缺 config | 先升级 skill；临时可 `cd $WORK` 或显式设置 `DTWR_HOME=$WORK` |
 | `npx skills` 找不到 skill | 确认仓库 public 且含 `skills/dingtalk-weekly-report/SKILL.md` |
 | extract 拒绝写 | json 已存在 |
-| 会话失效 | 内部二维码 → `--login-url` |
+| 会话失效 | 首选 `--login` 扫码；URL 兜底由用户本人运行 `--login-url` 后隐藏输入 |
 | 填表失败 | `output/shots/99-error.png` + `references/FIELDS.md` |
 
 ## 5. 安全
 
 输入、缺失处理和输出契约见 `references/CONTRACT.md`。只草稿、人提交；勿用他人
-`$WORK`/登录态；auth 链接与 `state.json` 当凭证。属主自动检查目前仅在 POSIX 系统启用；
-Windows 依赖独立用户目录和系统 ACL 隔离。
+`$WORK`/登录态；auth 链接与 `state.json` 当凭证。auth 链接不得交给 Agent，不得进入参数、
+聊天、文件或 git。属主自动检查目前仅在 POSIX 系统启用；Windows 依赖独立用户目录和
+系统 ACL 隔离。

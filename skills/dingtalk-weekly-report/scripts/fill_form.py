@@ -7,8 +7,8 @@
   「项目/产品名称」关联下拉必须成功选中；失败时阻断，不保存不完整草稿。
 
 用法：
-  登录(免扫码):   .venv/bin/python fill_form.py --login-url '<打印内部二维码解出的 entry/auth 链接>'
-  登录(扫码):     .venv/bin/python fill_form.py --login   # 二维码截图 output/shots/login.png
+  登录(首选扫码): .venv/bin/python fill_form.py --login
+  登录(URL):      .venv/bin/python fill_form.py --login-url  # 用户在本机终端隐藏输入
   填表:           .venv/bin/python fill_form.py weeks/week_report_20260713.json
                   默认填完截图停下；人工确认内容并检查旧草稿后，
                   --draft --confirmed 点「暂存」；本工具不提供提交能力。
@@ -19,6 +19,7 @@ import json
 import sys
 import time
 from datetime import date, timedelta
+from getpass import getpass
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
@@ -84,6 +85,15 @@ def validate_auth_url(auth_url):
             or "/entry/auth" not in parsed.path
             or not parse_qs(parsed.query).get("token")):
         raise ValueError("--login-url 必须是含 token 的 https://*.h3yun.com/entry/auth 链接")
+
+
+def prompt_auth_url():
+    if not sys.stdin.isatty():
+        sys.exit("--login-url 需要用户在本机交互终端运行；禁止通过聊天、参数或管道传递登录链接")
+    auth_url = getpass("粘贴 h3yun entry/auth 登录链接（输入隐藏）: ").strip()
+    if not auth_url:
+        sys.exit("未输入登录链接")
+    return auth_url
 
 
 def resolve_url(args):
@@ -375,7 +385,8 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("report_json", nargs="?")
     ap.add_argument("--login", action="store_true")
-    ap.add_argument("--login-url", help="带 token 的一次性登录链接（免扫码；token 勿入 git）")
+    ap.add_argument("--login-url", action="store_true",
+                    help="在本机交互终端隐藏输入一次性登录链接；不接受命令行参数")
     ap.add_argument("--dump", action="store_true")
     ap.add_argument("--keepalive", action="store_true", help="访问列表页续会话并回存 cookie（cron 用）")
     ap.add_argument("--url", help="覆盖 config.form_url（联调/仿真用）")
@@ -383,6 +394,8 @@ def main():
     ap.add_argument("--confirmed", action="store_true",
                     help="确认内容已经人工审核、同周旧草稿已经检查（与 --draft 同用）")
     args = ap.parse_args()
+    if args.login_url and args.report_json:
+        ap.error("--login-url 不接受 URL 参数；请只输入 --login-url，再按隐藏提示粘贴")
     if args.draft and not args.confirmed:
         ap.error("--draft 必须同时提供 --confirmed，表示已完成人审和同周旧草稿检查")
     if args.confirmed and not args.draft:
@@ -396,7 +409,7 @@ def main():
     except ValidationError as exc:
         sys.exit(str(exc))
     if args.login_url:
-        do_login_url(args.login_url)
+        do_login_url(prompt_auth_url())
     elif args.login:
         do_login(resolve_url(args))
     elif args.keepalive:

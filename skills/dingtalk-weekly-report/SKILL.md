@@ -79,10 +79,12 @@ git 操作（若 $WORK 配了仓库）必须 `git -C $WORK`。每用户差异（
 ### 5) 登录态
 
 - `.venv/bin/python "$SKILL/scripts/fill_form.py" --keepalive` 验会话（若装了 cron 保活通常直接过）。
-- 报「会话已失效」→ 请用户：钉钉报工周报列表 →「打印二维码 → 打印内部二维码」→ 手机钉钉扫 →
-  把浏览器里 `h3yun.com/entry/auth?token=…` 整条链接发来 →
-  `.venv/bin/python "$SKILL/scripts/fill_form.py" --login-url '<链接>'`。
-  链接 48h 有效、等价临时登录凭证：用完提醒勿转发；**勿写入任何文件/git**。
+- 报「会话已失效」→ 首选运行 `.venv/bin/python "$SKILL/scripts/fill_form.py" --login`，
+  请用户用手机钉钉扫描 `$WORK/output/shots/login.png`。
+- 若必须使用「打印内部二维码」得到的一次性 auth 链接：请用户**本人在本机交互终端**运行
+  `.venv/bin/python "$SKILL/scripts/fill_form.py" --login-url`，再按隐藏提示粘贴。
+  Agent 不得索要、接收、回显或代输链接，也不得把链接放入命令参数、聊天、文件或 git。
+  该链接 48h 有效，等价临时登录凭证。
 
 ### 6) 落草稿
 
@@ -114,7 +116,8 @@ git 操作（若 $WORK 配了仓库）必须 `git -C $WORK`。每用户差异（
    再按旧步骤 mkdir + `uv venv` + playwright + 拷 config + 写 dtwr root。
 3. 访谈补全 `config.json`：姓名、form_project（表单下拉**完整原文**）、attach_project、
    progress_report（没有则留空走访谈式）、会议/工时默认值。
-4. 登录：走第 5 步「会话已失效」分支；可选保活：
+4. 登录：走第 5 步「会话已失效」分支；一次性 auth 链接只能由用户本人在交互终端隐藏输入；
+   可选保活：
    - Linux/mac: cron `30 9 * * * cd <WORK> && .venv/bin/python <SKILL>/scripts/fill_form.py --keepalive >> output/keepalive.log 2>&1`
    - Windows: 计划任务调用同一命令（路径用 `Scripts\python.exe`）。
 

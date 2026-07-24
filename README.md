@@ -64,13 +64,14 @@ bash ~/.claude/skills/dingtalk-weekly-report/bootstrap.sh
 2. 若 ~/.codex/skills/dingtalk-weekly-report 不存在，则：
    mkdir -p ~/.codex/skills && ln -sfn ~/.claude/skills/dingtalk-weekly-report ~/.codex/skills/dingtalk-weekly-report
 3. 执行：bash ~/.claude/skills/dingtalk-weekly-report/bootstrap.sh
-4. 按 skills/dingtalk-weekly-report/USER_GUIDE.md 与 SKILL.md 引导我填写 config.json、完成钉钉「打印内部二维码」登录。
+4. 按 skills/dingtalk-weekly-report/USER_GUIDE.md 与 SKILL.md 引导我填写 config.json、完成扫码登录；不得让我把 auth 链接发到聊天或放进命令参数。
 5. 之后用 /dingtalk-weekly-report 做周报；只允许 --draft --confirmed；脚本无提交能力；内容必须人审。
 
 装完请运行自检（见 README「Verify」）并报告结果。
 ```
 
-**说明：** AI 可完成装 skill + bootstrap；**不能**代替你：表单项目下拉原文、扫码/token 登录、人审内容、钉钉点「提交」。
+**说明：** AI 可完成装 skill + bootstrap；**不能**代替你：表单项目下拉原文、扫码、
+一次性 auth 链接的隐藏输入、人审内容、钉钉点「提交」。
 
 ---
 
@@ -106,7 +107,8 @@ fi
 
 或指定周一：`/dingtalk-weekly-report 2026-07-20`
 
-3. 首次登录：钉钉报工周报 → 打印内部二维码 → 把 `h3yun.com/entry/auth?token=…` 交给 agent / `--login-url`。
+3. 首次登录首选 `fill_form.py --login` 后扫码；若使用内部二维码 auth 链接，
+   由你本人在本机终端运行 `fill_form.py --login-url` 并按隐藏提示粘贴，勿交给 Agent。
 4. 人审 json → 落**草稿** → **你**在钉钉点提交。
 
 三条铁律：只 `--draft --confirmed`；内容必人审；落草稿前删同周旧草稿。补交上周：**周一 17:00 前**。

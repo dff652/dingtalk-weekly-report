@@ -54,7 +54,7 @@ fi
 
 # uv / venv / playwright
 if ! command -v uv >/dev/null 2>&1; then
-  echo "❌ 未找到 uv。安装: https://docs.astral.sh/uv/  或 curl -LsSf https://astral.sh/uv/install.sh | sh" >&2
+  echo "❌ 未找到 uv。请按官方文档安装: https://docs.astral.sh/uv/getting-started/installation/" >&2
   exit 1
 fi
 
@@ -89,7 +89,8 @@ echo "✅ 已写 $DTWR_DIR/root → $WORK"
 echo ""
 echo "bootstrap 完成。"
 echo "  下一步: 编辑 $WORK/config.json"
-echo "  登录:   $PY \"$SKILL/scripts/fill_form.py\" --login-url '<h3yun entry/auth 链接>'"
+echo "  登录:   $PY \"$SKILL/scripts/fill_form.py\" --login"
+echo "  URL兜底: 用户本人在交互终端运行 $PY \"$SKILL/scripts/fill_form.py\" --login-url（隐藏输入）"
 echo "  或打开 AI 工具运行 /dingtalk-weekly-report 完成访谈式配置与登录"
 echo "  可选 cron(Linux/mac): 30 9 * * * cd $WORK && $PY $SKILL/scripts/fill_form.py --keepalive >> output/keepalive.log 2>&1"
 echo "  Windows 计划任务可调用同一 keepalive 命令"

@@ -4,13 +4,27 @@ import os
 import sys
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
 SKILL = Path(os.environ.get(
     "DTWR_SKILL", ROOT / "skills" / "dingtalk-weekly-report"))
 sys.path.insert(0, str(SKILL / "scripts"))
 
-from fill_form import validate_auth_url, validate_form_url, verify_draft_saved
+from fill_form import (
+    prompt_auth_url,
+    validate_auth_url,
+    validate_form_url,
+    verify_draft_saved,
+)
+
+
+class FakeStdin:
+    def __init__(self, is_tty):
+        self.is_tty = is_tty
+
+    def isatty(self):
+        return self.is_tty
 
 
 class FakeItem:
@@ -104,6 +118,23 @@ class FillFormLogicTests(unittest.TestCase):
     def test_valid_h3yun_urls_are_accepted(self):
         validate_form_url("https://www.h3yun.com/application/test")
         validate_auth_url("https://www.h3yun.com/entry/auth?token=x")
+
+    def test_auth_url_prompt_requires_tty(self):
+        with patch("fill_form.sys.stdin", FakeStdin(False)):
+            with self.assertRaisesRegex(SystemExit, "本机交互终端"):
+                prompt_auth_url()
+
+    def test_auth_url_prompt_uses_hidden_input(self):
+        value = "https://www.h3yun.com/entry/auth?token=x"
+        with patch("fill_form.sys.stdin", FakeStdin(True)):
+            with patch("fill_form.getpass", return_value=f" {value} "):
+                self.assertEqual(prompt_auth_url(), value)
+
+    def test_auth_url_prompt_rejects_empty_input(self):
+        with patch("fill_form.sys.stdin", FakeStdin(True)):
+            with patch("fill_form.getpass", return_value=" "):
+                with self.assertRaisesRegex(SystemExit, "未输入"):
+                    prompt_auth_url()
 
 
 if __name__ == "__main__":

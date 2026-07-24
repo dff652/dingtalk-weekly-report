@@ -43,8 +43,8 @@ npx skills add dff652/dingtalk-weekly-report -s dingtalk-weekly-report -a claude
 |------|------|--------|
 | `… json` | 只填不存 | 预览 |
 | `… json --draft --confirmed` | 人审并检查旧草稿后暂存 | **每周正式** |
-| `--login-url` | token 登录 | 会话失效 |
-| `--login` | 扫码 | 兜底 |
+| `--login` | 扫码 | 会话失效时首选 |
+| `--login-url` | 用户在交互终端隐藏输入 auth 链接 | 扫码不可用时兜底 |
 | `--keepalive` | 续 cookie | cron / 计划任务 |
 | `--dump` | DOM 诊断 | 联调 |
 
@@ -55,7 +55,7 @@ npx skills add dff652/dingtalk-weekly-report -s dingtalk-weekly-report -a claude
 | 触发 | 动作 |
 |------|------|
 | 每周例行 | 更新内容源 + `weeks/week_report_*.json` |
-| 会话失效 | 内部二维码 → `--login-url` |
+| 会话失效 | 首选 `--login` 扫码；auth URL 兜底由用户本人在交互终端隐藏输入 |
 | 换项目 | `config.json` 的 form/attach project |
 | HR 改字段 | `FIELDS.md` + `fill_form.py` 映射 |
 | DOM 变化 | `--dump` → 改选择器 → `run_mock_test.sh` |
@@ -67,6 +67,7 @@ npx skills add dff652/dingtalk-weekly-report -s dingtalk-weekly-report -a claude
 - 失败截图：`$WORK/output/shots/99-error.png`
 - `--dump` → dump.html / dump.png
 - 登录态：`~/.config/dtwr/state.json`（0600，勿入 git）
+- 一次性 auth 链接：Agent 不得接收；不得进入 argv、聊天、文件或 git
 
 ## 表单硬规则（工具侧）
 

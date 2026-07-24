@@ -28,7 +28,7 @@ if (-not (Test-Path $Config)) {
 }
 
 if (-not (Get-Command uv -ErrorAction SilentlyContinue)) {
-  Write-Error "未找到 uv。请先安装: https://docs.astral.sh/uv/getting-started/installation/ （Windows 推荐 irm https://astral.sh/uv/install.ps1 | iex）"
+  Write-Error "未找到 uv。请按官方文档安装: https://docs.astral.sh/uv/getting-started/installation/"
 }
 
 $VenvDir = Join-Path $Work ".venv"
@@ -61,6 +61,7 @@ Write-Host "✅ 已写 $RootFile → $Work"
 Write-Host ""
 Write-Host "bootstrap 完成。"
 Write-Host "  下一步: 编辑 $Config"
-Write-Host "  登录:   & `"$Py`" `"$Skill\scripts\fill_form.py`" --login-url '<h3yun entry/auth 链接>'"
+Write-Host "  登录:   & `"$Py`" `"$Skill\scripts\fill_form.py`" --login"
+Write-Host "  URL兜底: 用户本人在交互终端运行 fill_form.py --login-url（隐藏输入）"
 Write-Host "  或打开 AI 工具运行 /dingtalk-weekly-report"
 Write-Host "  可选: Windows 计划任务每日运行 fill_form.py --keepalive"

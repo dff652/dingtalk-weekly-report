@@ -54,6 +54,7 @@ skills.sh 公共索引。
 - 从当前版本及 Git 历史清除真实姓名、周报内容、内部项目名和路径；
 - 将用户工作数据永久迁出仓库，只保留 `tests/fixtures/` 脱敏夹具；
 - 确认许可证、安全说明和支持范围；
+- 安装时检查 skills.sh 的 Gen、Socket、Snyk 审计；不得带 Critical/High 未解释风险；
 - 重新运行 `tests/run_smoke.sh` 与 `tests/run_full_acceptance.sh`。
 
 然后：
@@ -85,4 +86,5 @@ bash tests/run_full_acceptance.sh
 npx skills add dff652/dingtalk-weekly-report --list
 ```
 
-只有三项都通过、敏感信息检查完成，才推送公开版本。
+只有三项都通过、敏感信息检查完成，且安装输出中的安全审计无未处理的 Critical/High，
+才推送公开版本。审计可能缓存旧提交；推送修复后需重新安装并等待平台重扫。

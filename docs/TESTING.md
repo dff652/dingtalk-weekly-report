@@ -7,7 +7,7 @@
 | 层级 | 命令 | 结果 |
 |---|---|---|
 | 核心边界 | `python3 tests/test_core.py` | 18 项通过 |
-| 填表边界 | `.venv/bin/python tests/test_fill_form_logic.py` | 8 项通过 |
+| 填表边界 | `.venv/bin/python tests/test_fill_form_logic.py` | 11 项通过 |
 | 快速回归 | `bash tests/run_smoke.sh` | PASS |
 | 完整自动验收 | `bash tests/run_full_acceptance.sh` | PASS |
 | 远程发现 | `npx skills add dff652/dingtalk-weekly-report --list` | 发现 1 个 skill |
@@ -24,6 +24,7 @@
 - `--draft` 未带 `--confirmed` 时阻断；
 - 表单关闭或只有隐藏成功文案时，不得判定暂存成功；
 - 非氚云表单 URL、无 token 登录 URL 均阻断；
+- auth 链接只允许用户在 TTY 隐藏输入，非交互环境与空输入均阻断；
 - `$WORK` 属主不匹配时阻断（POSIX）；
 - 两个 CLI 的 help 不依赖工作目录；
 - 未设置 `DTWR_HOME` 时可从 `~/.config/dtwr/root` 解析工作目录；
@@ -153,14 +154,43 @@ DTWR_TEST_BROWSERS_PATH="$HOME/.cache/ms-playwright" \
   bash tests/run_full_acceptance.sh
 ```
 
-结果：核心 18 项、填表逻辑 8 项、`SMOKE PASS`、`FULL ACCEPTANCE PASS`，并额外完成
+结果：核心 18 项、填表逻辑 11 项、`SMOKE PASS`、`FULL ACCEPTANCE PASS`，并额外完成
 隔离 Skills CLI 安装、root 指针跨 cwd 解析和隔离 Chromium 实际启动。
+
+## Skills.sh 安全审计跟进
+
+2026-07-24 从 GitHub 远端安装提交 `98a3326` 时，安装与逻辑测试通过，但 Skills CLI 展示：
+
+- Gen：Safe；
+- Socket：1 个 LOW anomaly，说明为安装脚本、依赖安装链和临时登录链接需要人工复核，
+  同时明确未见第三方凭证中转或恶意外传；
+- Snyk：Critical，包含 W007（auth 链接交给 Agent/进入 argv）和 E005
+  （文档建议把远端 uv 安装脚本直接管道执行）。
+
+对应报告：
+
+- <https://www.skills.sh/dff652/dingtalk-weekly-report/dingtalk-weekly-report/security/socket>
+- <https://www.skills.sh/dff652/dingtalk-weekly-report/dingtalk-weekly-report/security/snyk>
+
+本次修复：
+
+1. bootstrap 不再输出任何远端脚本管道执行命令，只链接 uv 官方安装文档；
+2. `--login-url` 改为无参数开关，仅在真实 TTY 使用 `getpass` 隐藏输入；
+3. 旧写法 `--login-url '<URL>'`、非 TTY、空输入均 fail-loud；
+4. SKILL/用户指南要求首选扫码，Agent 不得索要、接收或回显 auth 链接；
+5. 新增 3 项逻辑测试和 2 个 smoke CLI 门禁；实机 PTY 用假域名验证输入不回显、
+   且在启动浏览器前被 URL 校验阻断。
+
+本地修复后的核心 18 项、填表逻辑 11 项、smoke、full acceptance 均通过。
+平台审计是远端快照且可能缓存；必须在本提交 push 后重新从 GitHub 安装并等待重扫，
+才能判断告警是否解除。旧报告不能代表修复后版本。
 
 ## 尚未完成
 
 | 项目 | 状态 | 原因 |
 |---|---|---|
 | Windows PowerShell 实机 | 未验证 | 当前环境无 PowerShell |
+| Skills.sh 安全重扫 | 等待 push 后复验 | 当前公开报告仍对应 `98a3326` |
 | 真实氚云暂存验收 | 等待人工 | 当前周报缺 2026-07-22 至 2026-07-24 内容，且需用户确认旧草稿 |
 | 钉钉最终提交 | 不自动测试 | 设计上只能由用户人工执行 |
 

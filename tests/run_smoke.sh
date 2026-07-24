@@ -52,7 +52,22 @@ if DTWR_HOME="$ROOT/tests/fixtures" .venv/bin/python \
   exit 1
 fi
 grep -q -- "--draft 必须同时提供 --confirmed" /tmp/dtwr-guard.out
-echo "OK no-submit + explicit-confirm guards"
+if DTWR_HOME="$ROOT/tests/fixtures" .venv/bin/python \
+    skills/dingtalk-weekly-report/scripts/fill_form.py \
+    --login-url "https://www.h3yun.com/entry/auth?token=test" \
+    >/tmp/dtwr-auth-argv.out 2>&1; then
+  echo "FAIL: --login-url 仍接受 URL 参数" >&2
+  exit 1
+fi
+grep -q -- "--login-url 不接受 URL 参数" /tmp/dtwr-auth-argv.out
+if DTWR_HOME="$ROOT/tests/fixtures" .venv/bin/python \
+    skills/dingtalk-weekly-report/scripts/fill_form.py \
+    --login-url </dev/null >/tmp/dtwr-auth-tty.out 2>&1; then
+  echo "FAIL: --login-url 在非交互环境仍可读取" >&2
+  exit 1
+fi
+grep -q -- "本机交互终端" /tmp/dtwr-auth-tty.out
+echo "OK no-submit + explicit-confirm + auth-secret guards"
 
 echo "======== 4) gen_attachment + print_form_rows ========"
 cd "$ROOT"
