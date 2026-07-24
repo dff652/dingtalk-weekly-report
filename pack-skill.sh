@@ -18,9 +18,10 @@ cat <<'EOF'
   unzip dingtalk-weekly-report-skill-*.zip
   bash dingtalk-weekly-report/install.sh
   bash dingtalk-weekly-report/bootstrap.sh
+  # 说明见 dingtalk-weekly-report/USER_GUIDE.md
   # 编辑 ~/weekly-report-data/config.json 后，Claude/Codex 运行 /dingtalk-weekly-report
 Windows:
-  解压后: .\install.ps1  再  .\bootstrap.ps1
+  解压后: .\install.ps1  再  .\bootstrap.ps1 ；说明见 USER_GUIDE.md
 维护仓软链:
   bash install.sh --link
 注意: 包内含公司表单结构信息, 仅限公司内部分发。
