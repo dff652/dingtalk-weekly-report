@@ -129,6 +129,8 @@ fi
 | [docs/MAINTAINER.md](docs/MAINTAINER.md) | 维护仓：打包、测试、调试、路线图 |
 | [docs/PUBLISHING.md](docs/PUBLISHING.md) | skills.sh 安装、公开发布与内部私有分发 |
 | [docs/TESTING.md](docs/TESTING.md) | 自动测试覆盖、安装踩坑排查、最近结果与人工验收边界 |
+| [docs/MANUAL_ACCEPTANCE.md](docs/MANUAL_ACCEPTANCE.md) | 真实配置、登录、预览、草稿与人工提交 SOP |
 | [docs/](docs/) | 文档索引 |
 
-维护者：`bash tests/run_smoke.sh` 快速回归；`bash tests/run_full_acceptance.sh` 做隔离安装到仿真暂存的完整验收。更多见 [MAINTAINER.md](docs/MAINTAINER.md)。
+维护者：`run_smoke.sh` 快速回归，`run_full_acceptance.sh` 验本地包，
+`run_release_acceptance.sh` 验 GitHub 发行。更多见 [MAINTAINER.md](docs/MAINTAINER.md)。

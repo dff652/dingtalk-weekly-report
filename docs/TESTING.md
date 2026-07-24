@@ -10,6 +10,7 @@
 | 填表边界 | `.venv/bin/python tests/test_fill_form_logic.py` | 11 项通过 |
 | 快速回归 | `bash tests/run_smoke.sh` | PASS |
 | 完整自动验收 | `bash tests/run_full_acceptance.sh` | PASS |
+| 远端发行验收 | `bash tests/run_release_acceptance.sh` | 功能链通过；旧审计缓存导致门禁 FAIL |
 | 远程发现 | `npx skills add dff652/dingtalk-weekly-report --list` | 发现 1 个 skill |
 | 本地 skills CLI 安装 | Node 22.23.1 / `skills@1.5.20` / 隔离 HOME | PASS |
 
@@ -185,6 +186,11 @@ DTWR_TEST_BROWSERS_PATH="$HOME/.cache/ms-playwright" \
 平台审计是远端快照且可能缓存；必须在本提交 push 后重新从 GitHub 安装并等待重扫，
 才能判断告警是否解除。旧报告不能代表修复后版本。
 
+提交 `8408995` push 后已运行远端发行脚本：GitHub 下载、Skills CLI 安装、安装副本比对、
+bootstrap、核心 18 项、填表逻辑 11 项、附件和 mock draft 全部通过；最后因平台仍返回
+02:34/02:35 的旧 Snyk/Socket 报告而按设计失败。旧报告仍描述已经删除的管道安装和 argv
+传 token，故当前阻塞是等待重扫，不是功能测试失败。
+
 ## 尚未完成
 
 | 项目 | 状态 | 原因 |
@@ -195,3 +201,9 @@ DTWR_TEST_BROWSERS_PATH="$HOME/.cache/ms-playwright" \
 | 钉钉最终提交 | 不自动测试 | 设计上只能由用户人工执行 |
 
 所以准确结论是：**完整自动测试已通过；真实生产表单的本轮人工验收尚未完成。**
+
+三个验收层级不得混用：
+
+1. `run_full_acceptance.sh`：本地技能包的自动仿真闭环；
+2. `run_release_acceptance.sh`：远端提交、GitHub 下载、Skills CLI、运行态、仿真与审计门禁；
+3. [MANUAL_ACCEPTANCE.md](MANUAL_ACCEPTANCE.md)：真实个人配置、登录、氚云草稿和钉钉提交。

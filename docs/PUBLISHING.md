@@ -80,11 +80,22 @@ npx skills add dff652/dingtalk-weekly-report \
 
 ## 发布验收
 
+先在待发布提交上运行本地门禁：
+
 ```bash
 bash tests/run_smoke.sh
 bash tests/run_full_acceptance.sh
-npx skills add dff652/dingtalk-weekly-report --list
 ```
 
-只有三项都通过、敏感信息检查完成，且安装输出中的安全审计无未处理的 Critical/High，
-才推送公开版本。审计可能缓存旧提交；推送修复后需重新安装并等待平台重扫。
+两项通过并完成敏感信息检查后，push 候选提交；再运行远端门禁：
+
+```bash
+git push origin main
+bash tests/run_release_acceptance.sh
+```
+
+只有三项都通过，且安装输出中的安全审计无未处理的 Critical/High，才可宣布该提交通过
+公开发行验收。审计可能缓存旧提交；推送修复后需重新安装并等待平台重扫。
+
+真实个人配置、登录、氚云草稿和钉钉提交不属于发行自动验收，按
+[MANUAL_ACCEPTANCE.md](MANUAL_ACCEPTANCE.md) 单独执行并留存人工结论。
