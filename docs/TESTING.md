@@ -6,7 +6,7 @@
 
 | 层级 | 命令 | 结果 |
 |---|---|---|
-| 核心边界 | `python3 tests/test_core.py` | 18 项通过 |
+| 核心边界 | `python3 tests/test_core.py` | 24 项通过 |
 | 填表边界 | `.venv/bin/python tests/test_fill_form_logic.py` | 11 项通过 |
 | 快速回归 | `bash tests/run_smoke.sh` | PASS |
 | 完整自动验收 | `bash tests/run_full_acceptance.sh` | PASS |
@@ -35,6 +35,8 @@
 - `$WORK` 属主不匹配时阻断（POSIX）；
 - 两个 CLI 的 help 不依赖工作目录；
 - 未设置 `DTWR_HOME` 时可从 `~/.config/dtwr/root` 解析工作目录；
+- `progress_report` 可解析直接文件或项目目录内固定的 `docs/report/PROGRESS_REPORT.md`；
+  项目目录缺标准文档和不存在路径均阻断；
 - 配置占位值、TODO、超长内容、错误周次、缺工作日、缺项目和单日超 24h 均阻断；
 - 没有 `progress_report` 时生成 TODO 骨架，而不是编造内容；
 - 打包产物包含运行脚本、契约、锁定依赖和跨平台安装脚本。

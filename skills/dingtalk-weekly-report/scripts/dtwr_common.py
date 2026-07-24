@@ -10,6 +10,8 @@ import os
 import sys
 from pathlib import Path
 
+PROJECT_PROGRESS_REPORT = Path("docs/report/PROGRESS_REPORT.md")
+
 
 def require_owned(path: Path, label: str) -> None:
     """共享机安全闸：已有路径必须属于当前用户。"""
@@ -17,6 +19,27 @@ def require_owned(path: Path, label: str) -> None:
         return
     if path.stat().st_uid != os.geteuid():
         sys.exit(f"安全检查失败：{label} {path} 不属于当前用户，拒绝继续")
+
+
+def resolve_progress_report(source) -> Path | None:
+    """解析工作日志文件；项目目录只认固定的标准相对路径。"""
+    if source is None or source == "":
+        return None
+    if not isinstance(source, str):
+        raise ValueError("progress_report 必须是文件路径、项目目录或空字符串")
+    value = source.strip()
+    if not value:
+        return None
+    path = Path(value).expanduser()
+    if path.is_file():
+        return path
+    if path.is_dir():
+        candidate = path / PROJECT_PROGRESS_REPORT
+        if candidate.is_file():
+            return candidate
+        raise ValueError(
+            f"progress_report 项目目录缺 {PROJECT_PROGRESS_REPORT}: {path}")
+    raise ValueError(f"progress_report 不存在或不是文件/项目目录: {path}")
 
 
 def workdir() -> Path:

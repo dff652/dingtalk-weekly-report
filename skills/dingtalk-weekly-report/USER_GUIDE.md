@@ -13,7 +13,7 @@ Agent 流程见同目录 `SKILL.md`；字段见 `references/FIELDS.md`。
 | [uv](https://docs.astral.sh/uv/) | bootstrap 用 |
 | 手机钉钉 | 扫「打印内部二维码」 |
 | 表单项目原文 | 下拉「项目/产品名称」**完整字符串** |
-| 可选 | 工作日志路径（无则访谈式） |
+| 可选 | 工作日志文件或项目目录（无则访谈式） |
 
 包内含公司表单结构，**仅限公司内部分发**。
 
@@ -90,7 +90,9 @@ fi
 
 ### 2.6 首次配置
 
-1. 编辑 `$WORK/config.json`：`name`、`form_project`、`attach_project`、`progress_report`（可空）、`form_url`。  
+1. 编辑 `$WORK/config.json`：`name`、`form_project`、`attach_project`、`progress_report`（可空）、`form_url`。
+   `progress_report` 可填工作日志文件，或含 `docs/report/PROGRESS_REPORT.md` 的项目目录；
+   工具不会扫描项目或读取 git log。
 2. 登录首选扫码：会话里跟 Agent，或在终端运行：
 
 ```bash

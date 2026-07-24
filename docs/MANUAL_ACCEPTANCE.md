@@ -70,10 +70,12 @@ Windows 不提供 POSIX uid 闸，须人工确认当前 Windows 账户与目录 
 - `form_project` 是氚云下拉完整原文；
 - `attach_project` 是附件使用的项目；
 - `form_url` 是 `https://*.h3yun.com`；
-- `progress_report` 为空，或指向当前用户确实维护的工作日志；
+- `progress_report` 为空，或指向当前用户确实维护的工作日志文件/项目目录；项目目录内须有
+  `docs/report/PROGRESS_REPORT.md`；
 - 不含模板占位值、他人姓名、他人项目或凭证。
 
-已配置但不存在的 `progress_report` 是配置错误，必须修正；不得静默转成访谈模式。
+已配置但不存在的 `progress_report`，或项目目录缺标准文档，都是配置错误，必须修正；
+不得静默转成访谈模式。
 
 ## 4. 内容源与目标周
 

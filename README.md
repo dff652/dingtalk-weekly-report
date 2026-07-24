@@ -98,7 +98,9 @@ fi
 
 ## Use
 
-1. 编辑 `~/weekly-report-data/config.json`（姓名、`form_project` 完整原文、`attach_project`、可选 `progress_report`）。
+1. 编辑 `~/weekly-report-data/config.json`（姓名、`form_project` 完整原文、`attach_project`、可选
+   `progress_report`）。后者可填工作日志文件或项目目录；项目目录只读取
+   `docs/report/PROGRESS_REPORT.md`，留空则由 AI 逐日访谈。
 2. **新开** AI 会话并显式调用（自然语言提及不作为可靠触发方式）：
 
 ```text

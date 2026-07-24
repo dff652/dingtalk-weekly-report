@@ -2,6 +2,7 @@
 import copy
 import json
 import os
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -15,7 +16,7 @@ SKILL = Path(os.environ.get(
 SCRIPTS = SKILL / "scripts"
 sys.path.insert(0, str(SCRIPTS))
 
-from dtwr_common import require_owned, workdir
+from dtwr_common import resolve_progress_report, require_owned, workdir
 from dtwr_fields import ATTACHMENT_TASK_TYPES, PROJECT_TYPES, STATUSES
 from dtwr_validation import ValidationError, validate_config, validate_report
 from dtwr_week import date_near_week, pick_monday
@@ -107,6 +108,67 @@ class CoreTests(unittest.TestCase):
                 with patch("dtwr_common.Path.home", return_value=home):
                     with self.assertRaisesRegex(SystemExit, "指针.*为空"):
                         workdir()
+
+    def test_progress_report_empty_uses_interview_mode(self):
+        self.assertIsNone(resolve_progress_report("  "))
+
+    def test_progress_report_accepts_file(self):
+        with tempfile.TemporaryDirectory() as directory:
+            report = Path(directory) / "work-log.md"
+            report.write_text("# 工作日志\n", encoding="utf-8")
+            self.assertEqual(resolve_progress_report(str(report)), report)
+
+    def test_progress_report_resolves_project_directory(self):
+        with tempfile.TemporaryDirectory() as directory:
+            project = Path(directory)
+            report = project / "docs" / "report" / "PROGRESS_REPORT.md"
+            report.parent.mkdir(parents=True)
+            report.write_text("# 项目进展\n", encoding="utf-8")
+            self.assertEqual(resolve_progress_report(str(project)), report)
+
+    def test_progress_report_directory_requires_standard_file(self):
+        with tempfile.TemporaryDirectory() as directory:
+            with self.assertRaisesRegex(ValueError, "docs/report/PROGRESS_REPORT.md"):
+                resolve_progress_report(directory)
+
+    def test_progress_report_missing_path_is_rejected(self):
+        with tempfile.TemporaryDirectory() as directory:
+            missing = Path(directory) / "missing"
+            with self.assertRaisesRegex(ValueError, "不存在"):
+                resolve_progress_report(str(missing))
+
+    def test_extract_week_accepts_project_directory(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            project = root / "project"
+            source = project / "docs" / "report" / "PROGRESS_REPORT.md"
+            source.parent.mkdir(parents=True)
+            source.write_text(
+                (ROOT / "tests/fixtures/progress_report.md").read_text(encoding="utf-8"),
+                encoding="utf-8",
+            )
+            work = root / "work"
+            work.mkdir()
+            config = copy.deepcopy(self.config)
+            config["progress_report"] = str(project)
+            (work / "config.json").write_text(
+                json.dumps(config, ensure_ascii=False), encoding="utf-8")
+            result = subprocess.run(
+                [sys.executable, str(SCRIPTS / "extract_week.py"), "2026-07-13"],
+                env={**os.environ, "DTWR_HOME": str(work)},
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            report = json.loads(
+                (work / "weeks/week_report_20260713.json").read_text(
+                    encoding="utf-8"))
+            self.assertTrue(any(
+                row["date"] == "2026-07-13"
+                and row["content"] == "输入校验完成"
+                for row in report["days"]
+            ))
 
     def test_report_fixture_is_valid(self):
         validate_report(self.report)

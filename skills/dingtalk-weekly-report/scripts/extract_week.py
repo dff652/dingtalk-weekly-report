@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-"""从 PROGRESS_REPORT.md 抽取指定周的内容，生成 week_report.json 草稿（供人工审改）。
+"""从工作日志文件或项目目录抽取指定周内容，生成 week_report.json 草稿（供人工审改）。
 
 用法: python3 extract_week.py 2026-07-13  # 参数=周一日期；缺省=周一取上周、其他日期取本周
 输出: weeks/week_report_YYYYMMDD.json（已存在则拒绝覆盖，防止冲掉人工修改）
 
 抽取策略（草稿性质，产出后必须人工过目）：
+- progress_report 指向文件时直接读取；指向项目目录时只读取 docs/report/PROGRESS_REPORT.md。
 - 逐日内容：取「## 3. 每日工作详情」里 `### N月N日（标题）` 的标题作为该日「主要工作内容」初稿；
   区间标题（`### 7月18日 ~ 7月19日`）与无标题日置 TODO 占位并告警——宁可留空逼人补，不静默凑数。
 - 周总结/下周计划：取「## 4. 周报」里覆盖该周的 `### Week N（起 ~ 止）— 标题` 生成骨架，
@@ -18,7 +19,7 @@ from pathlib import Path
 
 import sys as _sys
 _sys.path.insert(0, str(Path(__file__).resolve().parent))
-from dtwr_common import workdir
+from dtwr_common import resolve_progress_report, workdir
 from dtwr_validation import ValidationError, validate_config
 from dtwr_week import date_near_week, pick_monday
 
@@ -40,12 +41,11 @@ def main():
     except ValueError as exc:
         sys.exit(str(exc))
     workdays = [monday + timedelta(days=i) for i in range(5)]
-    source = config.get("progress_report", "").strip()
-    if source:
-        source_path = Path(source).expanduser()
-        if not source_path.is_file():
-            sys.exit(f"已配置的 progress_report 不存在或不是文件: {source_path}；"
-                     "请修正路径，若没有工作日志则将该项留空")
+    try:
+        source_path = resolve_progress_report(config.get("progress_report", ""))
+    except ValueError as exc:
+        sys.exit(f"{exc}；请修正路径，若没有工作日志则将该项留空")
+    if source_path:
         text = source_path.read_text(encoding="utf-8")
     else:
         text = ""
