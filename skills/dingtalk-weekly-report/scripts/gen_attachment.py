@@ -12,6 +12,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from xlsxlite import Workbook
+from dtwr_fields import ATTACHMENT_TASK_TYPES
 from dtwr_validation import ValidationError, validate_report
 
 NOTE = """注：
@@ -25,9 +26,6 @@ NOTE = """注：
 
 THIS_HEADERS = ["序号", "姓名", "周任务", "任务类型", "周交付物", "完成情况", "备注", "所关联的项目/活动", "所关联的部门目标"]
 NEXT_HEADERS = ["序号", "姓名", "周任务", "任务类型", "周交付物", "所关联的项目/活动", "所关联的部门目标"]
-TASK_TYPES = ["产品研发", "交付项目", "售前活动", "知识产权", "其他"]
-
-
 def compact(d: str) -> str:
     return d.replace("-", "")
 
@@ -86,7 +84,7 @@ def build(report: dict, out_dir: Path) -> Path:
     sh2 = wb.add_sheet("说明")
     sh2.col_widths.update({1: 12, 2: 12, 3: 12, 4: 12, 5: 12, 6: 12})
     sh2.cell(2, 1, "任务类型：", style=3)
-    for c, t in enumerate(TASK_TYPES, 2):
+    for c, t in enumerate(ATTACHMENT_TASK_TYPES, 2):
         sh2.cell(2, c, t, style=1)
 
     out_dir.mkdir(parents=True, exist_ok=True)

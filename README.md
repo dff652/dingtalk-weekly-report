@@ -108,6 +108,7 @@ fi
 4. 人审 json → 落**草稿** → **你**在钉钉点提交。
 
 三条铁律：只 `--draft --confirmed`；内容必人审；落草稿前删同周旧草稿。补交上周：**周一 17:00 前**。
+`--confirmed` 只是操作者完成检查清单的声明，不是人审记录或审计证明。
 
 纯 CLI：见 [USER_GUIDE.md](skills/dingtalk-weekly-report/USER_GUIDE.md)。
 

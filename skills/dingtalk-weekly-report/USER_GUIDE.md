@@ -112,6 +112,7 @@ cd ~/weekly-report-data
 ```
 
 人审 → `--draft --confirmed` → **你**在钉钉提交。铁律：不自动提交；删同周旧草稿。补交上周：**周一 17:00 前**。
+`--confirmed` 仅表示操作者完成了检查清单，不构成人审记录或审计证明。
 
 ### 3.2 CLI
 
@@ -148,4 +149,5 @@ python3 "$SKILL/scripts/print_form_rows.py" weeks/week_report_YYYYMMDD.json   # 
 ## 5. 安全
 
 输入、缺失处理和输出契约见 `references/CONTRACT.md`。只草稿、人提交；勿用他人
-`$WORK`/登录态；auth 链接与 `state.json` 当凭证。
+`$WORK`/登录态；auth 链接与 `state.json` 当凭证。属主自动检查目前仅在 POSIX 系统启用；
+Windows 依赖独立用户目录和系统 ACL 隔离。

@@ -1,12 +1,7 @@
 """配置与周报 JSON 的共享校验。"""
 from datetime import date, timedelta
 
-
-PROJECT_TYPES = {
-    "产品研发", "交付项目", "售前活动", "知识产权",
-    "公司和部门运营活动", "其他",
-}
-STATUSES = {"算法开发", "内部会议", "内外部会议", "休假", "其它"}
+from dtwr_fields import PROJECT_TYPES, STATUSES
 
 
 class ValidationError(ValueError):
@@ -19,6 +14,12 @@ def _text(value) -> str:
 
 def _has_todo(value) -> bool:
     return "TODO" in str(value).upper()
+
+
+def _hours_ok(value) -> bool:
+    return (isinstance(value, (int, float))
+            and not isinstance(value, bool)
+            and 0 < value <= 24)
 
 
 def validate_config(config: dict) -> None:
@@ -47,8 +48,7 @@ def validate_config(config: dict) -> None:
     if config.get("status") not in STATUSES:
         errors.append(f"status 非法: {config.get('status')!r}")
     hours = config.get("hours")
-    if (not isinstance(hours, (int, float)) or isinstance(hours, bool)
-            or not 0 < hours <= 24):
+    if not _hours_ok(hours):
         errors.append("hours 必须是 0~24 的数字")
 
     for key in ("standup", "monday_meeting"):
@@ -62,8 +62,7 @@ def validate_config(config: dict) -> None:
         if not _text(value.get("content")):
             errors.append(f"{key}.content 不能为空")
         nested_hours = value.get("hours")
-        if (not isinstance(nested_hours, (int, float)) or isinstance(nested_hours, bool)
-                or not 0 < nested_hours <= 24):
+        if not _hours_ok(nested_hours):
             errors.append(f"{key}.hours 必须是 0~24 的数字")
         if value.get("status") not in STATUSES:
             errors.append(f"{key}.status 非法: {value.get('status')!r}")
@@ -133,8 +132,7 @@ def validate_report(report: dict, require_complete: bool = True) -> None:
             errors.append(f"{label}.project 不能为空")
 
         hours = row.get("hours")
-        if (not isinstance(hours, (int, float)) or isinstance(hours, bool)
-                or not 0 < hours <= 24):
+        if not _hours_ok(hours):
             errors.append(f"{label}.hours 必须是 0~24 的数字")
         elif row_date is not None:
             daily_hours[row_date] += hours

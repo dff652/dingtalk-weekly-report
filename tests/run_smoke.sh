@@ -29,6 +29,16 @@ export HOME="$REAL_HOME"
 echo "======== 3) core tests ========"
 cd "$ROOT"
 python3 tests/test_core.py
+.venv/bin/python tests/test_fill_form_logic.py
+(
+  cd /tmp
+  python3 "$ROOT/skills/dingtalk-weekly-report/scripts/extract_week.py" --help \
+    | grep -q "用法"
+  "$ROOT/.venv/bin/python" \
+    "$ROOT/skills/dingtalk-weekly-report/scripts/fill_form.py" --help \
+    | grep -q "usage:"
+)
+echo "OK help works without workdir"
 HELP=$(.venv/bin/python skills/dingtalk-weekly-report/scripts/fill_form.py --help)
 if echo "$HELP" | grep -q -- "--submit"; then
   echo "FAIL: fill_form 仍暴露 --submit" >&2

@@ -48,6 +48,8 @@ npx skills add dff652/dingtalk-weekly-report -s dingtalk-weekly-report -a claude
 | `--keepalive` | 续 cookie | cron / 计划任务 |
 | `--dump` | DOM 诊断 | 联调 |
 
+`--confirmed` 是操作清单声明，不是审计证据。属主自动检查仅覆盖 POSIX；Windows 验收需检查用户目录 ACL。
+
 ## 维护触发表
 
 | 触发 | 动作 |

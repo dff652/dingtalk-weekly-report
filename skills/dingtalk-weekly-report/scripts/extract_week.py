@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """从 PROGRESS_REPORT.md 抽取指定周的内容，生成 week_report.json 草稿（供人工审改）。
 
-用法: python3 extract_week.py 2026-07-13          # 参数=周一日期；缺省=上一个周一
+用法: python3 extract_week.py 2026-07-13  # 参数=周一日期；缺省=周一取上周、其他日期取本周
 输出: weeks/week_report_YYYYMMDD.json（已存在则拒绝覆盖，防止冲掉人工修改）
 
 抽取策略（草稿性质，产出后必须人工过目）：
@@ -20,40 +20,27 @@ import sys as _sys
 _sys.path.insert(0, str(Path(__file__).resolve().parent))
 from dtwr_common import workdir
 from dtwr_validation import ValidationError, validate_config
-
-WORK = workdir()
-CONFIG = json.loads((WORK / "config.json").read_text(encoding="utf-8"))
+from dtwr_week import date_near_week, pick_monday
 
 DAY_RE = re.compile(r"^### (\d{1,2})月(\d{1,2})日(?:\s*[~～]\s*(\d{1,2})月(\d{1,2})日)?(?:（(.*?)）)?", re.M)
 WEEK_RE = re.compile(r"^### Week \d+（(\d{4}-\d{2}-\d{2}) ~ ?(\d{4}-\d{2}-\d{2})?[^）]*）—\s*(.*)$", re.M)
 
 
-def pick_monday(argv, today=None) -> date:
-    if len(argv) > 1:
-        d = date.fromisoformat(argv[1])
-    else:
-        today = today or date.today()
-        offset = 7 if today.weekday() == 0 else today.weekday()
-        d = today - timedelta(days=offset)
-    if d.weekday() != 0:
-        sys.exit(f"{d} 不是周一；请传周一日期")
-    return d
-
-
-def date_near_week(month, day, monday):
-    candidates = [date(year, month, day)
-                  for year in (monday.year - 1, monday.year, monday.year + 1)]
-    return min(candidates, key=lambda value: abs((value - monday).days))
-
-
 def main():
+    if len(sys.argv) > 1 and sys.argv[1] in ("-h", "--help"):
+        print("用法: python3 extract_week.py [YYYY-MM-DD周一日期]")
+        return
+    work = workdir()
+    config = json.loads((work / "config.json").read_text(encoding="utf-8"))
     try:
-        validate_config(CONFIG)
+        validate_config(config)
+        monday = pick_monday(sys.argv)
     except ValidationError as exc:
         sys.exit(str(exc))
-    monday = pick_monday(sys.argv)
+    except ValueError as exc:
+        sys.exit(str(exc))
     workdays = [monday + timedelta(days=i) for i in range(5)]
-    source = CONFIG.get("progress_report", "").strip()
+    source = config.get("progress_report", "").strip()
     if source:
         source_path = Path(source).expanduser()
         if not source_path.is_file():
@@ -67,11 +54,20 @@ def main():
 
     titles = {}  # date -> 标题
     for m in DAY_RE.finditer(text):
-        d1 = date_near_week(int(m.group(1)), int(m.group(2)), monday)
+        try:
+            d1 = date_near_week(int(m.group(1)), int(m.group(2)), monday)
+        except ValueError as exc:
+            sys.exit(f"工作日志日期标题非法「{m.group(0)}」: {exc}")
         if m.group(3):  # 区间标题：区间内所有天都标记为存在但无独立标题
-            d2 = date_near_week(int(m.group(3)), int(m.group(4)), monday)
+            try:
+                d2 = date_near_week(int(m.group(3)), int(m.group(4)), monday)
+            except ValueError as exc:
+                sys.exit(f"工作日志日期标题非法「{m.group(0)}」: {exc}")
             if d2 < d1:
-                d2 = date(d1.year + 1, d2.month, d2.day)
+                try:
+                    d2 = date(d1.year + 1, d2.month, d2.day)
+                except ValueError as exc:
+                    sys.exit(f"工作日志跨年日期非法「{m.group(0)}」: {exc}")
             d = d1
             while d <= d2:
                 titles.setdefault(d, "")
@@ -82,11 +78,11 @@ def main():
     days, missing = [], []
     for i, d in enumerate(workdays):
         # 周一=算法团队周例会，其余=产品研发站会（历史填报模式，可在 json 里增删）
-        meet = CONFIG["monday_meeting"] if i == 0 else CONFIG["standup"]
+        meet = config["monday_meeting"] if i == 0 else config["standup"]
         days.append({
             "date": str(d),
-            "project_type": meet.get("project_type", CONFIG["project_type"]),
-            "project": "" if meet.get("project_type") == "公司和部门运营活动" else CONFIG["form_project"],
+            "project_type": meet.get("project_type", config["project_type"]),
+            "project": "" if meet.get("project_type") == "公司和部门运营活动" else config["form_project"],
             "status": meet["status"],
             "hours": meet["hours"],
             "content": meet["content"],
@@ -97,10 +93,10 @@ def main():
             title = "TODO(人工补充：该日在 PROGRESS_REPORT.md 无独立标题——现场/传输/会议等非提交工作也要写)"
         days.append({
             "date": str(d),
-            "project_type": CONFIG["project_type"],
-            "project": CONFIG["form_project"],
-            "status": CONFIG["status"],
-            "hours": CONFIG["hours"],
+            "project_type": config["project_type"],
+            "project": config["form_project"],
+            "status": config["status"],
+            "hours": config["hours"],
             "content": title,
         })
 
@@ -113,24 +109,24 @@ def main():
         print(f"警告: 周报节未找到覆盖 {monday} 的 Week 条目——先更新 PROGRESS_REPORT.md 再生成周报", file=sys.stderr)
 
     report = {
-        "name": CONFIG["name"],
-        "form_project": CONFIG["form_project"],
-        "attach_project": CONFIG["attach_project"],
-        "dept_goal": CONFIG["dept_goal"],
+        "name": config["name"],
+        "form_project": config["form_project"],
+        "attach_project": config["attach_project"],
+        "dept_goal": config["dept_goal"],
         "week": {"start": str(monday), "end": str(monday + timedelta(days=6))},
         "days": days,
         "special_note": "",
         "summary": {
             "tasks": f"TODO(参考 Week 标题: {week_title})",
-            "task_type": CONFIG["project_type"],
+            "task_type": config["project_type"],
             "deliverables": "TODO",
             "done": "TODO(编号列表，逐任务/交付物说明完成状态)",
             "remark": "",
         },
-        "next_week": {"tasks": "TODO", "task_type": CONFIG["project_type"], "deliverables": "TODO"},
+        "next_week": {"tasks": "TODO", "task_type": config["project_type"], "deliverables": "TODO"},
     }
 
-    out = WORK / "weeks" / f"week_report_{monday.strftime('%Y%m%d')}.json"
+    out = work / "weeks" / f"week_report_{monday.strftime('%Y%m%d')}.json"
     out.parent.mkdir(exist_ok=True)
     if out.exists():
         sys.exit(f"{out} 已存在，拒绝覆盖（如需重生成先手动删除）")

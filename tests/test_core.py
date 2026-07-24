@@ -1,17 +1,24 @@
 #!/usr/bin/env python3
 import copy
 import json
+import os
 import sys
+import tempfile
 import unittest
 from datetime import date
 from pathlib import Path
+from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
-SCRIPTS = ROOT / "skills" / "dingtalk-weekly-report" / "scripts"
+SKILL = Path(os.environ.get(
+    "DTWR_SKILL", ROOT / "skills" / "dingtalk-weekly-report"))
+SCRIPTS = SKILL / "scripts"
 sys.path.insert(0, str(SCRIPTS))
 
+from dtwr_common import require_owned
+from dtwr_fields import ATTACHMENT_TASK_TYPES, PROJECT_TYPES, STATUSES
 from dtwr_validation import ValidationError, validate_config, validate_report
-from extract_week import date_near_week, pick_monday
+from dtwr_week import date_near_week, pick_monday
 
 
 class CoreTests(unittest.TestCase):
@@ -54,6 +61,23 @@ class CoreTests(unittest.TestCase):
             date_near_week(1, 1, date(2025, 12, 29)),
             date(2026, 1, 1),
         )
+
+    def test_invalid_heading_date_is_rejected(self):
+        with self.assertRaisesRegex(ValueError, "无效月日"):
+            date_near_week(2, 30, date(2026, 2, 23))
+
+    def test_runtime_enums_are_documented(self):
+        fields = (SKILL / "references/FIELDS.md").read_text(encoding="utf-8")
+        for value in (*PROJECT_TYPES, *ATTACHMENT_TASK_TYPES, *STATUSES):
+            self.assertIn(f"`{value}`", fields)
+
+    @unittest.skipUnless(hasattr(os, "geteuid"), "POSIX owner check")
+    def test_require_owned_rejects_different_uid(self):
+        with tempfile.TemporaryDirectory() as directory:
+            with patch("dtwr_common.os.geteuid",
+                       return_value=os.geteuid() + 1):
+                with self.assertRaisesRegex(SystemExit, "不属于当前用户"):
+                    require_owned(Path(directory), "测试目录")
 
     def test_report_fixture_is_valid(self):
         validate_report(self.report)

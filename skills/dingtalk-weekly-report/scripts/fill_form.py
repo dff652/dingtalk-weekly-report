@@ -28,10 +28,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from dtwr_common import require_owned, workdir
 from dtwr_validation import ValidationError, validate_config, validate_report
 
-WORK = workdir()
-CONFIG = json.loads((WORK / "config.json").read_text(encoding="utf-8"))
+WORK = None
+CONFIG = {}
 STATE = Path.home() / ".config" / "dtwr" / "state.json"
-SHOTS = WORK / "output" / "shots"
+SHOTS = None
 
 SUBGRID_ID = "2ee34a58f62e4c81b0076a2a3623a4aa"   # 工作详情子表（见 FIELDS.md）
 SUB = f'[id="{SUBGRID_ID}"]'
@@ -59,17 +59,41 @@ def shot(page, name):
     return p
 
 
+def init_runtime():
+    global WORK, CONFIG, SHOTS
+    WORK = workdir()
+    CONFIG = json.loads((WORK / "config.json").read_text(encoding="utf-8"))
+    SHOTS = WORK / "output" / "shots"
+
+
+def validate_form_url(url):
+    parsed = urlparse(url)
+    if parsed.scheme == "file":
+        return
+    if parsed.scheme != "https" or not (
+            parsed.hostname == "h3yun.com"
+            or (parsed.hostname or "").endswith(".h3yun.com")):
+        raise ValueError("表单 URL 必须是 https://*.h3yun.com；file:// 仅用于本地仿真")
+
+
+def validate_auth_url(auth_url):
+    parsed = urlparse(auth_url)
+    if (parsed.scheme != "https"
+            or not (parsed.hostname == "h3yun.com"
+                    or (parsed.hostname or "").endswith(".h3yun.com"))
+            or "/entry/auth" not in parsed.path
+            or not parse_qs(parsed.query).get("token")):
+        raise ValueError("--login-url 必须是含 token 的 https://*.h3yun.com/entry/auth 链接")
+
+
 def resolve_url(args):
     url = args.url or CONFIG.get("form_url", "")
     if not url:
         sys.exit("缺表单 URL：config.json 填 form_url，或 --url 传入")
-    parsed = urlparse(url)
-    if parsed.scheme == "file":
-        return url
-    if parsed.scheme != "https" or not (
-            parsed.hostname == "h3yun.com"
-            or (parsed.hostname or "").endswith(".h3yun.com")):
-        sys.exit("表单 URL 必须是 https://*.h3yun.com；file:// 仅用于本地仿真")
+    try:
+        validate_form_url(url)
+    except ValueError as exc:
+        sys.exit(str(exc))
     return url
 
 
@@ -86,13 +110,10 @@ def ensure_state_owner():
 
 def do_login_url(auth_url):
     """带 token 的一次性登录链接（打印内部二维码解出，48h 有效）直接建立登录态，免扫码。"""
-    parsed = urlparse(auth_url)
-    if (parsed.scheme != "https"
-            or not (parsed.hostname == "h3yun.com"
-                    or (parsed.hostname or "").endswith(".h3yun.com"))
-            or "/entry/auth" not in parsed.path
-            or not parse_qs(parsed.query).get("token")):
-        sys.exit("--login-url 必须是含 token 的 https://*.h3yun.com/entry/auth 链接")
+    try:
+        validate_auth_url(auth_url)
+    except ValueError as exc:
+        sys.exit(str(exc))
     ensure_state_owner()
     STATE.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
     with sync_playwright() as pw:
@@ -169,7 +190,7 @@ def fill_ant_date(fr, page, scope, value):
     page.wait_for_timeout(500)
 
 
-def pick_dropdown(fr, page, scope, value, required=True):
+def pick_dropdown(fr, page, scope, value):
     """氚云 h3-dropdown：点开控件 → 按选项文本精确点选。
 
     同名选项会以隐藏 li 残留在此前行的菜单里（ant-select 菜单不销毁），
@@ -183,11 +204,9 @@ def pick_dropdown(fr, page, scope, value, required=True):
         if el.is_visible():
             el.click()
             page.wait_for_timeout(500)
-            return True
+            return
     page.keyboard.press("Escape")
-    if required:
-        raise RuntimeError(f"下拉无可见选项「{value}」")
-    return False
+    raise RuntimeError(f"下拉无可见选项「{value}」")
 
 
 # ---------------- 填表 ----------------
@@ -221,16 +240,10 @@ def verify_draft_saved(fr, page, mock):
         if any(success.nth(i).is_visible() for i in range(success.count())):
             return
         for text in ("暂存成功", "保存成功", "操作成功"):
-            if frame.get_by_text(text, exact=False).count():
+            matches = frame.get_by_text(text, exact=False)
+            if any(matches.nth(i).is_visible() for i in range(matches.count())):
                 return
-
-    form_still_open = any(
-        "FormAdapter" in frame.url and frame.locator(F["start_date"]).count()
-        for frame in page.frames
-    )
-    if not form_still_open:
-        return
-    raise RuntimeError("点击暂存后未检测到成功提示或表单关闭，不能确认草稿已保存")
+    raise RuntimeError("点击暂存后未检测到可见的成功提示，不能确认草稿已保存")
 
 
 def do_fill(report_path, url, save_draft):
@@ -370,14 +383,18 @@ def main():
     ap.add_argument("--confirmed", action="store_true",
                     help="确认内容已经人工审核、同周旧草稿已经检查（与 --draft 同用）")
     args = ap.parse_args()
-    try:
-        validate_config(CONFIG)
-    except ValidationError as exc:
-        sys.exit(str(exc))
     if args.draft and not args.confirmed:
         ap.error("--draft 必须同时提供 --confirmed，表示已完成人审和同周旧草稿检查")
     if args.confirmed and not args.draft:
         ap.error("--confirmed 只能与 --draft 同用")
+    if not any((args.login_url, args.login, args.keepalive, args.dump, args.report_json)):
+        ap.print_help()
+        return
+    init_runtime()
+    try:
+        validate_config(CONFIG)
+    except ValidationError as exc:
+        sys.exit(str(exc))
     if args.login_url:
         do_login_url(args.login_url)
     elif args.login:
@@ -388,8 +405,6 @@ def main():
         do_dump(resolve_url(args))
     elif args.report_json:
         do_fill(args.report_json, resolve_url(args), args.draft)
-    else:
-        ap.print_help()
 
 
 if __name__ == "__main__":
