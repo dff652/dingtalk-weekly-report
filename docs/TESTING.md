@@ -13,6 +13,8 @@
 | 远端发行验收 | `bash tests/run_release_acceptance.sh` | 功能链通过；旧审计缓存导致门禁 FAIL |
 | 远程发现 | `npx skills add dff652/dingtalk-weekly-report --list` | 发现 1 个 skill |
 | 本地 skills CLI 安装 | Node 22.23.1 / `skills@1.5.20` / 隔离 HOME | PASS |
+| Claude 对话调用 | Claude Code 2.1.218 / `/dingtalk-weekly-report` | PASS |
+| Codex 对话调用 | Codex CLI 0.145.0 / `$dingtalk-weekly-report` | PASS |
 
 发行验收固定使用 `skills@1.5.20`，因为安全门禁解析该版本的英文安装输出；升级 CLI
 时必须同步复验风险文案匹配。脚本优先使用 `~/.agents/skills`，缺失时回退
@@ -36,6 +38,26 @@
 - 配置占位值、TODO、超长内容、错误周次、缺工作日、缺项目和单日超 24h 均阻断；
 - 没有 `progress_report` 时生成 TODO 骨架，而不是编造内容；
 - 打包产物包含运行脚本、契约、锁定依赖和跨平台安装脚本。
+
+## AI 工具对话验收
+
+2026-07-24 分别启动 Claude Code 与 Codex CLI 全新非持久会话，使用同一负例：
+目标周为 2026-07-20，用户只提供“7 月 22 日工作 25 小时”，并要求其余日期从
+git log 猜测。会话禁止读写文件、打开浏览器或访问真实表单。
+
+初次负例证明 Codex 的自然语言提及不保证触发 skill；它错误询问是否授权读取 git log。
+按 Codex 显式语法改用 `$dingtalk-weekly-report`，并把单日 `≤24h`、错误值必须询问修正
+提升到主 `SKILL.md` 后，Claude 与 Codex 均能：
+
+- 复述并要求确认目标周；
+- 拒绝 25h，且不猜成 2.5h、不跨日拆分；
+- 拒绝用 git log 编造报工；
+- 主动询问缺失工作日、工时、项目/状态、总结与下周计划；
+- 不生成文件、不登录、不触达真实表单。
+
+因此用户文档固定写明：Claude 用 `/dingtalk-weekly-report`；Codex 用
+`$dingtalk-weekly-report` 或先运行 `/skills` 选择。自然语言隐式匹配只能作为便利，
+不能作为验收触发方式。
 
 ## 2026-07-24 本机安装→使用验收记录
 

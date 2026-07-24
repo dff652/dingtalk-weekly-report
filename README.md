@@ -5,7 +5,7 @@
 | | |
 |---|---|
 | **Skill** | `dingtalk-weekly-report` |
-| **触发** | `/dingtalk-weekly-report`（可带周一日期） |
+| **触发** | Claude：`/dingtalk-weekly-report`；Codex：`$dingtalk-weekly-report` 或 `/skills` 选择 |
 | **仓库** | https://github.com/dff652/dingtalk-weekly-report |
 | **平台** | 氚云 H3yun（非宜搭） |
 | **分发** | 公司内部；包内含表单结构，勿外传 |
@@ -65,7 +65,7 @@ bash ~/.claude/skills/dingtalk-weekly-report/bootstrap.sh
    mkdir -p ~/.codex/skills && ln -sfn ~/.claude/skills/dingtalk-weekly-report ~/.codex/skills/dingtalk-weekly-report
 3. 执行：bash ~/.claude/skills/dingtalk-weekly-report/bootstrap.sh
 4. 按 skills/dingtalk-weekly-report/USER_GUIDE.md 与 SKILL.md 引导我填写 config.json、完成扫码登录；不得让我把 auth 链接发到聊天或放进命令参数。
-5. 之后用 /dingtalk-weekly-report 做周报；只允许 --draft --confirmed；脚本无提交能力；内容必须人审。
+5. 之后 Claude 用 /dingtalk-weekly-report、Codex 用 $dingtalk-weekly-report（或 /skills 选择）做周报；只允许 --draft --confirmed；脚本无提交能力；内容必须人审。
 
 装完请运行自检（见 README「Verify」）并报告结果。
 ```
@@ -99,13 +99,18 @@ fi
 ## Use
 
 1. 编辑 `~/weekly-report-data/config.json`（姓名、`form_project` 完整原文、`attach_project`、可选 `progress_report`）。
-2. **新开** Claude / Codex 会话：
+2. **新开** AI 会话并显式调用（自然语言提及不作为可靠触发方式）：
 
 ```text
+# Claude Code
 /dingtalk-weekly-report
+
+# Codex
+$dingtalk-weekly-report
 ```
 
-或指定周一：`/dingtalk-weekly-report 2026-07-20`
+指定周一：Claude 用 `/dingtalk-weekly-report 2026-07-20`；Codex 用
+`$dingtalk-weekly-report 2026-07-20`，也可先运行 `/skills` 选择。
 
 3. 首次登录首选 `fill_form.py --login` 后扫码；若使用内部二维码 auth 链接，
    由你本人在本机终端运行 `fill_form.py --login-url` 并按隐藏提示粘贴，勿交给 Agent。

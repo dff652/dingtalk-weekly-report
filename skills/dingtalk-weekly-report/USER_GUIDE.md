@@ -47,7 +47,7 @@ bash ~/.claude/skills/dingtalk-weekly-report/bootstrap.sh
 1) npx skills add https://github.com/dff652/dingtalk-weekly-report --skill dingtalk-weekly-report --agent claude-code --agent codex --global --yes --copy
 2) 若无 ~/.codex/skills/dingtalk-weekly-report：ln -sfn ~/.claude/skills/dingtalk-weekly-report ~/.codex/skills/dingtalk-weekly-report（先 mkdir -p ~/.codex/skills）
 3) bash ~/.claude/skills/dingtalk-weekly-report/bootstrap.sh
-4) 引导填写 config、钉钉登录；用 /dingtalk-weekly-report 做周报；只 --draft --confirmed；脚本无提交能力；内容人审。
+4) 引导填写 config、钉钉登录；Claude 用 /dingtalk-weekly-report、Codex 用 $dingtalk-weekly-report（或 /skills 选择）做周报；只 --draft --confirmed；脚本无提交能力；内容人审。
 5) 按 README Verify 自检并汇报。
 ```
 
@@ -68,7 +68,7 @@ Windows：`.\install.ps1` → `.\bootstrap.ps1`
 | 工具 | 路径 | 触发 |
 |------|------|------|
 | Claude Code | `~/.claude/skills/dingtalk-weekly-report/` | `/dingtalk-weekly-report` |
-| Codex | `~/.codex/skills/…`（建议显式补链）及/或 `~/.agents/skills/…` | 同名 skill |
+| Codex | `~/.codex/skills/…`（建议显式补链）及/或 `~/.agents/skills/…` | `$dingtalk-weekly-report` 或 `/skills` 选择 |
 | Agents | `~/.agents/skills/…` | 视工具 |
 
 ### 2.5 Verify（自检）
@@ -114,9 +114,16 @@ cd ~/weekly-report-data
 ### 3.1 AI（推荐）
 
 ```text
+# Claude Code
 /dingtalk-weekly-report
 /dingtalk-weekly-report 2026-07-20
+
+# Codex
+$dingtalk-weekly-report
+$dingtalk-weekly-report 2026-07-20
 ```
+
+Codex 也可先运行 `/skills` 再选择；不要只靠自然语言提及来判断 skill 已触发。
 
 人审 → `--draft --confirmed` → **你**在钉钉提交。铁律：不自动提交；删同周旧草稿。补交上周：**周一 17:00 前**。
 `--confirmed` 仅表示操作者完成了检查清单，不构成人审记录或审计证明。
