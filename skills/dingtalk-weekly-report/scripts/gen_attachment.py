@@ -12,6 +12,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from xlsxlite import Workbook
+from dtwr_validation import ValidationError, validate_report
 
 NOTE = """注：
 
@@ -53,7 +54,7 @@ def build(report: dict, out_dir: Path) -> Path:
 
     r = 1
     sh.cell(r, 1, f"本周工作总结 周：{compact(str(monday))}-{compact(str(friday))}", style=3)
-    sh.merge(f"A{r}:H{r}")
+    sh.merge(f"A{r}:I{r}")
     r += 1
     for c, h in enumerate(THIS_HEADERS, 1):
         sh.cell(r, c, h, style=2)
@@ -100,9 +101,10 @@ def main():
     ap.add_argument("-o", "--out-dir", default="output")
     args = ap.parse_args()
     report = json.loads(Path(args.report_json).read_text(encoding="utf-8"))
-    for key in ("week", "summary", "next_week"):
-        if key not in report:
-            sys.exit(f"week_report.json 缺少必填节 {key!r}（先跑 extract_week.py 生成草稿并人工补齐）")
+    try:
+        validate_report(report)
+    except ValidationError as exc:
+        sys.exit(str(exc))
     out = build(report, Path(args.out_dir))
     print(f"已生成: {out}")
 

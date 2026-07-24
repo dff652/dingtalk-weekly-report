@@ -48,7 +48,7 @@ if (-not (Test-Path $Py)) {
 }
 
 Write-Host "==> 安装 playwright"
-uv pip install --python $Py playwright
+uv pip install --python $Py -r (Join-Path $Skill "requirements-runtime.txt")
 Write-Host "==> 安装 Chromium"
 & $Py -m playwright install chromium
 

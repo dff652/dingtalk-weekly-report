@@ -7,9 +7,12 @@
 | [../skills/dingtalk-weekly-report/SKILL.md](../skills/dingtalk-weekly-report/SKILL.md) | Agent | 周报 SOP |
 | [../skills/dingtalk-weekly-report/references/FIELDS.md](../skills/dingtalk-weekly-report/references/FIELDS.md) | 维护者 | 表单字段 |
 | [MAINTAINER.md](MAINTAINER.md) | 维护者 | 打包、测试、调试、路线图 |
+| [PUBLISHING.md](PUBLISHING.md) | 维护者 | skills.sh 分发、公开发布与脱敏门槛 |
+| [TESTING.md](TESTING.md) | 维护者/验收人 | 自动测试结果与真实人工验收边界 |
 | [USER_GUIDE.md](USER_GUIDE.md) | — | 跳转到技能包内正文 |
 
 ## 分发
 
-- **推荐**：GitHub + `npx skills add`（见根 README）
+- **公开生态**：脱敏后使用 GitHub + `npx skills add`（见 `PUBLISHING.md`）
+- **公司内部**：私有 Git URL / 内部 zip，不进入 skills.sh 公共索引
 - **zip**：`bash pack-skill.sh` → 仅技能目录（含 USER_GUIDE），无个人数据

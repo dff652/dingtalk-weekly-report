@@ -12,9 +12,11 @@
 
 ---
 
-## Install（skills hub 风格）
+## Install（skills.sh / skills CLI）
 
 需要 [Node.js](https://nodejs.org/)（`npx`）与 [uv](https://docs.astral.sh/uv/)。
+这里使用的是官方开放生态的 `npx skills add` 安装方式；它只安装 skill 文件，
+随后仍需运行本项目的 bootstrap 安装 Python/Chromium 运行时。
 
 ```bash
 # 1) 装 skill → Claude Code + Codex（全局）
@@ -43,6 +45,9 @@ bash ~/.claude/skills/dingtalk-weekly-report/bootstrap.sh
 
 升级 skill：`npx skills update dingtalk-weekly-report -g -y`（或 `install.sh --force`）
 
+> 分发边界：当前仓库可被公开 GitHub URL 克隆，但项目又声明“仅公司内部”，且包含内部表单结构。
+> 在决定公开进入 skills.sh 前，请先阅读 [发布与脱敏要求](docs/PUBLISHING.md)。
+
 ---
 
 ## 只给仓库 URL 时：复制给 AI
@@ -58,7 +63,7 @@ bash ~/.claude/skills/dingtalk-weekly-report/bootstrap.sh
    mkdir -p ~/.codex/skills && ln -sfn ~/.claude/skills/dingtalk-weekly-report ~/.codex/skills/dingtalk-weekly-report
 3. 执行：bash ~/.claude/skills/dingtalk-weekly-report/bootstrap.sh
 4. 按 skills/dingtalk-weekly-report/USER_GUIDE.md 与 SKILL.md 引导我填写 config.json、完成钉钉「打印内部二维码」登录。
-5. 之后用 /dingtalk-weekly-report 做周报；只允许 --draft，禁止 --submit；内容必须人审。
+5. 之后用 /dingtalk-weekly-report 做周报；只允许 --draft --confirmed；脚本无提交能力；内容必须人审。
 
 装完请运行自检（见 README「Verify」）并报告结果。
 ```
@@ -102,7 +107,7 @@ fi
 3. 首次登录：钉钉报工周报 → 打印内部二维码 → 把 `h3yun.com/entry/auth?token=…` 交给 agent / `--login-url`。
 4. 人审 json → 落**草稿** → **你**在钉钉点提交。
 
-三条铁律：只 `--draft`；内容必人审；落草稿前删同周旧草稿。补交上周：**周一 17:00 前**。
+三条铁律：只 `--draft --confirmed`；内容必人审；落草稿前删同周旧草稿。补交上周：**周一 17:00 前**。
 
 纯 CLI：见 [USER_GUIDE.md](skills/dingtalk-weekly-report/USER_GUIDE.md)。
 
@@ -114,8 +119,11 @@ fi
 |------|------|
 | [skills/…/USER_GUIDE.md](skills/dingtalk-weekly-report/USER_GUIDE.md) | 安装细节、每周 CLI、FAQ（随 skill / zip） |
 | [skills/…/SKILL.md](skills/dingtalk-weekly-report/SKILL.md) | Agent 执行 SOP |
+| [skills/…/references/CONTRACT.md](skills/dingtalk-weekly-report/references/CONTRACT.md) | 输入、缺失处理、输出与失败契约 |
 | [skills/…/references/FIELDS.md](skills/dingtalk-weekly-report/references/FIELDS.md) | 表单字段事实源 |
 | [docs/MAINTAINER.md](docs/MAINTAINER.md) | 维护仓：打包、测试、调试、路线图 |
+| [docs/PUBLISHING.md](docs/PUBLISHING.md) | skills.sh 安装、公开发布与内部私有分发 |
+| [docs/TESTING.md](docs/TESTING.md) | 自动测试覆盖、最近结果与人工验收边界 |
 | [docs/](docs/) | 文档索引 |
 
-维护者：`bash pack-skill.sh` 打 zip；`bash tests/run_smoke.sh` 冒烟。更多见 [MAINTAINER.md](docs/MAINTAINER.md)。
+维护者：`bash tests/run_smoke.sh` 快速回归；`bash tests/run_full_acceptance.sh` 做隔离安装到仿真暂存的完整验收。更多见 [MAINTAINER.md](docs/MAINTAINER.md)。

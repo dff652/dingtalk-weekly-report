@@ -1,0 +1,13 @@
+{
+  "name": "验收人员",
+  "form_url": "https://www.h3yun.com/application/test-form",
+  "form_project": "D-PD-TEST    测试项目    测试负责人",
+  "attach_project": "D-DP-TEST 测试项目",
+  "dept_goal": "测试目标",
+  "project_type": "产品研发",
+  "status": "算法开发",
+  "hours": 8,
+  "standup": {"content": "产品研发站会", "hours": 0.5, "status": "内部会议"},
+  "monday_meeting": {"content": "团队周例会", "hours": 0.5, "status": "内外部会议", "project_type": "公司和部门运营活动"},
+  "progress_report": ""
+}

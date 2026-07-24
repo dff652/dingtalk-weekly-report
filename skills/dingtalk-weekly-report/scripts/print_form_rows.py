@@ -9,6 +9,9 @@ import sys
 from datetime import date, timedelta
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from dtwr_validation import ValidationError, validate_report
+
 WEEKDAY = "一二三四五六日"
 
 
@@ -16,10 +19,11 @@ def main():
     if len(sys.argv) != 2:
         sys.exit("用法: python3 print_form_rows.py weeks/week_report_YYYYMMDD.json")
     r = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+    try:
+        validate_report(r)
+    except ValidationError as exc:
+        sys.exit(str(exc))
     w = r["week"]
-    todo = [d["date"] for d in r["days"] if "TODO" in d.get("content", "")]
-    if todo:
-        sys.exit(f"content 仍有 TODO 占位未补齐: {', '.join(todo)}——先改 json 再出粘贴块")
 
     monday = date.fromisoformat(w["start"])
     friday = monday + timedelta(days=4)

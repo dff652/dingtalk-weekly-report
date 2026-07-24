@@ -19,6 +19,7 @@ from pathlib import Path
 import sys as _sys
 _sys.path.insert(0, str(Path(__file__).resolve().parent))
 from dtwr_common import workdir
+from dtwr_validation import ValidationError, validate_config
 
 WORK = workdir()
 CONFIG = json.loads((WORK / "config.json").read_text(encoding="utf-8"))
@@ -27,28 +28,50 @@ DAY_RE = re.compile(r"^### (\d{1,2})月(\d{1,2})日(?:\s*[~～]\s*(\d{1,2})月(\
 WEEK_RE = re.compile(r"^### Week \d+（(\d{4}-\d{2}-\d{2}) ~ ?(\d{4}-\d{2}-\d{2})?[^）]*）—\s*(.*)$", re.M)
 
 
-def pick_monday(argv) -> date:
+def pick_monday(argv, today=None) -> date:
     if len(argv) > 1:
         d = date.fromisoformat(argv[1])
     else:
-        today = date.today()
-        d = today - timedelta(days=today.weekday() + 7)  # 上一个周一
+        today = today or date.today()
+        offset = 7 if today.weekday() == 0 else today.weekday()
+        d = today - timedelta(days=offset)
     if d.weekday() != 0:
         sys.exit(f"{d} 不是周一；请传周一日期")
     return d
 
 
+def date_near_week(month, day, monday):
+    candidates = [date(year, month, day)
+                  for year in (monday.year - 1, monday.year, monday.year + 1)]
+    return min(candidates, key=lambda value: abs((value - monday).days))
+
+
 def main():
+    try:
+        validate_config(CONFIG)
+    except ValidationError as exc:
+        sys.exit(str(exc))
     monday = pick_monday(sys.argv)
-    year = monday.year
     workdays = [monday + timedelta(days=i) for i in range(5)]
-    text = Path(CONFIG["progress_report"]).read_text(encoding="utf-8")
+    source = CONFIG.get("progress_report", "").strip()
+    if source:
+        source_path = Path(source).expanduser()
+        if not source_path.is_file():
+            sys.exit(f"已配置的 progress_report 不存在或不是文件: {source_path}；"
+                     "请修正路径，若没有工作日志则将该项留空")
+        text = source_path.read_text(encoding="utf-8")
+    else:
+        text = ""
+        print("未配置 progress_report：将生成逐日 TODO 骨架，请通过访谈/手工补齐后再生成附件",
+              file=sys.stderr)
 
     titles = {}  # date -> 标题
     for m in DAY_RE.finditer(text):
-        d1 = date(year, int(m.group(1)), int(m.group(2)))
+        d1 = date_near_week(int(m.group(1)), int(m.group(2)), monday)
         if m.group(3):  # 区间标题：区间内所有天都标记为存在但无独立标题
-            d2 = date(year, int(m.group(3)), int(m.group(4)))
+            d2 = date_near_week(int(m.group(3)), int(m.group(4)), monday)
+            if d2 < d1:
+                d2 = date(d1.year + 1, d2.month, d2.day)
             d = d1
             while d <= d2:
                 titles.setdefault(d, "")

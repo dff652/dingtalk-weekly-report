@@ -47,7 +47,7 @@ bash ~/.claude/skills/dingtalk-weekly-report/bootstrap.sh
 1) npx skills add https://github.com/dff652/dingtalk-weekly-report --skill dingtalk-weekly-report --agent claude-code --agent codex --global --yes --copy
 2) 若无 ~/.codex/skills/dingtalk-weekly-report：ln -sfn ~/.claude/skills/dingtalk-weekly-report ~/.codex/skills/dingtalk-weekly-report（先 mkdir -p ~/.codex/skills）
 3) bash ~/.claude/skills/dingtalk-weekly-report/bootstrap.sh
-4) 引导填写 config、钉钉登录；用 /dingtalk-weekly-report 做周报；只 --draft，禁止 --submit；内容人审。
+4) 引导填写 config、钉钉登录；用 /dingtalk-weekly-report 做周报；只 --draft --confirmed；脚本无提交能力；内容人审。
 5) 按 README Verify 自检并汇报。
 ```
 
@@ -111,7 +111,7 @@ cd ~/weekly-report-data
 /dingtalk-weekly-report 2026-07-20
 ```
 
-人审 → `--draft` → **你**在钉钉提交。铁律：不自动提交；删同周旧草稿。补交上周：**周一 17:00 前**。
+人审 → `--draft --confirmed` → **你**在钉钉提交。铁律：不自动提交；删同周旧草稿。补交上周：**周一 17:00 前**。
 
 ### 3.2 CLI
 
@@ -123,7 +123,7 @@ cd "$WORK"
 python3 "$SKILL/scripts/extract_week.py"    # 已存在 json 会拒绝覆盖
 python3 "$SKILL/scripts/gen_attachment.py" weeks/week_report_YYYYMMDD.json
 .venv/bin/python "$SKILL/scripts/fill_form.py" --keepalive
-.venv/bin/python "$SKILL/scripts/fill_form.py" weeks/week_report_YYYYMMDD.json --draft
+.venv/bin/python "$SKILL/scripts/fill_form.py" weeks/week_report_YYYYMMDD.json --draft --confirmed
 python3 "$SKILL/scripts/print_form_rows.py" weeks/week_report_YYYYMMDD.json   # 回退
 ```
 
@@ -132,8 +132,7 @@ python3 "$SKILL/scripts/print_form_rows.py" weeks/week_report_YYYYMMDD.json   # 
 | 命令 | 作用 |
 |------|------|
 | `json` | 只填不存 |
-| `json --draft` | 正式落草稿 |
-| `json --submit` | 勿用（政策） |
+| `json --draft --confirmed` | 人审并检查旧草稿后，正式落草稿 |
 | `--login-url` / `--keepalive` / `--dump` | 登录 / 续期 / 诊断 |
 
 ## 4. FAQ
@@ -148,4 +147,5 @@ python3 "$SKILL/scripts/print_form_rows.py" weeks/week_report_YYYYMMDD.json   # 
 
 ## 5. 安全
 
-只草稿、人提交；勿用他人 `$WORK`/登录态；auth 链接与 `state.json` 当凭证。
+输入、缺失处理和输出契约见 `references/CONTRACT.md`。只草稿、人提交；勿用他人
+`$WORK`/登录态；auth 链接与 `state.json` 当凭证。

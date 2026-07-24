@@ -10,7 +10,7 @@ rm -f "$OUT"
 (cd skills && zip -rq "../$OUT" dingtalk-weekly-report \
   -x '*__pycache__*' -x '*.pyc')
 echo "分发物: $OUT"
-unzip -l "$OUT" | head -20
+unzip -l "$OUT" | sed -n '1,20p'
 echo "..."
 unzip -l "$OUT" | tail -3
 cat <<'EOF'

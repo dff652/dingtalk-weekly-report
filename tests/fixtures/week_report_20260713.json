@@ -1,0 +1,62 @@
+{
+  "name": "验收人员",
+  "form_project": "D-PD-TEST    测试项目    测试负责人",
+  "attach_project": "D-DP-TEST 测试项目",
+  "dept_goal": "测试目标",
+  "week": {"start": "2026-07-13", "end": "2026-07-19"},
+  "days": [
+    {
+      "date": "2026-07-13",
+      "project_type": "公司和部门运营活动",
+      "project": "",
+      "status": "内外部会议",
+      "hours": 8,
+      "content": "周例会及部门协作事项"
+    },
+    {
+      "date": "2026-07-14",
+      "project_type": "产品研发",
+      "project": "D-PD-TEST    测试项目    测试负责人",
+      "status": "算法开发",
+      "hours": 8,
+      "content": "完成输入校验与错误分支测试"
+    },
+    {
+      "date": "2026-07-15",
+      "project_type": "产品研发",
+      "project": "D-PD-TEST    测试项目    测试负责人",
+      "status": "算法开发",
+      "hours": 8,
+      "content": "完成附件生成与结构检查"
+    },
+    {
+      "date": "2026-07-16",
+      "project_type": "产品研发",
+      "project": "D-PD-TEST    测试项目    测试负责人",
+      "status": "算法开发",
+      "hours": 8,
+      "content": "完成表单字段仿真回填"
+    },
+    {
+      "date": "2026-07-17",
+      "project_type": "产品研发",
+      "project": "D-PD-TEST    测试项目    测试负责人",
+      "status": "算法开发",
+      "hours": 8,
+      "content": "完成安装到使用的验收测试"
+    }
+  ],
+  "special_note": "",
+  "summary": {
+    "tasks": "周报工具安全与测试完善",
+    "task_type": "产品研发",
+    "deliverables": "输入输出契约、校验器和自动测试",
+    "done": "全部计划检查项已通过自动测试",
+    "remark": ""
+  },
+  "next_week": {
+    "tasks": "真实环境人工验收",
+    "task_type": "产品研发",
+    "deliverables": "草稿截图与人工验收记录"
+  }
+}

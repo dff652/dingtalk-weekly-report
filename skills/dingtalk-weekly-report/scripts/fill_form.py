@@ -4,15 +4,14 @@
 真机已验证（2026-07-21，worker dev box headless chromium）：
   登录态(token 链接免扫码)/新增打开/报工开始日期(结束日期联动)/子表行日期(星期联动)/
   项目类型与工作状态下拉选中/工时(系统字段联动)/主要工作内容 —— 全部走通。
-  「项目/产品名称」关联下拉暂不出数据（前端不发数据查询，原因待与手工行为对比），
-  填不上时告警跳过，由人工在草稿里补。
+  「项目/产品名称」关联下拉必须成功选中；失败时阻断，不保存不完整草稿。
 
 用法：
   登录(免扫码):   .venv/bin/python fill_form.py --login-url '<打印内部二维码解出的 entry/auth 链接>'
   登录(扫码):     .venv/bin/python fill_form.py --login   # 二维码截图 output/shots/login.png
   填表:           .venv/bin/python fill_form.py weeks/week_report_20260713.json
-                  默认填完截图停下；--draft 点「暂存」（推荐：钉钉里人工核对草稿后再提交）；
-                  --submit 点「提交」。
+                  默认填完截图停下；人工确认内容并检查旧草稿后，
+                  --draft --confirmed 点「暂存」；本工具不提供提交能力。
   诊断:           .venv/bin/python fill_form.py --dump
 """
 import argparse
@@ -21,11 +20,13 @@ import sys
 import time
 from datetime import date, timedelta
 from pathlib import Path
+from urllib.parse import parse_qs, urlparse
 
 from playwright.sync_api import sync_playwright, TimeoutError as PWTimeout
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from dtwr_common import workdir
+from dtwr_common import require_owned, workdir
+from dtwr_validation import ValidationError, validate_config, validate_report
 
 WORK = workdir()
 CONFIG = json.loads((WORK / "config.json").read_text(encoding="utf-8"))
@@ -62,6 +63,13 @@ def resolve_url(args):
     url = args.url or CONFIG.get("form_url", "")
     if not url:
         sys.exit("缺表单 URL：config.json 填 form_url，或 --url 传入")
+    parsed = urlparse(url)
+    if parsed.scheme == "file":
+        return url
+    if parsed.scheme != "https" or not (
+            parsed.hostname == "h3yun.com"
+            or (parsed.hostname or "").endswith(".h3yun.com")):
+        sys.exit("表单 URL 必须是 https://*.h3yun.com；file:// 仅用于本地仿真")
     return url
 
 
@@ -71,8 +79,21 @@ def is_mock(url):
 
 # ---------------- 登录 ----------------
 
+def ensure_state_owner():
+    require_owned(STATE.parent, "登录态目录")
+    require_owned(STATE, "登录态文件")
+
+
 def do_login_url(auth_url):
     """带 token 的一次性登录链接（打印内部二维码解出，48h 有效）直接建立登录态，免扫码。"""
+    parsed = urlparse(auth_url)
+    if (parsed.scheme != "https"
+            or not (parsed.hostname == "h3yun.com"
+                    or (parsed.hostname or "").endswith(".h3yun.com"))
+            or "/entry/auth" not in parsed.path
+            or not parse_qs(parsed.query).get("token")):
+        sys.exit("--login-url 必须是含 token 的 https://*.h3yun.com/entry/auth 链接")
+    ensure_state_owner()
     STATE.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
     with sync_playwright() as pw:
         browser = pw.chromium.launch(headless=True)
@@ -90,6 +111,7 @@ def do_login_url(auth_url):
 
 
 def do_login(url):
+    ensure_state_owner()
     STATE.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
     with sync_playwright() as pw:
         browser = pw.chromium.launch(headless=True)
@@ -177,8 +199,46 @@ def attach_path(monday_str):
         f"{monday.strftime('%Y%m%d')}-{friday.strftime('%Y%m%d')}本周工作总结与下周计划.xlsx")
 
 
-def do_fill(report_path, url, action):
+def verify_draft_saved(fr, page, mock):
+    if mock:
+        result = json.loads(fr.locator("#result").inner_text())
+        if result.get("kind") != "draft":
+            raise RuntimeError(f"仿真表单动作错误: {result.get('kind')!r}")
+        print("MOCK_RESULT:", json.dumps(result, ensure_ascii=False))
+        return
+
+    error_selector = (
+        ".ant-message-error, .ant-notification-notice-error, "
+        ".has-error .ant-form-explain"
+    )
+    success_selector = ".ant-message-success, .ant-notification-notice-success"
+    for frame in page.frames:
+        errors = frame.locator(error_selector)
+        for i in range(errors.count()):
+            if errors.nth(i).is_visible():
+                raise RuntimeError(f"暂存失败: {errors.nth(i).inner_text().strip()}")
+        success = frame.locator(success_selector)
+        if any(success.nth(i).is_visible() for i in range(success.count())):
+            return
+        for text in ("暂存成功", "保存成功", "操作成功"):
+            if frame.get_by_text(text, exact=False).count():
+                return
+
+    form_still_open = any(
+        "FormAdapter" in frame.url and frame.locator(F["start_date"]).count()
+        for frame in page.frames
+    )
+    if not form_still_open:
+        return
+    raise RuntimeError("点击暂存后未检测到成功提示或表单关闭，不能确认草稿已保存")
+
+
+def do_fill(report_path, url, save_draft):
     report = json.loads(Path(report_path).read_text(encoding="utf-8"))
+    try:
+        validate_report(report)
+    except ValidationError as exc:
+        sys.exit(str(exc))
     w = report["week"]
     attach = attach_path(w["start"])
     if not attach.exists():
@@ -187,7 +247,6 @@ def do_fill(report_path, url, action):
     if not mock and not STATE.exists():
         sys.exit("无登录态，先跑: fill_form.py --login / --login-url")
 
-    warnings = []
     with sync_playwright() as pw:
         browser = pw.chromium.launch(headless=True)
         ctx = browser.new_context(
@@ -227,32 +286,25 @@ def do_fill(report_path, url, action):
                 fill_ant_date(fr, page, row.locator(F["row_date"]), d["date"])
                 pick_dropdown(fr, page, row.locator(F["row_type"]).first, d["project_type"])
                 if d.get("project"):
-                    ok = pick_dropdown(fr, page, row.locator(F["row_project"]).first,
-                                       d["project"], required=False)
-                    if not ok:
-                        warnings.append(f"行{i+1} 项目/产品名称「{d['project']}」下拉无数据，已跳过（草稿里人工补）")
+                    pick_dropdown(fr, page, row.locator(F["row_project"]).first,
+                                  d["project"])
                 pick_dropdown(fr, page, row.locator(F["row_status"]).first, d["status"])
                 row.locator(f'{F["row_hours"]} input').first.fill(str(d["hours"]))
                 content = d.get("content", "")
-                if len(content) > 200:
-                    warnings.append(f"行{i+1} 主要工作内容 {len(content)} 字超 200 上限，控件会截断——回 json 精简")
                 row.locator(f'{F["row_content"]} textarea, {F["row_content"]} input').first.fill(content)
 
             shot(page, "20-filled-review")
-            for msg in warnings:
-                log(f"⚠ {msg}")
             log("已填完，核对 output/shots/20-filled-review.png")
 
-            if action == "review":
-                log("未保存（默认只填不存）。要落草稿加 --draft，直接提交加 --submit")
+            if not save_draft:
+                log("未保存（默认只填不存）。人工确认内容并检查旧草稿后，加 --draft --confirmed")
                 return
-            btn_name = "暂 存" if action == "draft" else "提 交"
+            btn_name = "暂 存"
             fr.get_by_text(btn_name, exact=True).first.click()
             page.wait_for_timeout(500 if mock else 4000)
+            verify_draft_saved(fr, page, mock)
             shot(page, "30-saved")
-            if mock:
-                print("MOCK_RESULT:", fr.locator("#result").inner_text())
-            log(f"已点「{btn_name.replace(' ', '')}」，看 30-saved.png 确认结果")
+            log("草稿暂存成功，见 30-saved.png")
         except (PWTimeout, RuntimeError) as e:
             shot(page, "99-error")
             sys.exit(f"失败: {e}（截图 output/shots/99-error.png 发给 Claude 联调）")
@@ -267,6 +319,7 @@ def do_keepalive(url):
     失效时 fail-loud（cron 日志可见），此时需要用户重新给「打印内部二维码」链接。"""
     if not STATE.exists():
         sys.exit("keepalive: 无登录态文件")
+    ensure_state_owner()
     with sync_playwright() as pw:
         browser = pw.chromium.launch(headless=True)
         ctx = browser.new_context(storage_state=str(STATE), viewport={"width": 1440, "height": 900})
@@ -313,9 +366,18 @@ def main():
     ap.add_argument("--dump", action="store_true")
     ap.add_argument("--keepalive", action="store_true", help="访问列表页续会话并回存 cookie（cron 用）")
     ap.add_argument("--url", help="覆盖 config.form_url（联调/仿真用）")
-    ap.add_argument("--draft", action="store_true", help="填完点「暂存」落草稿（推荐）")
-    ap.add_argument("--submit", action="store_true", help="填完直接点「提交」")
+    ap.add_argument("--draft", action="store_true", help="填完点「暂存」落草稿")
+    ap.add_argument("--confirmed", action="store_true",
+                    help="确认内容已经人工审核、同周旧草稿已经检查（与 --draft 同用）")
     args = ap.parse_args()
+    try:
+        validate_config(CONFIG)
+    except ValidationError as exc:
+        sys.exit(str(exc))
+    if args.draft and not args.confirmed:
+        ap.error("--draft 必须同时提供 --confirmed，表示已完成人审和同周旧草稿检查")
+    if args.confirmed and not args.draft:
+        ap.error("--confirmed 只能与 --draft 同用")
     if args.login_url:
         do_login_url(args.login_url)
     elif args.login:
@@ -325,8 +387,7 @@ def main():
     elif args.dump:
         do_dump(resolve_url(args))
     elif args.report_json:
-        action = "submit" if args.submit else ("draft" if args.draft else "review")
-        do_fill(args.report_json, resolve_url(args), action)
+        do_fill(args.report_json, resolve_url(args), args.draft)
     else:
         ap.print_help()
 

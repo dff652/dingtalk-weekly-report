@@ -75,7 +75,7 @@ fi
 [ -x "$PY" ] || { echo "❌ 找不到 venv python: $WORK/.venv" >&2; exit 1; }
 
 echo "==> 安装 playwright"
-uv pip install --python "$PY" playwright
+uv pip install --python "$PY" -r "$SKILL/requirements-runtime.txt"
 echo "==> 安装 Chromium（Playwright 自带）"
 "$PY" -m playwright install chromium
 
