@@ -14,10 +14,14 @@ unzip -l "$OUT" | head -20
 echo "..."
 unzip -l "$OUT" | tail -3
 cat <<'EOF'
-给同事的两行安装说明:
-  unzip dingtalk-weekly-report-skill-*.zip && bash dingtalk-weekly-report/install.sh
-  然后打开 Claude Code 输 /dingtalk-weekly-report 按引导走。
-维护仓软链装载:
+给同事（Linux/mac/WSL）:
+  unzip dingtalk-weekly-report-skill-*.zip
+  bash dingtalk-weekly-report/install.sh
+  bash dingtalk-weekly-report/bootstrap.sh
+  # 编辑 ~/weekly-report-data/config.json 后，Claude/Codex 运行 /dingtalk-weekly-report
+Windows:
+  解压后: .\install.ps1  再  .\bootstrap.ps1
+维护仓软链:
   bash install.sh --link
-注意: 包内含公司表单结构信息(FIELDS.md/form_url), 仅限公司内部分发。
+注意: 包内含公司表单结构信息, 仅限公司内部分发。
 EOF

@@ -16,7 +16,7 @@
 
 | 路径 | 职责 | 是否进 zip |
 |---|---|---|
-| `skills/dingtalk-weekly-report/` | **技能包**（`$SKILL`）：SKILL.md、install.sh、scripts、FIELDS、config 模板 | 是（平铺为 zip 根目录） |
+| `skills/dingtalk-weekly-report/` | **技能包**（`$SKILL`）：SKILL、install/bootstrap、scripts、FIELDS、config 模板 | 是（平铺为 zip 根目录） |
 | 仓库根 `config.json` / `weeks/` / `output/` / `.venv/` | 维护者本机 **`$WORK` 实例**（个人数据） | 否 |
 | `~/.config/dtwr/` | 每用户指针 `root` + 登录态 `state.json`（0600） | 否 |
 | `pack-skill.sh` / 根 `install.sh` | 维护仓打包入口 / 转调技能自安装 | 否（根 install 不进包） |
@@ -25,29 +25,45 @@
 
 同事默认 `$WORK` = `~/weekly-report-data`（与仓库名刻意区分）；维护者可把本仓本身当作 `$WORK`。
 
-## 推荐入口：Claude Code Skill `/dingtalk-weekly-report`
+## 推荐入口：Agent Skill `/dingtalk-weekly-report`
 
-skill 正文 = `skills/dingtalk-weekly-report/SKILL.md`（本仓单一事实源）。每周在 Claude Code 里
-一句 `/dingtalk-weekly-report`（或带周一日期）即触发 SOP 的 agent 版。三条铁律：只落草稿不提交 /
-内容必须人审 / 落草稿前提醒删同周旧草稿。
+skill 正文 = `skills/dingtalk-weekly-report/SKILL.md`（本仓单一事实源）。Claude / Codex 等 AI CLI 里
+触发后走半自动 SOP。三条铁律：只落草稿不提交 / 内容必须人审 / 落草稿前删同周旧草稿。
 
-**自包含与安全**（安装契约 2026-07-23 收口）：技能包无硬编码个人路径；`$SKILL` 只读、
-`$WORK` 经 `~/.config/dtwr/root` 解析。属主安全闸：`$WORK` 与 `~/.config/dtwr/` 属主必须是
-当前用户，否则拒绝运行（共享机禁止用他人目录/凭证填 HR 表）。工作目录建议 `chmod 700`。
+**自包含与安全**：技能包无硬编码个人路径；`$SKILL` 只读、`$WORK` 经 `~/.config/dtwr/root` 解析。
+属主安全闸：`$WORK` 与 `~/.config/dtwr/` 属主须为当前用户。工作目录建议 `chmod 700`。
 
 ### 安装与分发（单一契约）
 
-| 角色 | 命令 | 效果 |
+| 角色 | Linux / macOS / WSL | Windows |
 |---|---|---|
-| **同事（推荐）** | `unzip dingtalk-weekly-report-skill-*.zip && bash dingtalk-weekly-report/install.sh` | 复制到 `~/.claude/skills/dingtalk-weekly-report/`；若有 `~/.codex` 则写桥接 prompt |
-| **维护仓** | 仓库根目录 `bash install.sh --link` | 软链到仓内技能目录，改代码即时生效 |
-| **升级 / 覆盖** | 同上加 `--force`（改软链：`--link --force`） | 覆盖已有安装；清理旧名 `weekly-report` 技能与 Codex prompt |
-| **维护者打 zip** | `bash pack-skill.sh` | 产出 `dist/dingtalk-weekly-report-skill-YYYYMMDD.zip`（平铺技能包） |
+| **同事装技能** | `unzip … && bash dingtalk-weekly-report/install.sh` | 解压后 `cd dingtalk-weekly-report; .\install.ps1` |
+| **建运行环境** | `bash …/bootstrap.sh`（可选 `--work ~/weekly-report-data`） | `.\bootstrap.ps1`（可选 `-Work …`） |
+| **维护仓** | 仓库根 `bash install.sh --link` | （建议 WSL 或管理员软链） |
+| **升级技能** | `bash install.sh --force` | `.\install.ps1 -Force` |
+| **维护者打 zip** | `bash pack-skill.sh` → `dist/dingtalk-weekly-report-skill-YYYYMMDD.zip` | 同左（在维护仓打） |
 
-- 触发：Claude Code `/dingtalk-weekly-report`；Codex 同名（仅手动斜杠，无自动路由）。
-- 装完技能后**第一次**跑 skill：按 `SKILL.md`「首次安装」建 `$WORK`、uv 环境、config、登录。
-- 脚本层与 agent 无绑定；也可在 `$WORK` 下按下方命令手动跑。
-- 本仓私有 + 目录 700，同事**拿 zip 不拿仓库**；包内含公司表单结构，**仅限公司内部分发**。
+`install` 会写入（存在对应目录时）：
+
+| AI 工具 | 安装路径 | 触发 |
+|---|---|---|
+| **Claude Code** | `~/.claude/skills/dingtalk-weekly-report/` | `/dingtalk-weekly-report` |
+| **Codex CLI** | `~/.codex/skills/dingtalk-weekly-report/`（**skills，非旧 prompts**） | 同名 skill |
+| **Agents 通用** | `~/.agents/skills/…`（仅当已有 `~/.agents`） | 视工具而定 |
+
+- 装完技能 → **bootstrap** → 编辑 `config.json` → 首次登录（钉钉内部二维码 / `--login-url`）。
+- 也可不经 agent，在 `$WORK` 下直接调 `"$SKILL/scripts/…"`。
+- 本仓私有；同事**拿 zip 不拿仓库**；包内含公司表单结构，**仅限公司内部分发**。
+
+### 跨平台与运行时（刻意不换 TS）
+
+| 层 | 做法 |
+|---|---|
+| Skill 发现 | 目录契约 + `install.sh` / `install.ps1` 多目标 |
+| Python 环境 | **uv** + 每用户 `$WORK/.venv`（避开系统 pip / PEP 668） |
+| 浏览器 | Playwright 自带 **Chromium**（`bootstrap` 内 `playwright install chromium`） |
+| 保活 | Linux/mac：cron；Windows：计划任务，同一 `--keepalive` |
+| 不采用 | 全量 TS/二进制重构（仍要浏览器；与热门「可执行 skill」习惯不符） |
 
 ## 每周 SOP（周一 17:00 前；半自动闭环约 5 分钟人工）
 
@@ -76,8 +92,9 @@ python3 skills/dingtalk-weekly-report/scripts/print_form_rows.py weeks/week_repo
 
 | 文件 | 作用 |
 |---|---|
-| `skills/dingtalk-weekly-report/SKILL.md` | 技能指令（Claude Code 入口，`$SKILL`/`$WORK` 双路径模型） |
-| `skills/dingtalk-weekly-report/install.sh` | 技能自安装（copy / `--link` / `--force`；清理旧名；Codex 桥接） |
+| `skills/dingtalk-weekly-report/SKILL.md` | 技能指令（`$SKILL`/`$WORK` 双路径模型） |
+| `skills/dingtalk-weekly-report/install.sh` / `install.ps1` | 技能自安装（Claude+Codex skills；`--link`/`--force`） |
+| `skills/dingtalk-weekly-report/bootstrap.sh` / `bootstrap.ps1` | 建 `$WORK` + uv + Playwright Chromium + dtwr root |
 | `skills/dingtalk-weekly-report/scripts/extract_week.py` | ① 工作日志 → `weeks/week_report_*.json` 草稿（拒绝覆盖已有文件） |
 | `skills/dingtalk-weekly-report/scripts/gen_attachment.py` | ② json → `output/YYYYMMDD-YYYYMMDD本周工作总结与下周计划.xlsx` |
 | `skills/dingtalk-weekly-report/scripts/print_form_rows.py` | ② json → 表单粘贴块（回退路径） |
@@ -114,9 +131,9 @@ python3 skills/dingtalk-weekly-report/scripts/print_form_rows.py weeks/week_repo
 | HR 改表单字段 | `FIELDS.md` 编码表 + `fill_form.py` 顶部 `F` 映射与 `SUBGRID_ID` |
 | 氚云前端升级致 DOM 变化 | 跑 `--dump` 拿新结构 → 调选择器 → `bash tests/run_mock_test.sh` 回归 |
 | 附件模板要求变化 | `gen_attachment.py` 模板常量（表头/注/枚举） |
-| 改技能脚本后分发给同事 | `bash tests/run_mock_test.sh`（若动 fill_form）→ `bash pack-skill.sh` → 发 zip；对方 `install.sh --force` |
+| 改技能脚本后分发给同事 | `bash tests/run_mock_test.sh`（若动 fill_form）→ `bash pack-skill.sh` → 发 zip；对方 `install.sh --force` + 必要时 `bootstrap.sh` |
 | 本机重挂技能（维护仓） | `bash install.sh --link`（已对齐则无需再跑；换模式加 `--force`） |
-| 机器迁移 | `uv venv .venv && uv pip install playwright && .venv/bin/playwright install chromium`（PEP 668 用 uv）+ 重建登录态 + 重挂 cron + 重跑 `install.sh` |
+| 机器迁移 / 环境坏 | `bash bootstrap.sh --force-venv` + 重建登录态 + 重挂 cron/计划任务 + `install.sh --force` |
 
 ## 调试指南
 

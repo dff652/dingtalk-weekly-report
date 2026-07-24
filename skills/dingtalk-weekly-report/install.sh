@@ -1,24 +1,34 @@
 #!/usr/bin/env bash
 # dingtalk-weekly-report 技能自安装（本脚本位于技能包根目录）
 # 用法:
-#   bash install.sh           # 复制到 ~/.claude/skills/（同事 zip 默认）
-#   bash install.sh --link    # 软链到本目录（维护仓开发）
-#   bash install.sh --force   # 覆盖已有安装（含软链）
-# 检测到 ~/.codex 时同时写 Codex 桥接 prompt。
+#   bash install.sh              # 复制安装到 Claude；若有 Codex/agents 目录则一并装
+#   bash install.sh --link       # 软链到本目录（维护仓开发）
+#   bash install.sh --force      # 覆盖已有安装
+#   bash install.sh --claude-only | --codex-only | --agents-only
+# 目标:
+#   Claude  → ~/.claude/skills/dingtalk-weekly-report
+#   Codex   → ~/.codex/skills/dingtalk-weekly-report  （正式 skills，非旧 prompts）
+#   Agents  → ~/.agents/skills/dingtalk-weekly-report （若目录已存在）
 set -euo pipefail
 
 MODE=copy
 FORCE=0
+DO_CLAUDE=1
+DO_CODEX=1
+DO_AGENTS=1
 for arg in "$@"; do
   case "$arg" in
     --link) MODE=link ;;
     --force) FORCE=1 ;;
+    --claude-only) DO_CLAUDE=1; DO_CODEX=0; DO_AGENTS=0 ;;
+    --codex-only)  DO_CLAUDE=0; DO_CODEX=1; DO_AGENTS=0 ;;
+    --agents-only) DO_CLAUDE=0; DO_CODEX=0; DO_AGENTS=1 ;;
     -h|--help)
-      sed -n '2,8p' "$0" | sed 's/^# \{0,1\}//'
+      sed -n '2,12p' "$0" | sed 's/^# \{0,1\}//'
       exit 0
       ;;
     *)
-      echo "未知参数: $arg（支持 --link / --force / --help）" >&2
+      echo "未知参数: $arg（见 --help）" >&2
       exit 2
       ;;
   esac
@@ -26,92 +36,116 @@ done
 
 SRC="$(cd "$(dirname "$0")" && pwd)"
 NAME="dingtalk-weekly-report"
-DEST="$HOME/.claude/skills/$NAME"
-OLD_DEST="$HOME/.claude/skills/weekly-report"
-OLD_CODEX="$HOME/.codex/prompts/weekly-report.md"
-CODEX_PROMPT="$HOME/.codex/prompts/$NAME.md"
+OLD_NAME="weekly-report"
 
 [ -f "$SRC/SKILL.md" ] || {
   echo "❌ 找不到 $SRC/SKILL.md —— 请在技能包目录内运行本脚本" >&2
   exit 1
 }
 
-# 已在安装位置自身再跑（真实目录，非软链源）
-if [ "$SRC" = "$DEST" ] && [ ! -L "$DEST" ]; then
-  echo "✅ 已在安装位置: $DEST"
-  # 仍可刷新 Codex 桥接
-else
-  mkdir -p "$HOME/.claude/skills"
+# 安装到单个目标目录；label 仅用于日志
+install_to() {
+  local dest="$1"
+  local label="$2"
+  local parent
+  parent="$(dirname "$dest")"
+  mkdir -p "$parent"
 
-  # 清理改名前的旧技能，避免 Claude 双路由
-  if [ -e "$OLD_DEST" ] || [ -L "$OLD_DEST" ]; then
-    echo "⚠ 移除旧技能名: $OLD_DEST"
-    rm -rf "$OLD_DEST"
-  fi
-  if [ -f "$OLD_CODEX" ]; then
-    echo "⚠ 移除旧 Codex 桥接: $OLD_CODEX"
-    rm -f "$OLD_CODEX"
+  # 已在安装位置自身再跑
+  if [ "$SRC" = "$dest" ] && [ ! -L "$dest" ]; then
+    echo "✅ [$label] 已在安装位置: $dest"
+    return 0
   fi
 
-  need_install=1
-  if [ -e "$DEST" ] || [ -L "$DEST" ]; then
-    if [ -L "$DEST" ]; then
-      target="$(readlink -f "$DEST" 2>/dev/null || true)"
-      [ -n "$target" ] || target="$(readlink "$DEST")"
+  if [ -e "$dest" ] || [ -L "$dest" ]; then
+    if [ -L "$dest" ]; then
+      local target
+      target="$(readlink -f "$dest" 2>/dev/null || true)"
+      [ -n "$target" ] || target="$(readlink "$dest")"
       if [ "$MODE" = "link" ] && [ "$target" = "$SRC" ]; then
-        echo "✅ 软链已指向本目录: $DEST -> $SRC"
-        need_install=0
+        echo "✅ [$label] 软链已指向本目录: $dest -> $SRC"
+        return 0
       elif [ "$FORCE" -eq 1 ]; then
-        rm -rf "$DEST"
+        rm -rf "$dest"
       else
-        echo "❌ 已存在: $DEST（软链 -> $target）" >&2
+        echo "❌ [$label] 已存在: $dest（软链 -> $target）" >&2
         echo "   对齐软链: bash install.sh --link --force" >&2
         echo "   改复制装: bash install.sh --force" >&2
-        exit 1
+        return 1
       fi
     else
-      # 真实目录
       if [ "$FORCE" -eq 1 ]; then
-        rm -rf "$DEST"
+        rm -rf "$dest"
       else
-        echo "❌ 已存在目录安装: $DEST" >&2
-        echo "   升级复制: bash install.sh --force" >&2
-        echo "   改软链:   bash install.sh --link --force" >&2
-        exit 1
+        echo "❌ [$label] 已存在目录: $dest" >&2
+        echo "   升级: bash install.sh --force" >&2
+        echo "   软链: bash install.sh --link --force" >&2
+        return 1
       fi
     fi
   fi
 
-  if [ "$need_install" -eq 1 ]; then
-    if [ "$MODE" = "link" ]; then
-      ln -sfn "$SRC" "$DEST"
-      echo "✅ Claude Code 技能已软链: $DEST -> $SRC"
-    else
-      cp -a "$SRC" "$DEST"
-      chmod -R u+rwX,go-rwx "$DEST"
-      echo "✅ Claude Code 技能已安装: $DEST"
+  if [ "$MODE" = "link" ]; then
+    ln -sfn "$SRC" "$dest"
+    echo "✅ [$label] 已软链: $dest -> $SRC"
+  else
+    cp -a "$SRC" "$dest"
+    chmod -R u+rwX,go-rwx "$dest" 2>/dev/null || chmod -R u+rwX "$dest"
+    echo "✅ [$label] 已安装: $dest"
+  fi
+}
+
+# 清理改名前旧技能，避免双路由
+remove_old() {
+  local path="$1"
+  if [ -e "$path" ] || [ -L "$path" ]; then
+    echo "⚠ 移除旧技能名: $path"
+    rm -rf "$path"
+  fi
+}
+
+errs=0
+
+if [ "$DO_CLAUDE" -eq 1 ]; then
+  remove_old "$HOME/.claude/skills/$OLD_NAME"
+  install_to "$HOME/.claude/skills/$NAME" "Claude" || errs=$((errs + 1))
+fi
+
+if [ "$DO_CODEX" -eq 1 ]; then
+  # 仅当用户已有 ~/.codex 或强制全装时写入；无 .codex 则跳过并提示
+  if [ -d "$HOME/.codex" ] || [ "$DO_CLAUDE" -eq 0 ]; then
+    mkdir -p "$HOME/.codex/skills"
+    remove_old "$HOME/.codex/skills/$OLD_NAME"
+    # 清理旧 prompt 桥接（Codex 新版本以 skills 为准）
+    if [ -f "$HOME/.codex/prompts/$OLD_NAME.md" ]; then
+      echo "⚠ 移除旧 Codex prompt: $HOME/.codex/prompts/$OLD_NAME.md"
+      rm -f "$HOME/.codex/prompts/$OLD_NAME.md"
     fi
+    if [ -f "$HOME/.codex/prompts/$NAME.md" ]; then
+      echo "⚠ 移除过时 Codex prompt 桥接: $HOME/.codex/prompts/$NAME.md（改用 skills/）"
+      rm -f "$HOME/.codex/prompts/$NAME.md"
+    fi
+    install_to "$HOME/.codex/skills/$NAME" "Codex" || errs=$((errs + 1))
+  else
+    echo "ℹ 未检测到 ~/.codex，跳过 Codex skills（需要时: bash install.sh --codex-only --force）"
   fi
 fi
 
-# Codex 桥接：指向已装位置的 SKILL.md
-if [ -d "$HOME/.codex" ]; then
-  mkdir -p "$HOME/.codex/prompts"
-  cat > "$CODEX_PROMPT" <<EOF
-# 钉钉报工周报半自动流程（Codex 入口）
+if [ "$DO_AGENTS" -eq 1 ]; then
+  if [ -d "$HOME/.agents" ] || [ -d "$HOME/.agents/skills" ]; then
+    mkdir -p "$HOME/.agents/skills"
+    remove_old "$HOME/.agents/skills/$OLD_NAME"
+    install_to "$HOME/.agents/skills/$NAME" "Agents" || errs=$((errs + 1))
+  fi
+fi
 
-严格阅读并执行技能包指令文件：
-
-$DEST/SKILL.md
-
-要点提醒（详细以 SKILL.md 为准）：
-- 三条铁律：只落草稿（--draft）永不提交；周报内容必须先给用户人审确认；落草稿前提醒用户删同周旧草稿。
-- \$WORK 工作目录经 ~/.config/dtwr/root 解析；属主必须是当前用户，否则终止。
-- 用户传入的第一个参数若是周一日期（YYYY-MM-DD），作为目标周。
-EOF
-  echo "✅ Codex 已桥接: $CODEX_PROMPT"
+if [ "$errs" -ne 0 ]; then
+  exit 1
 fi
 
 echo ""
-echo "下一步: 打开 Claude Code（新会话），输入 /dingtalk-weekly-report，按引导完成首次配置"
-echo "（需要准备: 手机钉钉扫一次「打印内部二维码」；表单里你的项目下拉完整原文）"
+echo "下一步:"
+echo "  1) 建运行环境: bash \"$SRC/bootstrap.sh\"   # Windows: .\\bootstrap.ps1"
+echo "  2) 编辑 \$WORK/config.json（项目下拉完整原文等）"
+echo "  3) 新会话触发 /dingtalk-weekly-report（Claude）或 Codex 同名 skill"
+echo "     首次登录: 钉钉「打印内部二维码」→ 手机扫 → --login-url"
