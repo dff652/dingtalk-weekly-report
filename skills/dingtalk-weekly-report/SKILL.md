@@ -93,8 +93,12 @@ git 操作（若 $WORK 配了仓库）必须 `git -C $WORK`。每用户差异（
 
 ## 首次安装（$WORK 不存在时）
 
-**前提**：用户已用 zip + `install.sh`/`install.ps1`（或维护仓 `--link`）装好技能，故 `$SKILL` 可读。
-本步只建运行态，不改技能包。
+**前提**：技能已装到 agent 目录，故 `$SKILL` 可读。常见装法（仓库 README）：
+`npx skills add https://github.com/dff652/dingtalk-weekly-report -s dingtalk-weekly-report -a claude-code -a codex -g -y`，
+或 zip/`install.sh`，或维护仓 `--link`。若用户**只给了仓库 URL** 且本机尚无 skill，先按 README
+「只给仓库 URL 时：复制给 AI」完成安装，再继续本步。
+
+本步只建运行态（`$WORK`），不改技能包。
 
 1. **推荐一键 bootstrap**（优先于逐步手敲；完整安装说明见同目录 `USER_GUIDE.md`）：
    - Linux/macOS / WSL: `bash "$SKILL/bootstrap.sh"`（或 `--work ~/weekly-report-data`）

@@ -14,15 +14,12 @@ unzip -l "$OUT" | head -20
 echo "..."
 unzip -l "$OUT" | tail -3
 cat <<'EOF'
-给同事（Linux/mac/WSL）:
-  unzip dingtalk-weekly-report-skill-*.zip
-  bash dingtalk-weekly-report/install.sh
-  bash dingtalk-weekly-report/bootstrap.sh
-  # 说明见 dingtalk-weekly-report/USER_GUIDE.md
-  # 编辑 ~/weekly-report-data/config.json 后，Claude/Codex 运行 /dingtalk-weekly-report
-Windows:
-  解压后: .\install.ps1  再  .\bootstrap.ps1 ；说明见 USER_GUIDE.md
-维护仓软链:
-  bash install.sh --link
-注意: 包内含公司表单结构信息, 仅限公司内部分发。
+推荐（有 Node）— skills hub 风格:
+  npx skills add https://github.com/dff652/dingtalk-weekly-report \
+    -s dingtalk-weekly-report -a claude-code -a codex -g -y --copy
+  bash ~/.claude/skills/dingtalk-weekly-report/bootstrap.sh
+  # 说明: 仓库 README「Install / 复制给 AI / Verify」
+zip 回退:
+  unzip … && bash dingtalk-weekly-report/install.sh && bash dingtalk-weekly-report/bootstrap.sh
+注意: 包内含公司表单结构, 仅限公司内部分发。
 EOF
