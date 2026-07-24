@@ -1,16 +1,28 @@
 # dingtalk-weekly-report — 钉钉「报工周报」填写工具
 
-基于 ts-platform 的 `docs/report/PROGRESS_REPORT.md` 生成钉钉「工作申请 → 报工周报」所需的
-附件 xlsx 与表单粘贴内容，并可 Playwright 半自动填表。设计与调研见
+基于个人工作日志生成钉钉「工作申请 → 报工周报」所需的附件 xlsx 与表单内容，并可
+Playwright 半自动填表落**草稿**（提交永远由人在钉钉完成）。设计见
 `~/ilabel/ts-platform/docs/designs/design-dingtalk-weekly-report-tool.md`。
 
-> **平台判定修正（2026-07-21）**：报工周报实为**氚云（H3yun, www.h3yun.com）**表单，
-> 非最初判定的宜搭——「打印内部二维码」解出 h3yun 域名坐实；导出文件的 `F0000001` 字段编码
-> 也是氚云约定。P3 全自动路线对应改为氚云 OpenApi（`POST /OpenApi/Invoke`，
-> 需 EngineCode（已从 URL 拿到）+ EngineSecret（需管理员））。字段/枚举/DOM 事实源=`FIELDS.md`。
+> **平台**：报工周报为**氚云（H3yun）**表单（非宜搭）。字段/枚举/DOM 事实源 =
+> `skills/dingtalk-weekly-report/references/FIELDS.md`。
 
-**依赖**：内容生成/附件 xlsx 为纯 stdlib（`xlsxlite.py`，适配 PEP 668）；半自动填表需
-`playwright` + Chromium（`$WORK/.venv`）。独立个人项目，不进 ts-platform 团队仓库。
+**依赖**：xlsx/抽取为纯 stdlib；填表需 `playwright` + Chromium（由 `bootstrap` 安装）。  
+**用户文档（安装+每周怎么用）**：→ **[docs/USER_GUIDE.md](docs/USER_GUIDE.md)**
+
+## 快速开始（同事，3 步）
+
+```bash
+# Linux / macOS / WSL（Windows 见 USER_GUIDE：install.ps1 + bootstrap.ps1）
+unzip dingtalk-weekly-report-skill-*.zip
+bash dingtalk-weekly-report/install.sh      # 技能 → Claude/Codex skills 目录
+bash dingtalk-weekly-report/bootstrap.sh    # $WORK + uv + Chromium
+# 编辑 ~/weekly-report-data/config.json 后：
+#   Claude/Codex 新会话输入 /dingtalk-weekly-report
+#   按提示扫「打印内部二维码」完成登录；每周同一命令即可
+```
+
+维护者打 zip：`bash pack-skill.sh` → `dist/`。包内含公司表单结构，**仅限公司内部分发**。
 
 ## 目录与职责
 
@@ -106,7 +118,9 @@ python3 skills/dingtalk-weekly-report/scripts/print_form_rows.py weeks/week_repo
 | `install.sh` | 维护仓入口，转调技能包 `install.sh` |
 | `pack-skill.sh` | 打平铺 zip 到 `dist/`（分发用） |
 | `config.json` / `weeks/` | 我的实例数据（每用户各有一份，工作目录内） |
-| `tests/mock_form.html` + `tests/run_mock_test.sh` | 维护仓的仿真表单 e2e（改 fill_form 后必跑回归） |
+| `docs/USER_GUIDE.md` | **安装与每周使用**（同事/维护者速查） |
+| `tests/mock_form.html` + `tests/run_mock_test.sh` | 仿真表单 e2e（改 fill_form 后必跑） |
+| `tests/run_smoke.sh` | 打包+安装+附件+仿真冒烟 |
 | `output/` | 生成的附件与截图（gitignored） |
 
 ## fill_form.py 模式速查
@@ -131,7 +145,7 @@ python3 skills/dingtalk-weekly-report/scripts/print_form_rows.py weeks/week_repo
 | HR 改表单字段 | `FIELDS.md` 编码表 + `fill_form.py` 顶部 `F` 映射与 `SUBGRID_ID` |
 | 氚云前端升级致 DOM 变化 | 跑 `--dump` 拿新结构 → 调选择器 → `bash tests/run_mock_test.sh` 回归 |
 | 附件模板要求变化 | `gen_attachment.py` 模板常量（表头/注/枚举） |
-| 改技能脚本后分发给同事 | `bash tests/run_mock_test.sh`（若动 fill_form）→ `bash pack-skill.sh` → 发 zip；对方 `install.sh --force` + 必要时 `bootstrap.sh` |
+| 改技能脚本后分发给同事 | `bash tests/run_smoke.sh`（或至少 `run_mock_test.sh`）→ `pack-skill.sh` 发 zip；对方 `install.sh --force` |
 | 本机重挂技能（维护仓） | `bash install.sh --link`（已对齐则无需再跑；换模式加 `--force`） |
 | 机器迁移 / 环境坏 | `bash bootstrap.sh --force-venv` + 重建登录态 + 重挂 cron/计划任务 + `install.sh --force` |
 

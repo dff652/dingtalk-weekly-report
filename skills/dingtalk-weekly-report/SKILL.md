@@ -95,7 +95,7 @@ git 操作（若 $WORK 配了仓库）必须 `git -C $WORK`。每用户差异（
 **前提**：用户已用 zip + `install.sh`/`install.ps1`（或维护仓 `--link`）装好技能，故 `$SKILL` 可读。
 本步只建运行态，不改技能包。
 
-1. **推荐一键 bootstrap**（优先于逐步手敲）：
+1. **推荐一键 bootstrap**（优先于逐步手敲；完整安装说明见维护仓 `docs/USER_GUIDE.md`）：
    - Linux/macOS / WSL: `bash "$SKILL/bootstrap.sh"`（或 `--work ~/weekly-report-data`）
    - Windows: `powershell -File "$SKILL/bootstrap.ps1"`
    会建 `$WORK`、`.venv`、playwright+Chromium、`config.json` 模板、`~/.config/dtwr/root`。
