@@ -18,8 +18,7 @@ from copy import deepcopy
 from datetime import date, timedelta
 from pathlib import Path
 
-import sys as _sys
-_sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 from dtwr_common import resolve_progress_report, workdir
 from dtwr_validation import ValidationError, validate_config
 from dtwr_week import date_near_week, pick_monday
@@ -116,7 +115,9 @@ def main():
         "name": config["name"],
         "form_project": config["form_project"],
         "attach_project": config["attach_project"],
-        "dept_goal": config["dept_goal"],
+        # dept_goal 是可选项（configure.py 标注「可空」），配置里缺键即视为空；
+        # 不能用下标取值，否则老配置在这里抛裸 KeyError 而不是本项目的 fail-loud 信息。
+        "dept_goal": config.get("dept_goal", ""),
         "vocabulary": deepcopy(config["vocabulary"]),
         "week": {"start": str(monday), "end": str(monday + timedelta(days=6))},
         "days": days,

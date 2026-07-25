@@ -21,6 +21,12 @@
 
 ## 本机开发
 
+克隆后**第一件事**是装 pre-push 钩子——CI 在 push 之后才跑，防泄露必须在本地拦：
+
+```bash
+ln -sf ../../hooks/pre-push .git/hooks/pre-push
+```
+
 ```bash
 bash install.sh --link              # ~/.claude + ~/.codex skills 软链到仓内
 # 改代码即时生效；勿对软链误跑无 --force 的 copy 安装
@@ -93,6 +99,8 @@ bash tests/run_full_acceptance.sh
 
 | 项 | 自动？ |
 |----|--------|
+| 历史脱敏扫描（`tests/scan_history.py`） | ✅ pre-push 钩子 + CI |
+| 单测 / 仿真 e2e | ✅ CI（`.github/workflows/ci.yml`） |
 | pack / 隔离 install / 附件 / 仿真 e2e | ✅ |
 | bootstrap + 独立 venv + 安装后仿真使用 | ✅ `run_full_acceptance.sh` |
 | GitHub 下载 + skills CLI + 安全审计 | ✅ `run_release_acceptance.sh` |

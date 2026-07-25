@@ -13,6 +13,17 @@ from pathlib import Path
 PROJECT_PROGRESS_REPORT = Path("docs/report/PROGRESS_REPORT.md")
 
 
+def dtwr_config_dir() -> Path:
+    """`~/.config/dtwr`——指针与登录态所在目录的**唯一**解析口。
+
+    尊重 `XDG_CONFIG_HOME`；bootstrap 写指针用同一规则，脚本不得各写一套，
+    否则设了该变量的系统上指针与登录态会落在两个目录。
+    """
+    config_home = Path(
+        os.environ.get("XDG_CONFIG_HOME") or Path.home() / ".config")
+    return config_home / "dtwr"
+
+
 def require_owned(path: Path, label: str) -> None:
     """共享机安全闸：已有路径必须属于当前用户。"""
     if not path.exists() or not hasattr(os, "geteuid"):
@@ -47,9 +58,7 @@ def workdir() -> Path:
     if configured:
         d = Path(configured).expanduser().resolve()
     else:
-        config_home = Path(
-            os.environ.get("XDG_CONFIG_HOME") or Path.home() / ".config")
-        pointer = config_home / "dtwr" / "root"
+        pointer = dtwr_config_dir() / "root"
         if pointer.exists():
             require_owned(pointer.parent, "登录态目录")
             require_owned(pointer, "工作目录指针")

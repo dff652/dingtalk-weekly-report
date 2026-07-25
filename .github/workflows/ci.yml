@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  unit:
+    name: 单元测试
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m unittest discover -s tests -p 'test_*.py' -v
+
+  mock-e2e:
+    name: 仿真表单 e2e
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r skills/dingtalk-weekly-report/requirements-runtime.txt
+      - run: python -m playwright install --with-deps chromium
+      - run: bash tests/run_mock_test.sh
+        env:
+          DTWR_PYTHON: python
+
+  history-scan:
+    name: 历史脱敏扫描
+    runs-on: ubuntu-latest
+    steps:
+      # fetch-depth: 0 = 取全部历史；扫工作树不够，2026-07-25 的教训是
+      # 工作树干净而历史仍在公网可取（见 docs/PUBLISHING.md）。
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python tests/scan_history.py

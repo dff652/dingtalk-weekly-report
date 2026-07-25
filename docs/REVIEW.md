@@ -43,17 +43,45 @@ HR 表单上的内部工具做成可开源的通用技能包——已经解决�
 
 ## 三、待修缺陷
 
-| # | 位置 | 问题 | 严重度 |
-|---|---|---|---|
-| ① | `fill_form.py` 附件上传 | 无完成校验，可能存下缺附件的草稿 | 高 |
-| ② | `extract_week.py` `dept_goal` | 缺键时裸 KeyError（已复现） | 中 |
-| ③ | `fill_form.py` `STATE` 常量 | 忽略 `XDG_CONFIG_HOME`，与其余两处不一致 | 中 |
-| ④ | `fill_form.py::verify_draft_saved` | 依赖 frame 顺序，后置 frame 的错误看不到 | 低 |
-| ⑤ | `fill_form.py` 各处 | 定长 `wait_for_timeout` 而非条件等待 | 低 |
-| ⑥ | `gen_attachment.py` | 产物走 cwd 相对 `output/`，与 `$WORK/output/` 两套解析 | 低 |
-| ⑦ | `xlsxlite.py::Sheet.to_xml` | 未过滤 XML 非法控制字符 | 低 |
-| ⑧ | `extract_week.py` / 各脚本 | 重复 import sys；`sys.path.insert` 而非包 | 琐碎 |
-| ⑨ | 仓库根 | 无 CI，测试不在 push 时运行 | 中 |
+| # | 位置 | 问题 | 严重度 | 状态 |
+|---|---|---|---|---|
+| ① | `fill_form.py` 附件上传 | 无完成校验，可能存下缺附件的草稿 | 高 | 待修（与附件可选化一起改） |
+| ② | `extract_week.py` `dept_goal` | 缺键时裸 KeyError | 中 | ✅ 已修 |
+| ③ | `fill_form.py` `STATE` 常量 | 忽略 `XDG_CONFIG_HOME`，与其余两处不一致 | 中 | ✅ 已修 |
+| ④ | `fill_form.py::verify_draft_saved` | 依赖 frame 顺序，后置 frame 的错误看不到 | 低 | 待修 |
+| ⑤ | `fill_form.py` 各处 | 定长 `wait_for_timeout` 而非条件等待 | 低 | 待修 |
+| ⑥ | `gen_attachment.py` | 产物走 cwd 相对 `output/`，与 `$WORK/output/` 两套解析 | 低 | 待修 |
+| ⑦ | `xlsxlite.py::Sheet.to_xml` | 未过滤 XML 非法控制字符 | 低 | 待修 |
+| ⑧ | `extract_week.py` | 重复 import sys | 琐碎 | ✅ 已修 |
+| ⑨ | 仓库根 | 无 CI，测试不在 push 时运行 | 中 | ✅ 已修 |
+
+**②③⑧⑨ 的修复与验证（2026-07-25）**
+
+- ② `config.get("dept_goal", "")`；实测删掉该键后 `extract_week.py` 正常产出、`dept_goal` 落空串。
+- ③ 新增 `dtwr_common.dtwr_config_dir()` 作为指针与登录态目录的**唯一**解析口，
+  `workdir()` 与 `fill_form.STATE` 共用；实测 `XDG_CONFIG_HOME=/tmp/...` 时两者同源，
+  未设时仍为 `~/.config/dtwr`。
+- ⑨ `.github/workflows/ci.yml` 三个 job（单测 / 仿真 e2e / **历史脱敏扫描**）
+  + `hooks/pre-push` 本地闸门。**CI 在 push 之后才跑，对防泄露已经晚了**——
+  本地钩子才是唯一能在暴露前拦住的一道，两者都要。
+- 历史扫描器 `tests/scan_history.py` 复用 `test_public_tree.SENSITIVE_PATTERNS`
+  作单一事实源，扫全部 blob / commit / tag 对象（含提交信息），并校验提交身份必须是
+  GitHub noreply。有效性已反向验证：对尚未 gc 的悬空旧对象能正确命中。
+
+### 附件必选/可选（与 ① 同批处理）
+
+结论：**该由配置决定，但不能做成 CLI 开关。** 要分清两个问题——
+
+- **表单有没有附件字段** = 组织事实，与字段 id、枚举同类，应当可配。现在
+  `form_fields.attach` 是必填非空键，等于**让没有附件字段的组织根本配不出来**，
+  违反第二节第 2 条不变量。
+- **某一周要不要传附件** = 执行选择。表单要求附件时跳过就是交了不合规的周报，不该给选择。
+
+实现取向：`form_fields.attach` 允许留空（语义 = 本表单无附件字段），由它**推导**必选性；
+`do_fill` 配了则附件必须存在且必须校验上传完成，没配则整步跳过。**不新增 `--no-attach`
+之类的开关**——那会成为 agent 的逃生口（生成失败 → 加参数绕过 → 交出缺附件的草稿），
+正是本项目在别处都堵死的失败模式。放宽"必填非空"为"可空"向后兼容，**不需要升
+`config_version`**。
 
 ### ① 附件上传没有完成校验 —— 唯一的"静默成功"缺口
 

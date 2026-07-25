@@ -26,7 +26,7 @@ from urllib.parse import parse_qs, urlparse
 from playwright.sync_api import sync_playwright, TimeoutError as PWTimeout
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from dtwr_common import require_owned, workdir
+from dtwr_common import dtwr_config_dir, require_owned, workdir
 from dtwr_validation import (
     ValidationError,
     validate_config,
@@ -36,7 +36,7 @@ from dtwr_validation import (
 
 WORK = None
 CONFIG = {}
-STATE = Path.home() / ".config" / "dtwr" / "state.json"
+STATE = dtwr_config_dir() / "state.json"
 SHOTS = None
 SUB = None
 F = {}

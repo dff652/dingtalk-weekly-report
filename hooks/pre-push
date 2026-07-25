@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# 推送前拦截敏感内容进入公开历史。
+#
+# CI 也跑同一个扫描，但 CI 在 push **之后**才运行——对"防泄露"来说已经晚了：
+# 内容那时已经公开。本钩子是唯一能在暴露前拦住的闸门。
+#
+# 安装: ln -sf ../../hooks/pre-push .git/hooks/pre-push
+# 绕过: git push --no-verify （仅限确认无敏感内容时；绕过即自负后果）
+set -euo pipefail
+
+# 不能用 dirname "$0"：安装后 $0 是 .git/hooks/ 下的软链，取到的是 .git 而非仓库根。
+ROOT="$(git rev-parse --show-toplevel)"
+
+echo "[pre-push] 历史脱敏扫描…"
+if ! python3 "$ROOT/tests/scan_history.py"; then
+  echo "" >&2
+  echo "[pre-push] 已拦截推送。处置见 docs/PUBLISHING.md。" >&2
+  exit 1
+fi
+
+echo "[pre-push] 工作树脱敏与核心断言…"
+python3 -m unittest discover -s "$ROOT/tests" -p 'test_public_tree.py' -q
