@@ -15,6 +15,9 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      # test_fill_form_logic 会 import fill_form，而 fill_form 顶层 import playwright，
+      # 所以单测也需要这个包——只装包，不下载 Chromium（浏览器只有 mock-e2e 需要）。
+      - run: pip install -r skills/dingtalk-weekly-report/requirements-runtime.txt
       - run: python -m unittest discover -s tests -p 'test_*.py' -v
 
   mock-e2e:
