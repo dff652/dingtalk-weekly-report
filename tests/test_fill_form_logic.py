@@ -11,10 +11,13 @@ SKILL = Path(os.environ.get(
     "DTWR_SKILL", ROOT / "skills" / "dingtalk-weekly-report"))
 sys.path.insert(0, str(SKILL / "scripts"))
 
+import fill_form
 from fill_form import (
+    attachment_enabled,
     prompt_auth_url,
     validate_auth_url,
     validate_form_url,
+    verify_attachment_uploaded,
     verify_draft_saved,
 )
 
@@ -68,6 +71,20 @@ class FakeFrame:
 class FakePage:
     def __init__(self, frames=()):
         self.frames = list(frames)
+        self.waits = 0
+
+    def wait_for_timeout(self, _ms):
+        self.waits += 1
+
+
+class FakeFileInput:
+    """只实现 verify_attachment_uploaded 用到的 evaluate。"""
+
+    def __init__(self, file_count):
+        self.file_count = file_count
+
+    def evaluate(self, _script):
+        return self.file_count
 
 
 class FillFormLogicTests(unittest.TestCase):
@@ -99,6 +116,50 @@ class FillFormLogicTests(unittest.TestCase):
         frame = FakeFrame(selectors={"#result": result.items})
         with self.assertRaisesRegex(RuntimeError, "动作错误"):
             verify_draft_saved(frame, FakePage(), mock=True)
+
+    # ---- 附件：必选性由配置推导，上传必须有完成证据 ----
+
+    def test_attachment_enabled_is_derived_from_config(self):
+        # 取值刻意不用真实字段 id 形状——脱敏门禁会拦（它拦过本测试的第一版）。
+        cases = {
+            "attach-field": True, "  attach-field  ": True,
+            "": False, "   ": False, None: False,
+        }
+        for value, expected in cases.items():
+            with self.subTest(value=value):
+                fields = {} if value is None else {"attach": value}
+                with patch.object(fill_form, "CONFIG", {"form_fields": fields}):
+                    self.assertEqual(attachment_enabled(), expected)
+
+    def test_attachment_missing_from_file_input_is_rejected(self):
+        with self.assertRaisesRegex(RuntimeError, "未进入文件控件"):
+            verify_attachment_uploaded(
+                FakeFrame(), FakePage(), FakeFileInput(0), "周报附件", mock=False)
+
+    def test_attachment_unconfirmed_upload_is_rejected(self):
+        """页面上等不到附件名 = 上传未确认，必须中止而不是继续暂存。"""
+        page = FakePage()
+        with self.assertRaisesRegex(RuntimeError, "不落缺附件的草稿"):
+            verify_attachment_uploaded(
+                FakeFrame(), page, FakeFileInput(1), "周报附件",
+                mock=False, timeout_ms=0)
+
+    def test_attachment_hidden_name_is_not_evidence(self):
+        frame = FakeFrame(texts={"周报附件": [FakeItem(visible=False)]})
+        with self.assertRaisesRegex(RuntimeError, "无法确认上传完成"):
+            verify_attachment_uploaded(
+                frame, FakePage(), FakeFileInput(1), "周报附件",
+                mock=False, timeout_ms=0)
+
+    def test_attachment_visible_name_is_accepted(self):
+        frame = FakeFrame(texts={"周报附件": [FakeItem()]})
+        verify_attachment_uploaded(
+            frame, FakePage(), FakeFileInput(1), "周报附件", mock=False)
+
+    def test_attachment_mock_only_checks_file_input(self):
+        """仿真表单没有异步上传完成信号，只查第 1 层。"""
+        verify_attachment_uploaded(
+            FakeFrame(), FakePage(), FakeFileInput(1), "周报附件", mock=True)
 
     def test_form_url_rejects_non_h3yun_host(self):
         with self.assertRaisesRegex(ValueError, "h3yun"):

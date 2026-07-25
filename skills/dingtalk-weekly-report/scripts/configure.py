@@ -40,7 +40,7 @@ FIELD_SPECS = (
     ("submission_reminder", "人工提交提醒（可空）", "text"),
     ("form_fields.subgrid_id", "工作详情子表 DOM id", "text"),
     ("form_fields.start_date", "开始日期字段 DOM id", "text"),
-    ("form_fields.attach", "附件字段 DOM id", "text"),
+    ("form_fields.attach", "附件字段 DOM id（本表单无附件项则留空）", "text"),
     ("form_fields.note", "特殊说明字段 DOM id", "text"),
     ("form_fields.row_date", "行日期字段 DOM id", "text"),
     ("form_fields.row_type", "行项目类型字段 DOM id", "text"),

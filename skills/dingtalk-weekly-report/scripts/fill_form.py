@@ -231,6 +231,47 @@ def attach_path(monday_str):
         f"{monday.strftime('%Y%m%d')}-{friday.strftime('%Y%m%d')}本周工作总结与下周计划.xlsx")
 
 
+def attachment_enabled():
+    """本表单是否有附件字段——组织事实，由 `form_fields.attach` 是否配置推导。
+
+    留空即该表单没有附件项，整个上传步骤跳过。**不提供 `--no-attach` 之类的开关**：
+    那会成为「附件生成失败 → 加参数绕过 → 交出缺附件草稿」的逃生口。
+    """
+    return bool(str(CONFIG.get("form_fields", {}).get("attach", "")).strip())
+
+
+def attachment_locator(fr):
+    return fr.locator(
+        f'{F["attach"]} input[type="file"], input[type="file"]').first
+
+
+def verify_attachment_uploaded(fr, page, file_input, needle, mock,
+                               timeout_ms=30000):
+    """上传后必须拿到**完成证据**；定长 sleep 不是证据。
+
+    两层：
+    1. 文件控件真的持有文件——`set_input_files` 静默没生效会在这层暴露（两种模式都查）；
+    2. 页面上出现附件名——与人工在 `20-filled-review.png` 上核对「附件已挂」同一判据。
+       仿真表单是同步的，没有异步上传完成信号可等，故只做第 1 层。
+    """
+    held = file_input.evaluate("el => el.files.length")
+    if held != 1:
+        raise RuntimeError(f"附件未进入文件控件（files.length={held}）: {needle}")
+    if mock:
+        return
+    deadline = time.time() + timeout_ms / 1000
+    while True:
+        matches = fr.get_by_text(needle, exact=False)
+        if any(matches.nth(i).is_visible() for i in range(matches.count())):
+            return
+        if time.time() >= deadline:
+            break
+        page.wait_for_timeout(500)
+    raise RuntimeError(
+        f"上传后 {timeout_ms // 1000}s 内页面未出现附件名「{needle}」，"
+        "无法确认上传完成——就此中止，不落缺附件的草稿")
+
+
 def verify_draft_saved(fr, page, mock, success_messages=()):
     if mock:
         result = json.loads(fr.locator("#result").inner_text())
@@ -267,8 +308,9 @@ def do_fill(report_path, url, save_draft):
     except ValidationError as exc:
         sys.exit(str(exc))
     w = report["week"]
-    attach = attach_path(w["start"])
-    if not attach.exists():
+    attach_required = attachment_enabled()
+    attach = attach_path(w["start"]) if attach_required else None
+    if attach_required and not attach.exists():
         sys.exit(f"附件不存在: {attach}（先跑 gen_attachment.py）")
     mock = is_mock(url)
     if not mock and not STATE.exists():
@@ -287,9 +329,14 @@ def do_fill(report_path, url, save_draft):
             log(f"报工开始日期 {w['start']}")
             fill_ant_date(fr, page, fr.locator(F["start_date"]), w["start"])
 
-            log(f"上传附件 {attach.name}")
-            fr.locator(f'{F["attach"]} input[type="file"], input[type="file"]').first.set_input_files(str(attach))
-            page.wait_for_timeout(500 if mock else 4000)
+            if attach_required:
+                log(f"上传附件 {attach.name}")
+                file_input = attachment_locator(fr)
+                file_input.set_input_files(str(attach))
+                verify_attachment_uploaded(
+                    fr, page, file_input, attach.stem, mock)
+            else:
+                log("未配置 form_fields.attach：本表单无附件字段，跳过上传")
 
             note = report.get("special_note", "")
             if note:

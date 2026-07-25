@@ -6,6 +6,7 @@ from urllib.parse import urlparse
 from dtwr_fields import (
     FORM_FIELD_KEYS,
     FORM_TEXT_KEYS,
+    OPTIONAL_FORM_FIELD_KEYS,
     VOCABULARY_LIST_KEYS,
     VOCABULARY_VALUE_KEYS,
 )
@@ -86,7 +87,9 @@ def _validate_form_metadata(config: dict, errors: list[str]) -> None:
         for key in FORM_FIELD_KEYS:
             value = _text(fields.get(key))
             if not value:
-                errors.append(f"form_fields.{key} 不能为空")
+                # 可选键留空 = 本表单无该字段；其余键缺失即配置未就绪。
+                if key not in OPTIONAL_FORM_FIELD_KEYS:
+                    errors.append(f"form_fields.{key} 不能为空")
             elif not re.fullmatch(r"[A-Za-z0-9_-]+", value):
                 errors.append(
                     f"form_fields.{key} 只能包含字母、数字、下划线或连字符")

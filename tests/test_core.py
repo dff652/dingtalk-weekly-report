@@ -51,6 +51,18 @@ class CoreTests(unittest.TestCase):
         with self.assertRaisesRegex(ValidationError, "standup.hours"):
             validate_config(value)
 
+    def test_config_allows_empty_attach_field(self):
+        """留空 attach = 本表单无附件项，是合法组织配置，不是配置未就绪。"""
+        value = copy.deepcopy(self.config)
+        value["form_fields"]["attach"] = ""
+        validate_config(value)
+
+    def test_config_still_requires_other_form_fields(self):
+        value = copy.deepcopy(self.config)
+        value["form_fields"]["subgrid_id"] = ""
+        with self.assertRaisesRegex(ValidationError, "subgrid_id 不能为空"):
+            validate_config(value)
+
     def test_config_rejects_submit_button_as_draft_action(self):
         value = copy.deepcopy(self.config)
         value["form_texts"]["save_draft"] = "提 交"

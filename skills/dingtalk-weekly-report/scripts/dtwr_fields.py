@@ -13,6 +13,11 @@ FORM_FIELD_KEYS = (
     "row_content",
 )
 
+# 留空 = 本表单没有这个字段。附件字段是**组织事实**（该表单有没有附件项），
+# 不是每周的执行选择，所以由配置一次性决定，不提供 CLI 开关——那会变成
+# 「生成失败就加参数绕过」的逃生口。其余字段一律必填。
+OPTIONAL_FORM_FIELD_KEYS = ("attach",)
+
 FORM_TEXT_KEYS = (
     "report_title",
     "add_row",

@@ -90,6 +90,11 @@ git 操作（若 $WORK 配了仓库）必须 `git -C $WORK`。每用户差异（
 
 `python3 "$SKILL/scripts/gen_attachment.py" weeks/week_report_YYYYMMDD.json`
 
+附件是否必需由 `config.json` 的 `form_fields.attach` 推导：填了则必须生成并成功上传
+（`fill_form.py` 会等到页面出现附件名才继续，等不到就中止，不落缺附件的草稿）；
+留空表示本表单没有附件项，本步跳过。**不存在"这周不传附件"的选项**——
+表单要求附件时跳过就是交了不合规的周报。
+
 ### 5) 登录态
 
 - `.venv/bin/python "$SKILL/scripts/fill_form.py" --keepalive` 验会话（若装了 cron 保活通常直接过）。
