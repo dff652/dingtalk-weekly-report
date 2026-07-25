@@ -122,9 +122,10 @@ bash tests/run_full_acceptance.sh
 - [x] P2 Playwright 真机联调 + 仿真 e2e
 - [ ] P3 氚云 OpenApi（缺 EngineSecret）
 
-改代码前先读 [REVIEW.md](REVIEW.md)：第二节是**不变量清单**（改动不得破坏），第三节是**待修缺陷
-清单**（① 附件上传无完成校验、② `dept_goal` KeyError、③ `XDG_CONFIG_HOME` 两套解析、⑨ 无 CI
-等）。公开发布的硬阻塞是 Git 历史，不是功能，见 [PUBLISHING.md](PUBLISHING.md#当前发布阻断)。
+改代码前先读 [REVIEW.md](REVIEW.md)：第二节是**不变量清单**（改动不得破坏），第三节是代码缺陷
+清单（①②③⑧⑨ 已修，④⑤⑥⑦ 待修），第三点五节是**工程流程缺口**（⑩ 无版本号、⑪ 无回滚路径、
+⑫ 测试选择无矩阵、⑬ 开发流程未成文）及其处置取向 A/B/C。历史泄露的处置与状态见
+[PUBLISHING.md](PUBLISHING.md#历史泄露处置已发生)。
 
 ## 跨平台运行时（不换 TS）
 

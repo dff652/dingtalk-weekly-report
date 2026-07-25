@@ -151,6 +151,49 @@ fail-loud 信息。修法二选一：加进 `required`，或改 `.get("dept_goal
 仓库无 `.github/`。测试写得齐整却没有任何机制在 push 时运行。公开仓最便宜的下一步是把单测与
 mock e2e 挂上 Actions，与 `PUBLISHING.md` 的发布门禁对齐。
 
+## 三点五、工程流程（开发 / 测试 / 发版 / 部署）现状与缺口
+
+### 现状承载
+
+| 阶段 | 现有承载 | 覆盖 |
+|---|---|---|
+| 开发 | [MAINTAINER.md](MAINTAINER.md)「本机开发」+ 本文件第二节不变量清单 | 部分 |
+| 测试 | MAINTAINER.md 命令表 + [TESTING.md](TESTING.md) + CI 三 job + `hooks/pre-push` | 机制齐，选择规则未成矩阵 |
+| 发版 | [PUBLISHING.md](PUBLISHING.md)（分发 / 许可 / 泄露处置 / 门禁）+ `pack-skill.sh` | 有硬缺口，见 ⑩ |
+| 部署 | [../README.md](../README.md) + 技能包 `USER_GUIDE.md`（安装 / bootstrap / 配置 / 登录 / keepalive / 升级） | 较好，缺回滚 |
+| 运行期 | `SKILL.md` + `references/CONTRACT.md` + [MANUAL_ACCEPTANCE.md](MANUAL_ACCEPTANCE.md) | 好 |
+
+### 缺口（是机制不存在，不是文档没写）
+
+| # | 缺口 | 后果 | 状态 |
+|---|---|---|---|
+| ⑩ | **完全没有版本概念**：无 CHANGELOG、0 个 git tag、`SKILL.md` frontmatter 无 `version`、zip 用日期戳 | 见下 | 待做 |
+| ⑪ | **无回滚路径** | 发出坏版本后用户无法退回：`npx skills` 无版本 pin，zip 无历史归档，文档无说法 | 待做 |
+| ⑫ | **测试选择无矩阵** | "改了什么必须跑什么"只在「维护触发表」里部分存在，且按运维触发而非改动类型分 | 待做 |
+| ⑬ | **开发流程未成文** | 分支策略（现直推 main）、提交身份必须 noreply、克隆后必装钩子都没写；公开仓无 `CONTRIBUTING.md`，而选 Apache-2.0 的首要理由正是"会收到陌生人 PR" | 待做 |
+
+⑩ 的后果很具体：`npx skills update` 的用户不知道更新到了什么、变了什么；出问题说不清哪版引入；
+**2026-07-25 的附件行为变更（等不到附件名即中止）就是活例——装了旧版的人升级后会撞上新的中止
+行为，而没有任何地方告知**；同一天打两次包还会互相覆盖。
+
+另：`PUBLISHING.md` 的手工门禁清单与新 CI 有重叠，两套并存会漂移。
+
+### 处置取向：补机制优先于写文档
+
+文档已 9 个文件千余行、taxonomy 清楚。再新增「开发 / 测试 / 发版 / 部署」四份 SOP 会造成重叠与
+漂移——那恰恰违反本项目自己的单一事实源原则。取向是**只新增两个文件**：
+
+- **A. 引入版本号（唯一真正缺失的机制）**：`SKILL.md` frontmatter 加 `version` 作单一事实源
+  → `CHANGELOG.md` → git tag → `pack-skill.sh` 改用版本号命名 → **加测试守住 tag /
+  frontmatter / CHANGELOG 三者一致**（沿用本项目"用测试守约定"的既有套路）。
+- **B. `CONTRIBUTING.md`**（约 20 行）：装 pre-push 钩子、提交身份必须 noreply、
+  禁止提交任何真实表单数据、PR 必过 CI 三 job。
+- **C. `docs/SOP.md`**（唯一新增的 SOP 文件）：四阶段流程骨架 + 三张表——改动类型→必跑验证矩阵、
+  发版检查单（标明哪些 CI 自动 / 哪些人工）、回滚路径。具体命令一律链回现有文档，**不复制**。
+
+顺序 A → B → C，机制先于文档。Apache-2.0 的三项配套待补（版权主体、SPDX 头、SPDX 断言，
+见 [PUBLISHING.md](PUBLISHING.md#配套待补未完成)）并入 A、B 一起做。
+
 ## 四、历史泄露：已经发生，不是待办
 
 **2026-07-25 核实：仓库已是 PUBLIC，历史敏感对象公网可直取。** 这不是"发布前要处理的阻断"，
