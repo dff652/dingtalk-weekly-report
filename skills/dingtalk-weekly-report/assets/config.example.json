@@ -1,0 +1,48 @@
+{
+  "_说明": "复制为 config.json 后运行 scripts/configure.py。所有字段、枚举和按钮文本必须来自你有权使用的氚云表单；不要保存一次性 entry/auth 登录链接。",
+  "config_version": 2,
+  "name": "你的姓名",
+  "form_url": "",
+  "form_project": "项目下拉完整原文",
+  "attach_project": "附件关联项目或活动",
+  "dept_goal": "",
+  "vocabulary": {
+    "project_types": [],
+    "statuses": [],
+    "attachment_task_types": [],
+    "operations_project_type": "",
+    "leave_status": ""
+  },
+  "project_type": "",
+  "status": "",
+  "hours": 8,
+  "leave_hours": 8,
+  "standup": {"content": "每日站会", "hours": 0.5, "status": ""},
+  "monday_meeting": {
+    "content": "团队周例会",
+    "hours": 0.5,
+    "status": "",
+    "project_type": ""
+  },
+  "progress_report": "",
+  "submission_reminder": "",
+  "form_fields": {
+    "subgrid_id": "",
+    "start_date": "",
+    "attach": "",
+    "note": "",
+    "row_date": "",
+    "row_type": "",
+    "row_project": "",
+    "row_status": "",
+    "row_hours": "",
+    "row_content": ""
+  },
+  "form_texts": {
+    "report_title": "",
+    "add_row": "",
+    "start_date_label": "",
+    "save_draft": "",
+    "success_messages": []
+  }
+}

@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<title>测试周报-新增（氚云结构仿真）</title>
+<style>
+  body { font-family: sans-serif; margin: 20px; }
+  .control-adapter { margin: 10px 0; }
+  .subgrid-sheet__row { border: 1px solid #ccc; margin: 4px 0; padding: 4px; display: flex; gap: 8px; }
+  .h3-dropdown { display: inline-block; border: 1px solid #999; padding: 2px 16px 2px 6px; min-width: 110px; min-height: 1.2em; background: #fafafa; cursor: pointer; }
+  #dd-panel { position: fixed; bottom: 10px; right: 10px; background: #fff; border: 1px solid #666; padding: 4px; display: none; z-index: 9; }
+  #dd-panel div { padding: 3px 10px; cursor: pointer; }
+  #cal-wrap { position: fixed; top: 10px; right: 10px; background: #fff; border: 1px solid #666; padding: 6px; display: none; z-index: 9; }
+  #result { margin-top: 14px; white-space: pre-wrap; background: #f5f5f5; padding: 8px; }
+</style>
+</head>
+<body>
+<h3>测试周报-新增（仿真：配置驱动字段 / subgrid / ant-calendar / h3-dropdown）</h3>
+<div>开始日期</div>
+
+<div id="mock-start-date" class="control-adapter"><input readonly placeholder="年-月-日" class="ant-calendar-picker-input"></div>
+<div id="mock-attach" class="control-adapter"><input type="file"></div>
+<div id="mock-note" class="control-adapter"><textarea placeholder="本周特殊情况说明"></textarea></div>
+
+<div id="mock-subgrid" class="subgrid-control-adapter">
+  <button type="button" onclick="addRow()">新增</button>
+  <div class="subgrid-sheet__body"><div class="ant-spin-container"></div></div>
+</div>
+
+<button type="button" onclick="save('draft')">暂 存</button>
+<button type="button" onclick="save('submit')">提 交</button>
+
+<div id="cal-wrap"><input class="ant-calendar-input" placeholder="输入日期"></div>
+<div id="dd-panel"></div>
+<div id="result"></div>
+
+<script>
+const OPTIONS = {
+  "mock-row-type": ["项目工作", "组织活动"],
+  "mock-row-project": ["TEST-PROJECT 测试项目", "TEST-PROJECT-OTHER 其它测试项目"],
+  "mock-row-status": ["进行中", "会议", "请假"],
+};
+let calTarget = null, ddTarget = null;
+
+document.body.addEventListener("click", (e) => {
+  const inp = e.target.closest("input.ant-calendar-picker-input");
+  if (inp) {
+    calTarget = inp;
+    const w = document.getElementById("cal-wrap");
+    w.style.display = "block";
+    const ci = w.querySelector("input"); ci.value = ""; ci.focus();
+  }
+});
+document.querySelector("#cal-wrap input").addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && calTarget) {
+    calTarget.value = e.target.value;
+    document.getElementById("cal-wrap").style.display = "none";
+  }
+});
+
+function makeDropdown(fid) {
+  const div = document.createElement("div");
+  div.className = "h3-dropdown";
+  div.dataset.fid = fid;
+  div.onclick = (e) => {
+    e.stopPropagation();
+    ddTarget = div;
+    const p = document.getElementById("dd-panel");
+    p.innerHTML = "";
+    for (const opt of OPTIONS[fid]) {
+      const o = document.createElement("div");
+      o.textContent = opt;
+      o.onclick = (ev) => { ev.stopPropagation(); ddTarget.textContent = opt; p.style.display = "none"; };
+      p.appendChild(o);
+    }
+    p.style.display = "block";
+  };
+  return div;
+}
+
+function addRow() {
+  const row = document.createElement("div");
+  row.className = "subgrid-sheet__row";
+  // 复刻真实 DOM 的坑：行内还有一个同名 class 的滚动容器
+  const inner = document.createElement("div");
+  inner.className = "subgrid-sheet__row horizontal-scrollbar";
+  row.appendChild(inner);
+  const dateBox = document.createElement("div"); dateBox.id = "mock-row-date";
+  const di = document.createElement("input"); di.readOnly = true; di.className = "ant-calendar-picker-input";
+  dateBox.appendChild(di); row.appendChild(dateBox);
+  for (const fid of ["mock-row-type", "mock-row-project", "mock-row-status"]) {
+    const box = document.createElement("div"); box.id = fid;
+    box.appendChild(makeDropdown(fid)); row.appendChild(box);
+  }
+  const hb = document.createElement("div"); hb.id = "mock-row-hours";
+  const hi = document.createElement("input"); hb.appendChild(hi); row.appendChild(hb);
+  const cb = document.createElement("div"); cb.id = "mock-row-content";
+  const ta = document.createElement("textarea"); cb.appendChild(ta); row.appendChild(cb);
+  document.querySelector(".subgrid-sheet__body .ant-spin-container").appendChild(row);
+}
+addRow(); // 表单自带首行
+
+function save(kind) {
+  const rows = [];
+  for (const r of document.querySelectorAll(".ant-spin-container > .subgrid-sheet__row")) {
+    rows.push([
+      r.querySelector("#mock-row-date input").value,
+      r.querySelector('[data-fid="mock-row-type"]').textContent,
+      r.querySelector('[data-fid="mock-row-project"]').textContent,
+      r.querySelector('[data-fid="mock-row-status"]').textContent,
+      r.querySelector("#mock-row-hours input").value,
+      r.querySelector("#mock-row-content textarea").value.slice(0, 24),
+    ].join("|"));
+  }
+  const attach = document.querySelector("#mock-attach input").files[0];
+  document.getElementById("result").textContent = JSON.stringify({
+    kind: kind,
+    start: document.querySelector("#mock-start-date input").value,
+    attach: attach ? attach.name : "",
+    note: document.querySelector("#mock-note textarea").value,
+    rows: rows,
+  });
+}
+</script>
+</body>
+</html>

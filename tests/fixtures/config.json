@@ -1,0 +1,47 @@
+{
+  "config_version": 2,
+  "name": "验收人员",
+  "form_url": "https://www.h3yun.com/application/test-form",
+  "form_project": "TEST-PROJECT 测试项目",
+  "attach_project": "TEST-ACTIVITY 测试活动",
+  "dept_goal": "测试目标",
+  "vocabulary": {
+    "project_types": ["项目工作", "组织活动"],
+    "statuses": ["进行中", "会议", "请假"],
+    "attachment_task_types": ["项目工作"],
+    "operations_project_type": "组织活动",
+    "leave_status": "请假"
+  },
+  "project_type": "项目工作",
+  "status": "进行中",
+  "hours": 8,
+  "leave_hours": 8,
+  "standup": {"content": "每日站会", "hours": 0.5, "status": "会议"},
+  "monday_meeting": {
+    "content": "团队周例会",
+    "hours": 0.5,
+    "status": "会议",
+    "project_type": "组织活动"
+  },
+  "progress_report": "",
+  "submission_reminder": "请按组织规定的截止时间提交",
+  "form_fields": {
+    "subgrid_id": "mock-subgrid",
+    "start_date": "mock-start-date",
+    "attach": "mock-attach",
+    "note": "mock-note",
+    "row_date": "mock-row-date",
+    "row_type": "mock-row-type",
+    "row_project": "mock-row-project",
+    "row_status": "mock-row-status",
+    "row_hours": "mock-row-hours",
+    "row_content": "mock-row-content"
+  },
+  "form_texts": {
+    "report_title": "测试周报",
+    "add_row": "新增",
+    "start_date_label": "开始日期",
+    "save_draft": "暂 存",
+    "success_messages": ["暂存成功", "保存成功"]
+  }
+}

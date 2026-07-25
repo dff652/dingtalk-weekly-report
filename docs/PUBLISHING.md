@@ -1,0 +1,130 @@
+# skills.sh 分发与开源发布
+
+## 分发模型
+
+本项目采用 Apache License 2.0，仓库根与 Skill 安装目录均携带 `LICENSE`。skills CLI 只安装
+`$SKILL`；`bootstrap.sh` / `bootstrap.ps1` 另行创建每用户私有 `$WORK`。
+
+```text
+公开仓库 / $SKILL              每用户私有 $WORK
+---------------------------   --------------------------------
+通用脚本、空白模板、文档       config.json、weeks/、output/、.venv/
+Apache-2.0                     ~/.config/dtwr/ 保存指针和登录态
+```
+
+真实表单 URL、组件 ID、按钮文本、枚举、项目、周报、截图和登录态不得进入公开仓库、issue、
+日志或发布附件。
+
+## 许可证选择：Apache-2.0 vs MIT
+
+**决定（2026-07-25）：维持 Apache-2.0，不换 MIT。** 理由按对本项目的实际权重排：
+
+1. **§5 贡献条款 = 不需要 CLA（权重最高）**。Apache-2.0 明写"任何有意提交的贡献默认按本许可证
+   授出"。本项目要挂到 skills hub 被陌生人安装，就会收到陌生人的 PR。MIT 无任何入站贡献条款，
+   只能靠 GitHub ToS 的 inbound=outbound 兜底；Apache 把它写进许可证，省掉未来"要么建 CLA、
+   要么心里没底"的两难。
+2. **§3 专利授权 + 反诉终止**。本项目没有可专利的发明，此条**实质**价值不大，但**信号**价值不小：
+   工具会被其他公司的员工装进公司机器去操作其 HR 系统，企业 OSPO 审"能不能装"时，显式专利授权
+   是加分项，MIT 的专利地位靠默示推定。成本为零的保险。
+3. **§4(b) 要求改动方标注"已修改"**。对本项目有真实意义：核心卖点是"只落草稿、永不提交、内容
+   必人审"。有人 fork 后拆掉 `--draft` 闸门直接提交、还挂着本项目名分发——Apache 下属于违约，
+   MIT 下无从追究。代人向 HR 填报的工具，"改了必须说"不是形式主义。
+4. **§6 商标条款**明确不授予名称/标识使用权。技能名要在 hub 上被搜索发现，名字本身是资产；
+   MIT 对商标只字不提。
+5. **生态一致**。唯一运行时依赖 Playwright 本身即 Apache-2.0，skills / agent 工具链主流亦然，
+   下游合规审查零摩擦。
+
+MIT 的两个常见优势在此不成立：
+
+- *简短*：`LICENSE` 11KB 比多数脚本都大，但技能包经 zip / `npx skills` 分发，多 11KB 无人感知。
+  该理由只在单文件 gist 场景成立。
+- *GPLv2 兼容*：Apache-2.0 与 GPLv2-only 不兼容（只兼容 GPLv3+）。但本项目是自包含独立技能包，
+  被吸收进 GPLv2-only 项目的概率约等于零。
+
+**重估触发**：若目标改为"让 `xlsxlite.py` 这类小组件被尽可能多的项目随手抄走"，MIT 的零摩擦
+更优。当前目标是"整包被安装、被 fork 时行为约束可追溯"，Apache 更贴。
+
+### 配套待补（未完成）
+
+- [ ] `LICENSE` 附录的 `Copyright [yyyy] [name of copyright owner]` 仍是占位符。规范做法是保留
+      附录原文不动，另在 `README.md` 或新增 `NOTICE` 中写明版权主体——目前两处都没有。
+- [ ] 每个 `.py` 顶部加 `# SPDX-License-Identifier: Apache-2.0`（Apache 推荐，且让扫描工具在
+      文件级即可判定）。
+- [ ] `tests/test_public_tree.py` 加一条断言：所有分发脚本都带 SPDX 头。脱敏已用测试守住，
+      许可证头用同一机制守是顺手的事。
+
+## skills.sh 发布方式
+
+skills.sh 没有单独的上传命令。公开发布流程是：
+
+1. 将含合法 `SKILL.md` 的仓库推送到公开 GitHub；
+2. `npx skills add owner/repo --list` 验证发现；
+3. 用隔离 HOME 完成安装、bootstrap 和仿真验收；
+4. 等待 skills.sh 根据安装遥测建立或更新索引。
+
+安装示例：
+
+```bash
+npx skills add dff652/dingtalk-weekly-report \
+  --skill dingtalk-weekly-report \
+  --agent claude-code --agent codex \
+  --global --yes --copy
+```
+
+## 历史泄露处置（已发生）
+
+当前工作树已把运行数据迁出仓库并参数化表单元数据，但旧 Git 历史包含真实个人配置、周报、
+组织项目与表单标识。普通删除提交不能清除历史对象。
+
+**2026-07-25 核实：仓库已是 PUBLIC，上述历史对象公网可直取（实测 HTTP 200）。** 这不再是
+"发布前阻断"，而是**已发生的泄露**。暴露窗口约 4 天（仓库创建于 2026-07-21），fork / star /
+watcher 均为 0。**无凭证泄露**：token、`state.json`、cookie、截图从未入库，没有需要立即轮换
+的凭证。泄露内容清单见 [REVIEW.md](REVIEW.md#四历史泄露已经发生不是待办)。
+
+处置顺序（每一步都需要单独批准，历史重写前必须先建离线备份）：
+
+1. **止血决策**：转回 private，或接受暴露继续公开。转 private 只阻断新增抓取，不撤回已发生的
+   暴露，也不影响已有克隆与第三方镜像。
+2. **离线备份**整个仓库（含全部 ref 与 reflog），重写前不可跳过。
+3. **历史重写**：36 个提交，规模很小，`git filter-repo` 一次可完成——删除历史 `config.json`、
+   `weeks/`、含真实值的 `FIELDS.md` / `README.md` 版本。
+4. **force push** 并通知任何已有克隆作废。
+5. **请求 GitHub 清除弃置对象**：force push 后，被弃置的 commit 在 GitHub 上**仍可按 hash 直接
+   访问**，必须另行联系 GitHub Support 请求 GC，否则第 3、4 步等于没做。这一步最常被漏。
+6. **组织侧知会**：表单标识与内部项目/周报内容曾公开，按所在组织的安全合规要求判断是否上报。
+7. **复跑全部发布门禁**，不得带 `DTWR_ALLOW_DIRTY=1` 或本地 `DTWR_RELEASE_REMOTE`。
+
+历史重写是破坏性操作，不属于普通发布命令。
+
+## 后续发布阻断
+
+在完成以下动作前，不得宣布公开发行完成：
+
+- 上节「历史泄露处置」7 步全部完成，且确认远端安装只包含脱敏版本；
+- 确认有权以 Apache-2.0 发布全部剩余代码和文档。
+
+## 发布门禁
+
+本地候选：
+
+```bash
+bash tests/run_smoke.sh
+bash tests/run_full_acceptance.sh
+```
+
+push 后：
+
+```bash
+bash tests/run_release_acceptance.sh
+```
+
+必须同时满足：
+
+- 当前树脱敏扫描通过，未跟踪根 `config.json`、`weeks/` 或 `output/`；
+- 根 `LICENSE` 与 Skill 内 `LICENSE` 完全一致；
+- 单元、打包、隔离安装、附件、浏览器仿真草稿全部通过；
+- skills CLI 安装输出无未处理的 Critical/High；
+- 真实个人配置、登录和草稿按 `MANUAL_ACCEPTANCE.md` 单独人工验收。
+
+正式发行验收不得设置 `DTWR_ALLOW_DIRTY=1`，也不得把 `DTWR_RELEASE_REMOTE` 指向本地仓库。
+审计平台可能缓存旧提交；推送修复后需等待重扫并重新安装验证。
