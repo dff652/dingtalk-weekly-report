@@ -36,3 +36,7 @@ VOCABULARY_VALUE_KEYS = (
     "operations_project_type",
     "leave_status",
 )
+
+# 假期与调休：均为可选的 YYYY-MM-DD 列表，留空即沿用「周一至周五」。
+# 不内置年度节假日表（过期的表比没有表更危险），也不联网获取。
+CALENDAR_LIST_KEYS = ("holidays", "extra_workdays")

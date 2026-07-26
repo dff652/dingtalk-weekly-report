@@ -5,6 +5,8 @@
   "form_url": "",
   "form_project": "项目下拉完整原文",
   "attach_project": "附件关联项目或活动",
+  "holidays": [],
+  "extra_workdays": [],
   "dept_goal": "",
   "vocabulary": {
     "project_types": [],
@@ -17,7 +19,11 @@
   "status": "",
   "hours": 8,
   "leave_hours": 8,
-  "standup": {"content": "每日站会", "hours": 0.5, "status": ""},
+  "standup": {
+    "content": "每日站会",
+    "hours": 0.5,
+    "status": ""
+  },
   "monday_meeting": {
     "content": "团队周例会",
     "hours": 0.5,

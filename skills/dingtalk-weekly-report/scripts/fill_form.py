@@ -240,10 +240,13 @@ def open_new_form(page, url, mock):
 def fill_ant_date(fr, page, scope, value):
     """ant-calendar readonly input：点开 → 面板输入框敲日期 → Enter。"""
     scope.locator("input").first.click()
-    page.wait_for_timeout(600)
     cal = fr.locator(".ant-calendar-input")
-    if not cal.count():
-        raise RuntimeError("日期面板未弹出（.ant-calendar-input 不存在）")
+    for _ in range(10):                      # 等面板弹出，而不是赌固定 600ms
+        page.wait_for_timeout(300)
+        if cal.count():
+            break
+    else:
+        raise RuntimeError("3s 内日期面板未弹出（.ant-calendar-input 不存在）")
     cal.first.fill(value)
     page.keyboard.press("Enter")
     page.wait_for_timeout(500)
@@ -331,11 +334,15 @@ def verify_draft_saved(fr, page, mock, success_messages=()):
         ".has-error .ant-form-explain"
     )
     success_selector = ".ant-message-success, .ant-notification-notice-success"
+    # 两趟：先扫遍**所有** frame 找错误，再找成功。
+    # 单趟逐 frame「先查错再查成功、命中成功就返回」会漏掉出现在后置 frame 里的错误——
+    # 语义应是「全 frame 无可见错误 ∧ 存在可见成功」。
     for frame in page.frames:
         errors = frame.locator(error_selector)
         for i in range(errors.count()):
             if errors.nth(i).is_visible():
                 raise RuntimeError(f"暂存失败: {errors.nth(i).inner_text().strip()}")
+    for frame in page.frames:
         success = frame.locator(success_selector)
         if any(success.nth(i).is_visible() for i in range(success.count())):
             return
@@ -423,9 +430,18 @@ def do_fill(report_path, url, save_draft):
                 return
             btn_name = CONFIG["form_texts"]["save_draft"]
             fr.get_by_text(btn_name, exact=True).first.click()
-            page.wait_for_timeout(500 if mock else 4000)
-            verify_draft_saved(
-                fr, page, mock, CONFIG["form_texts"]["success_messages"])
+            # 轮询等结果而非定长等待：慢的时候 4s 不够（误判失败），快的时候白等。
+            page.wait_for_timeout(500)
+            deadline = time.time() + (0 if mock else 20)
+            while True:
+                try:
+                    verify_draft_saved(
+                        fr, page, mock, CONFIG["form_texts"]["success_messages"])
+                    break
+                except RuntimeError:
+                    if time.time() >= deadline:
+                        raise
+                    page.wait_for_timeout(1000)
             shot(page, "30-saved")
             log("草稿暂存成功，见 30-saved.png")
         except (PWTimeout, RuntimeError) as e:

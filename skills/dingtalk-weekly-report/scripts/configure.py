@@ -37,6 +37,8 @@ FIELD_SPECS = (
     ("monday_meeting.hours", "周一例会工时", "number"),
     ("monday_meeting.status", "周一例会状态", "status"),
     ("monday_meeting.project_type", "周一例会项目类型", "project_type"),
+    ("holidays", "法定假日，不报工的日期（逗号分隔 YYYY-MM-DD，可空）", "list"),
+    ("extra_workdays", "调休上班日，通常是周末（逗号分隔 YYYY-MM-DD，可空）", "list"),
     ("progress_report", "工作日志文件或项目目录（可空）", "text"),
     ("submission_reminder", "人工提交提醒（可空）", "text"),
     ("form_fields.subgrid_id", "工作详情子表 DOM id", "text"),

@@ -22,24 +22,33 @@
 这里使用的是官方开放生态的 `npx skills add` 安装方式；它只安装 skill 文件，
 随后仍需运行本项目的 bootstrap 安装 Python/Chromium 运行时。
 
+**最短路径**——装完直接调用，skill 自己会建运行环境：
+
+```bash
+npx skills add dff652/dingtalk-weekly-report
+```
+
+```text
+/dingtalk-weekly-report        # Claude；Codex 用 $dingtalk-weekly-report
+```
+
+首次调用时 `SKILL.md` 第 0 步发现 `$WORK` 不存在，会引导跑 bootstrap（建 `$WORK`、venv、
+Chromium、config）。
+
+**确定性装法**（非交互、或想一次装到位不依赖 agent 行为）：
+
 ```bash
 # 1) 装 skill → Claude Code + Codex（全局）
 npx skills add https://github.com/dff652/dingtalk-weekly-report \
-  --skill dingtalk-weekly-report \
-  --agent claude-code \
-  --agent codex \
-  --global --yes --copy
+  --skill dingtalk-weekly-report --agent claude-code --agent codex --global --yes --copy
 
-# 2) Codex 若只扫 ~/.codex/skills，补链（npx 常只写到 ~/.agents + ~/.claude）
+# 2) Codex 补链（实测 npx 只写 ~/.agents + ~/.claude，不写 ~/.codex/skills）
 mkdir -p ~/.codex/skills
-ln -sfn ~/.claude/skills/dingtalk-weekly-report \
-        ~/.codex/skills/dingtalk-weekly-report
+ln -sfn ~/.claude/skills/dingtalk-weekly-report ~/.codex/skills/dingtalk-weekly-report
 
-# 3) 运行时：$WORK + Playwright Chromium（装 skill 不会做这一步）
+# 3) 运行时：$WORK + Playwright Chromium
 bash ~/.claude/skills/dingtalk-weekly-report/bootstrap.sh
 ```
-
-等价简写：`npx skills add dff652/dingtalk-weekly-report -s dingtalk-weekly-report -a claude-code -a codex -g -y --copy`
 
 | 回退 | 命令 |
 |------|------|
@@ -51,8 +60,8 @@ bash ~/.claude/skills/dingtalk-weekly-report/bootstrap.sh
 
 Skill 代码与每用户运行数据严格分离：安装目录只读，默认私有工作目录为
 `~/weekly-report-data`。不要把 `$WORK/config.json`、`weeks/`、`output/` 或
-`~/.config/dtwr/state.json` 提交到本仓库。历史版本曾包含本地运行数据，正式公开发行前仍须按
-[发布与历史清理要求](docs/PUBLISHING.md) 处理 Git 历史。
+`~/.config/dtwr/state.json` 提交到本仓库。Git 历史已于 2026-07-25 重建为单一提交并回收旧对象，
+该日期之前的克隆请重新克隆；处置全过程见 [PUBLISHING.md](docs/PUBLISHING.md)。
 
 ---
 
@@ -149,6 +158,10 @@ $dingtalk-weekly-report
 | [skills/…/SKILL.md](skills/dingtalk-weekly-report/SKILL.md) | Agent 执行 SOP |
 | [skills/…/references/CONTRACT.md](skills/dingtalk-weekly-report/references/CONTRACT.md) | 输入、缺失处理、输出与失败契约 |
 | [skills/…/references/FIELDS.md](skills/dingtalk-weekly-report/references/FIELDS.md) | 私有配置键、字段获取方法与通用 DOM 约束 |
+| [SECURITY.md](SECURITY.md) | 信任模型、扫描器告警处置、数据边界 |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | 贡献规则：钩子、提交身份、不接受的改动 |
+| [docs/SOP.md](docs/SOP.md) | 开发/测试/发版/部署流程骨架与决策表 |
+| [docs/REVIEW.md](docs/REVIEW.md) | 设计评审：不变量清单与缺陷台账 |
 | [docs/MAINTAINER.md](docs/MAINTAINER.md) | 维护仓：打包、测试、调试、路线图 |
 | [docs/PUBLISHING.md](docs/PUBLISHING.md) | 开源发布、发行门禁与历史清理 |
 | [docs/TESTING.md](docs/TESTING.md) | 自动测试覆盖、安装踩坑排查、最近结果与人工验收边界 |

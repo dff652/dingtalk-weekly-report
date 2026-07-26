@@ -48,10 +48,10 @@ HR 表单上的内部工具做成可开源的通用技能包——已经解决�
 | ① | `fill_form.py` 附件上传 | 无完成校验，可能存下缺附件的草稿 | 高 | ✅ 已修 |
 | ② | `extract_week.py` `dept_goal` | 缺键时裸 KeyError | 中 | ✅ 已修 |
 | ③ | `fill_form.py` `STATE` 常量 | 忽略 `XDG_CONFIG_HOME`，与其余两处不一致 | 中 | ✅ 已修 |
-| ④ | `fill_form.py::verify_draft_saved` | 依赖 frame 顺序，后置 frame 的错误看不到 | 低 | 待修 |
-| ⑤ | `fill_form.py` 各处 | 定长 `wait_for_timeout` 而非条件等待 | 低 | 待修 |
-| ⑥ | `gen_attachment.py` | 产物走 cwd 相对 `output/`，与 `$WORK/output/` 两套解析 | 低 | 待修 |
-| ⑦ | `xlsxlite.py::Sheet.to_xml` | 未过滤 XML 非法控制字符 | 低 | 待修 |
+| ④ | `fill_form.py::verify_draft_saved` | 依赖 frame 顺序，后置 frame 的错误看不到 | 低 | ✅ 已修：改为两趟——先扫全 frame 找错误，再找成功 |
+| ⑤ | `fill_form.py` 各处 | 定长 `wait_for_timeout` 而非条件等待 | 低 | ✅ 已修：暂存后轮询等结果（上限 20s）取代定长 4s；日历面板改重试等待 |
+| ⑥ | `gen_attachment.py` | 产物走 cwd 相对 `output/`，与 `$WORK/output/` 两套解析 | 低 | ✅ 已修：`-o` 缺省时走 `workdir()/output`，与 fill_form 同源 |
+| ⑦ | `xlsxlite.py::Sheet.to_xml` | 未过滤 XML 非法控制字符 | 低 | ✅ 已修：新增 `xml_text()` 过滤 XML 1.0 非法控制字符 |
 | ⑧ | `extract_week.py` | 重复 import sys | 琐碎 | ✅ 已修 |
 | ⑨ | 仓库根 | 无 CI，测试不在 push 时运行 | 中 | ✅ 已修 |
 
@@ -176,7 +176,7 @@ mock e2e 挂上 Actions，与 `PUBLISHING.md` 的发布门禁对齐。
 | ⑰ | **运行日志不落文件** | 12 处 `[fill_form]` 逐步日志只到 stdout，全项目只有 cron keepalive 重定向到文件。**会话一关日志就没了，失败后回溯只剩截图**——截图能看最终状态，看不到「第几行开始不对、等了多久超时」 | ✅ 已修：写 `$WORK/output/fill_form.log`，URL 落盘前脱敏 |
 | ⑱ | **`--dump` 被完整配置校验挡住** | `--dump` 的用途就是**找出字段 id**，却要求字段 id 已配好才能跑——新用户拿空模板运行只会得到「字段不能为空」。这是别人用不起来的**具体机制**，不是抽象的「门槛高」 | ✅ 已修：`--dump` 只校验 `form_texts.add_row` / `start_date_label`，`--login` 只校验 form_url，填表与保活仍走完整校验 |
 | ⑲ | **脱敏把「值长什么样」也删了** | 公开模板里全是空串，新用户不知道该向管理员要什么、拿到的对不对、`dump.html` 里该找什么形状 | ✅ 已修：`FIELDS.md` 加掩码形状表（`F#######` / 32 位十六进制）、可复制的索取模板、以及修正后的获取流程 |
-| ⑳ | **工作日硬编码周一~周五，无视节假日与调休** | `extract_week` 只生成 `range(5)` 五天、`validate_report` 缺任一周一~周五即阻断。国庆/春节周会**强迫为放假日填工时**；调休周六上班则**根本不生成该行 → 漏报**。中国假期制度下两头都错 | 待修：配置项 `holidays` + `extra_workdays`，工作日集合 = (周一~周五 − holidays) ∪ extra_workdays；不联网、不内置年度表（过期的表比没有表更危险） |
+| ⑳ | **工作日硬编码周一~周五，无视节假日与调休** | `extract_week` 只生成 `range(5)` 五天、`validate_report` 缺任一周一~周五即阻断。国庆/春节周会**强迫为放假日填工时**；调休周六上班则**根本不生成该行 → 漏报**。中国假期制度下两头都错 | ✅ 已修：配置项 `holidays` + `extra_workdays`，工作日集合 = (周一~周五 − holidays) ∪ extra_workdays；报告写入 `workdays` 快照供校验，旧报告回落周一~周五 |
 | ⑬ | **开发流程未成文** | 公开仓无 `CONTRIBUTING.md`，而选 Apache-2.0 的首要理由正是"会收到陌生人 PR" | ✅ 已修（B）：[CONTRIBUTING.md](../CONTRIBUTING.md) + [SOP.md](SOP.md) |
 
 ⑩ 的后果很具体：`npx skills update` 的用户不知道更新到了什么、变了什么；出问题说不清哪版引入；

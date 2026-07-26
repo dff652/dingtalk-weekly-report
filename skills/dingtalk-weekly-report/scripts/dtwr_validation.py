@@ -4,7 +4,10 @@ import re
 from datetime import date, timedelta
 from urllib.parse import urlparse
 
+from dtwr_week import parse_dates
+
 from dtwr_fields import (
+    CALENDAR_LIST_KEYS,
     FORM_FIELD_KEYS,
     FORM_TEXT_KEYS,
     OPTIONAL_FORM_FIELD_KEYS,
@@ -123,6 +126,30 @@ def _validate_form_url(value, errors: list[str]) -> None:
         errors.append("form_url 不得保存一次性 entry/auth 登录链接")
 
 
+def _validate_calendar(config: dict, errors: list[str]) -> None:
+    """假期与调休列表：可选，但给了就必须是合法且互不矛盾的 ISO 日期。"""
+    parsed = {}
+    for key in CALENDAR_LIST_KEYS:
+        value = config.get(key, [])
+        if value in (None, ""):
+            value = []
+        if not isinstance(value, list):
+            errors.append(f"{key} 必须是 YYYY-MM-DD 字符串列表（可留空）")
+            continue
+        try:
+            parsed[key] = parse_dates(value, key)
+        except ValueError as exc:
+            errors.append(str(exc))
+            continue
+        if len(parsed[key]) != len(value):
+            errors.append(f"{key} 含重复日期")
+    overlap = parsed.get("holidays", set()) & parsed.get("extra_workdays", set())
+    if overlap:
+        errors.append(
+            "同一天不能既是假期又是调休上班日: "
+            + ", ".join(str(d) for d in sorted(overlap)))
+
+
 def validate_config(config: dict) -> None:
     errors = []
     if not isinstance(config, dict):
@@ -152,6 +179,7 @@ def validate_config(config: dict) -> None:
             errors.append(f"{key} 仍是模板占位值")
 
     _validate_form_url(config.get("form_url"), errors)
+    _validate_calendar(config, errors)
     _validate_form_metadata(config, errors)
     vocabulary = _validate_vocabulary(config, errors)
     if config.get("project_type") not in vocabulary["project_types"]:
@@ -266,8 +294,21 @@ def validate_report(report: dict, require_complete: bool = True) -> None:
             errors.append(f"{row_date} 合计工时超过 24 小时（当前 {total}）")
 
     if require_complete and monday:
-        missing = [str(monday + timedelta(days=i)) for i in range(5)
-                   if monday + timedelta(days=i) not in covered]
+        # 应报工作日以报告自带的快照为准（生成时按假期/调休算好）；
+        # 旧报告没有该字段时回落到周一至周五，保持向后兼容。
+        snapshot = report.get("workdays")
+        if snapshot is None:
+            expected = [monday + timedelta(days=i) for i in range(5)]
+        else:
+            try:
+                expected = sorted(parse_dates(snapshot, "workdays"))
+            except ValueError as exc:
+                errors.append(str(exc))
+                expected = []
+            if any(not (monday <= d <= monday + timedelta(days=6))
+                   for d in expected):
+                errors.append("workdays 含不属于目标周的日期")
+        missing = [str(d) for d in expected if d not in covered]
         if missing:
             errors.append("工作日未覆盖: " + ", ".join(missing))
 

@@ -12,6 +12,7 @@ from datetime import date, timedelta
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+from dtwr_common import workdir
 from xlsxlite import Workbook
 from dtwr_validation import ValidationError, validate_report
 
@@ -95,14 +96,17 @@ def build(report: dict, out_dir: Path) -> Path:
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("report_json")
-    ap.add_argument("-o", "--out-dir", default="output")
+    # 默认落 $WORK/output，与 fill_form 读取的位置同源；
+    # 原先用 cwd 相对 "output"，跑错目录就会产出 fill_form 找不到的附件。
+    ap.add_argument("-o", "--out-dir", default=None)
     args = ap.parse_args()
     report = json.loads(Path(args.report_json).read_text(encoding="utf-8"))
     try:
         validate_report(report)
     except ValidationError as exc:
         sys.exit(str(exc))
-    out = build(report, Path(args.out_dir))
+    out_dir = Path(args.out_dir) if args.out_dir else workdir() / "output"
+    out = build(report, out_dir)
     print(f"已生成: {out}")
 
 

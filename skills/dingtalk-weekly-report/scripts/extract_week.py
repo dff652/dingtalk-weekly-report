@@ -22,7 +22,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from dtwr_common import resolve_progress_report, workdir
 from dtwr_validation import ValidationError, validate_config
-from dtwr_week import date_near_week, pick_monday
+from dtwr_week import date_near_week, parse_dates, pick_monday, workdays_for
 
 DAY_RE = re.compile(r"^### (\d{1,2})月(\d{1,2})日(?:\s*[~～]\s*(\d{1,2})月(\d{1,2})日)?(?:（(.*?)）)?", re.M)
 WEEK_RE = re.compile(r"^### Week \d+（(\d{4}-\d{2}-\d{2}) ~ ?(\d{4}-\d{2}-\d{2})?[^）]*）—\s*(.*)$", re.M)
@@ -41,7 +41,16 @@ def main():
         sys.exit(str(exc))
     except ValueError as exc:
         sys.exit(str(exc))
-    workdays = [monday + timedelta(days=i) for i in range(5)]
+    # 工作日不是无脑周一到周五：法定假日不上班，调休时周末要上班。
+    try:
+        workdays = workdays_for(
+            monday,
+            parse_dates(config.get("holidays"), "holidays"),
+            parse_dates(config.get("extra_workdays"), "extra_workdays"))
+    except ValueError as exc:
+        sys.exit(str(exc))
+    if not workdays:
+        sys.exit(f"{monday} 这一周按配置全是假期，无需报工（如有误请检查 holidays）")
     try:
         source_path = resolve_progress_report(config.get("progress_report", ""))
     except ValueError as exc:
@@ -79,7 +88,7 @@ def main():
     days, missing = [], []
     operations_type = config["vocabulary"]["operations_project_type"]
     for i, d in enumerate(workdays):
-        # 周一例会与其他工作日站会均来自当前用户配置，可在 json 里增删。
+        # 周一例会挂在**本周第一个工作日**，而不是写死周一——假期周的周一可能不上班。
         meet = config["monday_meeting"] if i == 0 else config["standup"]
         meeting_type = meet.get("project_type", config["project_type"])
         days.append({
@@ -121,6 +130,8 @@ def main():
         "dept_goal": config.get("dept_goal", ""),
         "vocabulary": deepcopy(config["vocabulary"]),
         "week": {"start": str(monday), "end": str(monday + timedelta(days=6))},
+        # 应报工作日快照：校验按它判覆盖，避免"生成时算了假期、校验时又按周一到周五"分叉
+        "workdays": [str(d) for d in workdays],
         "days": days,
         "special_note": "",
         "summary": {

@@ -5,8 +5,16 @@
 合并单元格、列宽、行高、四种样式（默认/正文带边框换行/表头/标题）。
 样式索引约定：0=默认 1=正文(边框+换行+顶对齐) 2=表头(加粗+底色+边框+居中) 3=标题(加粗)。
 """
+import re
 import zipfile
 from xml.sax.saxutils import escape
+
+# XML 1.0 不允许的控制字符：混进内容会产出 Excel 打不开的文件，escape() 不管这些。
+_ILLEGAL_XML = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f]")
+
+
+def xml_text(value) -> str:
+    return _ILLEGAL_XML.sub("", str(value))
 
 NS = 'xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"'
 
@@ -82,7 +90,7 @@ class Sheet:
                 elif value is None or value == "":
                     parts.append(f'<c r="{ref}" s="{style}"/>')
                 else:
-                    txt = escape(str(value))
+                    txt = escape(xml_text(value))
                     parts.append(f'<c r="{ref}" s="{style}" t="inlineStr"><is><t xml:space="preserve">{txt}</t></is></c>')
             parts.append("</row>")
         parts.append("</sheetData>")

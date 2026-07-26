@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import copy
+import datetime
 import json
 import os
 import subprocess
@@ -62,6 +63,60 @@ class CoreTests(unittest.TestCase):
         value["form_fields"]["subgrid_id"] = ""
         with self.assertRaisesRegex(ValidationError, "subgrid_id 不能为空"):
             validate_config(value)
+
+    def test_workdays_skip_holidays_and_include_makeup_days(self):
+        """中国假期制度两头都会偏离周一到周五：法定假日不上班、调休时周末上班。"""
+        from dtwr_week import workdays_for
+        monday = datetime.date(2026, 9, 28)
+        self.assertEqual(
+            [str(d) for d in workdays_for(monday, {datetime.date(2026, 10, 1),
+                                                   datetime.date(2026, 10, 2)})],
+            ["2026-09-28", "2026-09-29", "2026-09-30"])
+        self.assertEqual(
+            [str(d) for d in workdays_for(
+                monday, {datetime.date(2026, 10, 1)},
+                {datetime.date(2026, 10, 3)})],
+            ["2026-09-28", "2026-09-29", "2026-09-30", "2026-10-02", "2026-10-03"])
+
+    def test_workdays_ignore_makeup_days_outside_target_week(self):
+        from dtwr_week import workdays_for
+        monday = datetime.date(2026, 9, 28)
+        self.assertNotIn(
+            "2026-10-10",
+            [str(d) for d in workdays_for(monday, (), {datetime.date(2026, 10, 10)})])
+
+    def test_config_rejects_day_that_is_both_holiday_and_workday(self):
+        value = copy.deepcopy(self.config)
+        value["holidays"] = ["2026-10-01"]
+        value["extra_workdays"] = ["2026-10-01"]
+        with self.assertRaisesRegex(ValidationError, "既是假期又是调休"):
+            validate_config(value)
+
+    def test_config_rejects_malformed_holiday(self):
+        value = copy.deepcopy(self.config)
+        value["holidays"] = ["2026/10/01"]
+        with self.assertRaisesRegex(ValidationError, "holidays 含非法日期"):
+            validate_config(value)
+
+    def test_report_coverage_follows_workdays_snapshot(self):
+        value = copy.deepcopy(self.report)
+        value["workdays"] = ["2026-07-13", "2026-07-14"]
+        value["days"] = [r for r in value["days"]
+                         if r["date"] in ("2026-07-13", "2026-07-14")]
+        validate_report(value)          # 假期周只报两天也应通过
+
+    def test_report_without_snapshot_still_requires_five_weekdays(self):
+        value = copy.deepcopy(self.report)
+        value.pop("workdays", None)
+        value["days"] = [r for r in value["days"] if r["date"] != "2026-07-17"]
+        with self.assertRaisesRegex(ValidationError, "工作日未覆盖"):
+            validate_report(value)
+
+    def test_xlsx_strips_illegal_control_characters(self):
+        """XML 1.0 不允许的控制字符会产出 Excel 打不开的文件；escape() 不管这些。"""
+        from xlsxlite import xml_text
+        self.assertEqual(xml_text("正常\x0b内容\x00结束"), "正常内容结束")
+        self.assertEqual(xml_text("换行\n制表\t保留"), "换行\n制表\t保留")
 
     def test_config_rejects_submit_button_as_draft_action(self):
         value = copy.deepcopy(self.config)

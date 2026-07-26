@@ -113,6 +113,16 @@ class FillFormLogicTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "必填字段错误"):
             verify_draft_saved(None, FakePage([frame]), mock=False)
 
+    def test_error_in_later_frame_is_not_masked_by_earlier_success(self):
+        """单趟逐 frame「命中成功就返回」会漏掉后置 frame 的错误。"""
+        success_sel = ".ant-message-success, .ant-notification-notice-success"
+        error_sel = (".ant-message-error, .ant-notification-notice-error, "
+                     ".has-error .ant-form-explain")
+        ok_frame = FakeFrame(selectors={success_sel: [FakeItem()]})
+        bad_frame = FakeFrame(selectors={error_sel: [FakeItem("工时超限")]})
+        with self.assertRaisesRegex(RuntimeError, "工时超限"):
+            verify_draft_saved(None, FakePage([ok_frame, bad_frame]), mock=False)
+
     def test_mock_non_draft_result_is_rejected(self):
         result = FakeLocator([FakeItem(json.dumps({"kind": "submit"}))])
         frame = FakeFrame(selectors={"#result": result.items})
