@@ -14,11 +14,15 @@
 - `CONTRIBUTING.md`：装钩子、提交身份必须 noreply、三条硬规则与不接受的改动类型。
 - `docs/SOP.md`：开发 / 测试 / 发版 / 部署的流程骨架与三张决策表（改动类型→必跑验证、
   发版检查单、回滚路径），并记录 `npx skills` 无版本 pin 这一已知回滚缺口。
+- `SECURITY.md`：信任模型与两条扫描器告警（Snyk W012 MEDIUM / Socket LOW Anomaly）的处置说明，
+  含数据边界表与「你不该装它的情况」。
+- 发行审计门禁改为与已复审基线比对（`tests/fixtures/expected-audit-row.txt`），
+  取代原先在整个安装日志里 grep `Critical Risk` 的做法。
 - `references/CONTRACT.md` 新增「工作日志的格式契约」：`PROGRESS_REPORT.md` 的标题形态此前
   只存在于 `extract_week.py` 的正则里，格式写不对不会报错、只会得到一整周 TODO。现补上
   最小示例与三条硬约束（日期标题形态、工作日必须全覆盖、拒绝覆盖已有 json）。
 
-## [0.1.0] - 2026-07-25
+## [0.1.0] - 2026-07-26
 
 首个带版本号的发行。此前的安装没有版本标识，因此本条同时说明**从无版本号的旧安装升级上来时
 会遇到的行为变化**。

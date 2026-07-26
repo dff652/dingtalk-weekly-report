@@ -1,0 +1,19 @@
+# skills.sh 安装输出里本 skill 的评级行基线（已人工复审）。
+#
+# 门禁比对的是「评级有没有变」，不是「评级干不干净」——本 skill 的告警来自其**固有能力**
+# （浏览器自动化 + 登录态 + 安装期拉取依赖），追求 PASS 不现实。评级一旦变化就必须重新
+# 人工看告警原文，看完再更新本文件。
+#
+# 2026-07-26 复审（平台页面原文）：
+#   Socket  WARN / LOW  Anomaly on SKILL.md，Confidence 83% Severity 58%
+#           "核心能力与目的基本一致，未见明显凭证窃取或无关数据外传，整体不像恶意技能"，
+#           但因 skills CLI 转移信任链 + 自动化网页登录 + 可选 git push 归类 SUSPICIOUS。
+#   Snyk    WARN / RISK LEVEL: MEDIUM，1 issue
+#           W012 Unverifiable external dependency：运行时经 Playwright page.goto 访问
+#           用户提供的 h3yun 表单 URL，远端页面内容可影响执行。
+#   两者都准确描述了当前设计，属已知且必要的风险；处置说明见 SECURITY.md。
+#
+# 注意：CLI 这一列印的是「Critical Risk」，而平台页面上 Snyk 的实际 RISK LEVEL 是 MEDIUM。
+# 两处口径不一致是 skills.sh 的渲染差异，不代表存在 Critical 级问题。正因如此，旧门禁那种
+# 「整日志 grep Critical Risk 就判失败」既会误判，也会被同批安装的其它 skill 带偏。
+dingtalk-weekly-report Safe 1 alert Critical Risk

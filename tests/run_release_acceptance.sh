@@ -87,11 +87,25 @@ echo "OK remote skill at $SKILL matches commit $LOCAL_SHA"
 
 AUDIT_LOG="$TMP/skills-audit.txt"
 sed -E 's/\x1B\[[0-9;?]*[ -/]*[@-~]//g' "$INSTALL_LOG" > "$AUDIT_LOG"
+
+# 门禁语义 = 「本 skill 的评级相对已复审基线有没有变」，不是「评级干不干净」。
+# 本 skill 的告警来自固有能力（浏览器自动化 + 登录态 + 安装期拉依赖），追求 PASS 不现实；
+# 恒红的门禁等于没有门禁，只会逼人加 override。
+# 旧实现是整日志 grep 'Critical Risk|High Risk'，两个毛病：
+#   1) 不限定本 skill 那一行——同批安装的其它 skill 的评级会让我们的验收失败；
+#   2) CLI 那一列印的字样与平台页面的实际 RISK LEVEL 不一致（CLI 写 Critical Risk，
+#      页面写 MEDIUM），拿它当严重度判据本身就不可靠。
+AUDIT_BASELINE="$ROOT/tests/fixtures/expected-audit-row.txt"
+AUDIT_ROW=$(grep -F 'dingtalk-weekly-report' "$AUDIT_LOG" | grep -F '│' \
+  | grep -E 'Safe|Risk|alert|Warn|Critical|High|Medium|Low' | tail -1 \
+  | tr -d '│' | sed -E 's/[[:space:]]+/ /g; s/^ //; s/ $//')
+AUDIT_EXPECTED=$(grep -vE '^[[:space:]]*#|^[[:space:]]*$' "$AUDIT_BASELINE" | head -1)
+
 AUDIT_STATUS=PASS
-if grep -Eq 'Critical Risk|High Risk' "$AUDIT_LOG"; then
-  AUDIT_STATUS=FAIL
-elif ! grep -q 'Security Risk Assessments' "$AUDIT_LOG"; then
+if ! grep -q 'Security Risk Assessments' "$AUDIT_LOG" || [ -z "$AUDIT_ROW" ]; then
   AUDIT_STATUS=UNKNOWN
+elif [ "$AUDIT_ROW" != "$AUDIT_EXPECTED" ]; then
+  AUDIT_STATUS=FAIL
 fi
 
 echo "======== 3) bootstrap installed skill ========"
@@ -121,15 +135,18 @@ DTWR_HOME="$TMP/work" DTWR_PYTHON="$PY" DTWR_SKILL="$SKILL" \
 echo "======== 6) skills.sh audit gate ========"
 case "$AUDIT_STATUS" in
   PASS)
-    echo "OK no Critical/High risk in install output"
+    echo "OK 评级与已复审基线一致: $AUDIT_ROW"
     ;;
   FAIL)
-    grep -E 'Security Risk Assessments|Critical Risk|High Risk|Details:' "$AUDIT_LOG" || true
-    echo "FAIL: skills.sh 仍报告 Critical/High；等待重扫或处理告警" >&2
+    echo "实际: $AUDIT_ROW" >&2
+    echo "基线: $AUDIT_EXPECTED" >&2
+    grep -E 'Security Risk Assessments|Details:' "$AUDIT_LOG" || true
+    echo "FAIL: skills.sh 评级与基线不符；去 Details 链接看告警原文，人工复审后再更新" >&2
+    echo "      $AUDIT_BASELINE（含复审结论，勿盲目覆盖）" >&2
     exit 1
     ;;
   UNKNOWN)
-    echo "FAIL: 安装输出没有 Security Risk Assessments，无法完成发行安全验收" >&2
+    echo "FAIL: 安装输出缺 Security Risk Assessments 或取不到本 skill 的评级行，无法完成发行安全验收" >&2
     exit 1
     ;;
 esac

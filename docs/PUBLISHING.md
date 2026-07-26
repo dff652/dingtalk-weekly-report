@@ -44,7 +44,7 @@ MIT 的两个常见优势在此不成立：
 **重估触发**：若目标改为"让 `xlsxlite.py` 这类小组件被尽可能多的项目随手抄走"，MIT 的零摩擦
 更优。当前目标是"整包被安装、被 fork 时行为约束可追溯"，Apache 更贴。
 
-### 配套（2026-07-25 完成）
+### 配套（2026-07-26 完成）
 
 - [x] 版权主体写在 `README.md`（`Copyright 2026 dff652`）。`LICENSE` 附录保留 Apache 原文不动
       （那是给使用者抄的模板，不是待填空）。**刻意用 GitHub handle 而非真实姓名**——与提交身份
@@ -112,11 +112,12 @@ watcher 均为 0。**无凭证泄露**：token、`state.json`、cookie、截图�
 | 提交身份统一为 GitHub noreply（公司邮箱不再出现在公开仓） | ✅ 完成 |
 | `git push --force` | ✅ 完成 |
 | 公网 fresh clone 复验：1 提交、身份正确、脱敏扫描 0 命中 | ✅ 完成 |
-| **回收弃置对象** —— 实测旧 commit 与旧文件**仍可按 hash 取回（HTTP 200）** | ❌ **未完成** |
-| 防复发门禁（CI 扫历史，不只扫工作树） | ❌ 未完成 |
+| **回收弃置对象** —— 用户 2026-07-25 删库并同名重建 | ✅ 完成（旧 raw 与历史周报实测全 404） |
+| 防复发门禁（`hooks/pre-push` + CI 历史脱敏扫描） | ✅ 完成 |
 
-**未完成项是关键项**：force push 只改变了默认分支指向，GitHub 仍保留弃置对象且公开可寻址。
-在完成回收前，本次重写的实际效果仅限于"新克隆者拿不到"。
+**关键教训**：force push 只改变默认分支指向，GitHub 仍保留弃置对象且公开可寻址——实测旧
+commit 与历史周报在 force push 后仍可按 hash 取回（HTTP 200）。本仓最终靠**删库重建**回收，
+重建后同样的 URL 全部 404。
 
 两条回收路径：
 
@@ -168,7 +169,7 @@ bash tests/run_release_acceptance.sh
 - 当前树脱敏扫描通过，未跟踪根 `config.json`、`weeks/` 或 `output/`；
 - 根 `LICENSE` 与 Skill 内 `LICENSE` 完全一致；
 - 单元、打包、隔离安装、附件、浏览器仿真草稿全部通过；
-- skills CLI 安装输出无未处理的 Critical/High；
+- skills CLI 评级与已复审基线 `tests/fixtures/expected-audit-row.txt` 一致（评级变化即触发人工复审，处置说明见 [SECURITY.md](../SECURITY.md)）；
 - 真实个人配置、登录和草稿按 `MANUAL_ACCEPTANCE.md` 单独人工验收。
 
 正式发行验收不得设置 `DTWR_ALLOW_DIRTY=1`，也不得把 `DTWR_RELEASE_REMOTE` 指向本地仓库。
