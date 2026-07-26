@@ -241,6 +241,82 @@ bootstrap、核心 18 项、填表逻辑 11 项、附件和 mock draft 全部通
 `DTWR_ALLOW_DIRTY=1` 只验证脚本改动；它不构成正式 `RELEASE ACCEPTANCE PASS`。
 push 后必须不带这两个开发覆盖变量重新运行。
 
+## 2026-07-26/27 会话：工具链与门禁踩坑
+
+本轮把评审缺陷 ①②③⑧⑨⑭⑮ 收口、引入版本号机制、处置历史泄露与安全告警。过程中踩到的坑
+按"下次还会踩"的标准记录如下。
+
+### 踩坑 5：`npx skills` 确认不写 `~/.codex/skills`
+
+README「复制给 AI」那段的第 2 步（补链）曾被怀疑多余。在隔离 HOME 里逐条执行验证：
+`--agent codex` 装完后 `~/.codex/skills/dingtalk-weekly-report` **不存在**，只写了
+`~/.claude` 与 `~/.agents`。**该步骤必须保留**，不是历史包袱。
+
+### 踩坑 6：`skills@1.5.20` 要 Node ≥22.20，且 `nvm install` 会偷改 default
+
+本机只有 Node 18（system）与 20（nvm），跑 `run_release_acceptance.sh` 直接 fail-fast。
+装 22 解决，但 **`nvm install 22` 在没有显式 default 别名时会自动创建 `default -> 22`**，
+把项目默认 Node 顶掉。装完必须复查：
+
+```bash
+nvm alias default        # 确认仍指向项目需要的版本
+nvm unalias default      # 若是 nvm 自己创建的，删掉恢复原状
+node -v                  # 非登录 shell 应与安装前一致
+```
+
+注意 `stable` / `node` 这两个内置别名会跟着最新安装版本走，装了 22 就回不去——这是安装
+本身的固有结果，不是别名设置问题。
+
+### 踩坑 7：`test_fill_form_logic` 不是纯单元测试
+
+CI 首次运行即失败：该文件 `import fill_form`，而 `fill_form.py` 顶层 `import playwright`，
+缺包会在 unittest **loader 阶段**就 ImportError（报 `Ran 38 tests` 而非全量）。单测 job 必须
+装 `requirements-runtime.txt`，但**不需要**下载 Chromium——浏览器只有仿真 e2e 用得到。
+
+### 踩坑 8：git hook 里 `dirname "$0"` 会解析到 `.git`
+
+`hooks/pre-push` 装成 `.git/hooks/pre-push` 软链后，`$(dirname "$0")/..` 得到的是 `.git`
+而不是仓库根，脚本立刻找不到 `tests/`。hook 里一律用：
+
+```bash
+ROOT="$(git rev-parse --show-toplevel)"
+```
+
+### 踩坑 9：测试假数据撞脱敏门禁
+
+新增附件测试时，假字段 id 用了「大写 F + 7 位数字」这个形状——正好命中 `SENSITIVE_PATTERNS`，
+被 `test_public_tree` 当场拦下。**连测试夹具都要避开真实标识的形状**；这也反过来证明门禁有效。
+
+后续写本条踩坑说明时**又中了一次**——正文里原样写出那个形状，`test_public_tree` 再次拦下。
+结论：连"讨论敏感形状"的文档也不能把形状写出来，只能描述它（"大写 F + 7 位数字"）。
+
+### 踩坑 10：提交身份忘带 noreply 被钩子拦
+
+用默认 git 身份（公司邮箱）做了一次空提交，`scan_history.py` 的身份校验立刻拦住推送。
+治本是设仓库级身份，别靠每次手打：
+
+```bash
+git config --local user.email "<GitHub 数字 ID>+<用户名>@users.noreply.github.com"
+```
+
+### README「复制给 AI」粘贴块验收（PASS）
+
+在隔离 HOME 里逐条执行 README 那段自然语言指令（这是脚本化验收覆盖不到的部分——它验的是
+**指令本身是否完整可执行**）：
+
+| 步骤 | 结果 |
+|---|---|
+| `npx skills add` | ✅ |
+| Codex 补链 | ✅ 且证实必要（见踩坑 5） |
+| `bootstrap.sh` | ✅ 全新下载 Chromium 114MB、建 venv、写 `dtwr/root` |
+| Verify 自检 5 条 | ✅ 全过 |
+| `configure.py --check` | ✅ 正确 fail-loud 列出缺失项 |
+| 安装物无维护者路径 | ✅ |
+| 版本号随包分发 | ✅ `VERSION: 0.1.0` |
+
+附带确认：`--check` 的缺失清单**跳过了 `attach`**，说明"附件字段可留空"在从 GitHub 全新安装
+的产物里端到端生效，不只是本地测试通过。
+
 ## 尚未完成
 
 | 项目 | 状态 | 原因 |

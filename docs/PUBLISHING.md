@@ -142,6 +142,24 @@ commit 与历史周报在 force push 后仍可按 hash 取回（HTTP 200）。�
 
 历史重写是破坏性操作，不属于普通发布命令。
 
+### 删库重建的副作用（实测）
+
+删库重建能彻底回收弃置对象，但会连带影响几件事，事前要有准备：
+
+- **Deploy key 全部失效，且旧 key 无法直接复用。** 删库后 GitHub 仍把旧 key 记为该仓库的
+  deploy key：`ssh -T` 依然回 `Hi owner/repo!`，而 `gh repo deploy-key add` 报
+  `key is already in use`，推送则报 `Permission ... denied to deploy key`。
+  解法二选一：① 生成一把新 key 注册为新仓的 deploy key（本仓采用）；
+  ② 临时改 HTTPS + **仓库级** gh 凭据 `git config --local credential.https://github.com.helper '!gh auth git-credential'`
+  （注意这等于用账号级 OAuth 推送，与"只用仓库级 deploy key"的偏好冲突，事后要换回）。
+- **skills.sh 的记录跨删库存续。** 重建后页面仍显示重建前的 `FIRST SEEN` 与累计 install 数，
+  安全评级也不会因删库而重置。要判断某次评级扫的是新代码还是旧代码，看
+  **`ANALYZED AT` 时间戳**是否晚于重建时刻，别靠"仓库是新的"推断。
+- **install 计数不等于采用量。** 每次 `run_release_acceptance.sh` 都会真实执行一次
+  `npx skills add`，计数里绝大部分是自己的验收。别把它读成用户增长。
+- URL、`npx skills add` 命令、README 安装说明全部不变；star / fork / issue / release 若为 0，
+  删除不损失任何东西（本仓即此情形）。
+
 ## 后续发布阻断
 
 在完成以下动作前，不得宣布公开发行完成：
