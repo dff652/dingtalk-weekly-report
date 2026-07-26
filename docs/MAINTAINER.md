@@ -153,7 +153,25 @@ bash tests/run_full_acceptance.sh
 3. 历史记录值形状匹配 —— 字段定位主力，**一条完整记录即可**；仅当该条残缺时才往前取，上限 4 条
 4. 空白表单结构切分 —— 兜底，只能定到"子表容器 + 主表/行分组"
 
-**阶段 0 已实现**：`fill_form.py --dump-list` 只读 dump 列表页并统计候选入口，
+**阶段 0 已完成并真机取证（2026-07-27）**：新增 `--dump-list`（只读 dump 列表页）与
+`--dump-record N`（打开第 N 条历史记录并 dump，只读不保存）。真机结果：
+
+- 列表页是 h3yun 自有网格，**不是 `<table>`、标题不是 `<a href>`**（全页仅 8 个链接），
+  所以无法用 URL 直取记录，必须点 `span.tg-link`。行容器 `.tg-row`，单元格 `.tg-cell.tg-c-<N>`，
+  **列序带稳定编号**且表头文字与 `tg-c-N` 一一对应。
+- 取一条 9 行的历史记录，按字段 id 分组统计取值形状，结果高度一致：
+  日期×9 → `row_date`、数字×9 → `row_hours`、短文本×4+长文本×4 → `row_content`
+  （长短混杂正是内容字段特征）。**这三个值形状即可唯一确定。**
+- `row_type` / `row_project` / `row_status` 三者都是短文本，**形状分不开**——需第二重信号：
+  取值 ∈ `vocabulary.project_types` → row_type；∈ `statuses` → row_status；
+  == `form_project` → row_project。枚举来自展开下拉（独立来源），两信号叠加即可区分。
+- 主表三项用**控件类型**区分：`input[type=file]` 全表单唯一 → `attach`；`textarea` → `note`；
+  日期控件 → `start_date`。
+
+**结论：值形状 + 枚举匹配 + 控件类型三者叠加，9 个字段 + 子表容器可全自动定位。**
+剩余实现 = B 枚举抓取 → C 三信号匹配器 → D `configure.py` 逐项确认写入。
+
+**阶段 0 原始说明**：`fill_form.py --dump-list` 只读 dump 列表页并统计候选入口，
 只需登录态、不需要字段配置。**待真机跑一次**——把它输出的统计行（不是 html 本身，
 html 含组织数据）拿回来，才能实现「打开一条历史记录」那步。
 

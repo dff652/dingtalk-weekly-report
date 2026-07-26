@@ -523,6 +523,53 @@ def do_dump_list(url):
             browser.close()
 
 
+# 氚云列表页网格的通用 DOM 常量（与 .ant-calendar-input / FormAdapter 同类，属厂商结构而非组织数据）
+LIST_ROW_LINK = "span.tg-link"
+
+
+def do_dump_record(url, index):
+    """打开第 index 条历史记录并 dump 其 DOM。**只读，不点保存、不改任何值。**
+
+    `--dump` 打的是空白新增表单，只有控件 id 没有值；按值形状认字段（日期/工时/长文本/
+    枚举各有形态）必须看一条**已填**记录。列表页的标题是 span.tg-link（不是 <a href>，
+    所以无法用 URL 直取），只能点开。
+    """
+    if not STATE.exists():
+        sys.exit("无登录态，先跑: fill_form.py --login / --login-url")
+    with sync_playwright() as pw:
+        browser = pw.chromium.launch(headless=True)
+        ctx = browser.new_context(storage_state=str(STATE),
+                                  viewport={"width": 1700, "height": 1100})
+        page = ctx.new_page()
+        try:
+            page.goto(url, wait_until="networkidle")
+            page.wait_for_timeout(3000)
+            if "login" in page.url.lower() or "entry/auth" in page.url:
+                sys.exit("登录态过期，重跑 --login / --login-url")
+            links = page.locator(LIST_ROW_LINK)
+            total = links.count()
+            log(f"列表页记录标题 {total} 条，打开第 {index} 条")
+            if total < index:
+                sys.exit(f"列表页只有 {total} 条记录，取不到第 {index} 条")
+            links.nth(index - 1).click()
+            for _ in range(30):
+                page.wait_for_timeout(1000)
+                fr = next((f for f in page.frames if "FormAdapter" in f.url), None)
+                if fr and fr.locator("[id]").count() > 20:
+                    page.wait_for_timeout(2000)
+                    break
+            else:
+                shot(page, "dump-record-not-rendered")
+                sys.exit("30s 内记录未渲染；看 dump-record-not-rendered.png")
+            SHOTS.mkdir(parents=True, exist_ok=True)
+            (SHOTS / "dump-record.html").write_text(fr.content(), encoding="utf-8")
+            shot(page, "dump-record")
+            log(f"已存 output/shots/dump-record.html + dump-record.png")
+            log("只读操作，未保存任何内容；html 含组织数据，勿外发")
+        finally:
+            browser.close()
+
+
 def do_dump(url):
     mock = is_mock(url)
     with sync_playwright() as pw:
@@ -551,6 +598,8 @@ def main():
                     help="打开「新增」空白表单并 dump DOM（找字段 id）")
     ap.add_argument("--dump-list", action="store_true",
                     help="只 dump 列表页并列出打开历史记录的候选入口（取证用，只读）")
+    ap.add_argument("--dump-record", type=int, metavar="N",
+                    help="打开列表第 N 条历史记录并 dump（只读，不保存）")
     ap.add_argument("--keepalive", action="store_true", help="访问列表页续会话并回存 cookie（cron 用）")
     ap.add_argument("--url", help="覆盖 config.form_url（联调/仿真用）")
     ap.add_argument("--draft", action="store_true", help="填完点「暂存」落草稿")
@@ -564,7 +613,7 @@ def main():
     if args.confirmed and not args.draft:
         ap.error("--confirmed 只能与 --draft 同用")
     if not any((args.login_url, args.login, args.keepalive, args.dump,
-                args.dump_list, args.report_json)):
+                args.dump_list, args.dump_record, args.report_json)):
         ap.print_help()
         return
     init_runtime()
@@ -577,6 +626,8 @@ def main():
         do_login(resolve_url(args))              # 只需 form_url，由 resolve_url 校验
     elif args.dump_list:
         do_dump_list(resolve_url(args))          # 只读列表页，无需任何字段配置
+    elif args.dump_record:
+        do_dump_record(resolve_url(args), args.dump_record)
     elif args.dump:
         # 找字段 id 的诊断模式：只需能导航到表单，字段 id 正是它要找的东西
         require_config_keys(
