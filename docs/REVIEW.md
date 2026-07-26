@@ -172,6 +172,8 @@ mock e2e 挂上 Actions，与 `PUBLISHING.md` 的发布门禁对齐。
 | ⑫ | **测试选择无矩阵** | "改了什么必须跑什么"无处可查 | ✅ 已修（C）：[SOP.md「改动类型→必跑验证」](SOP.md#改动类型--必跑验证) |
 | ⑭ | **工作日志格式是隐性契约** | 全仓只说路径 `docs/report/PROGRESS_REPORT.md`，从未说明文件该长什么样；解析要求全埋在 `extract_week.py` 的两个正则里。维护者自己的文件符合是因为工具和它一起长出来的——**换个人配好 progress_report 却写不对格式，只会得到一整周 TODO 且不知道为什么** | ✅ 已修：`references/CONTRACT.md` 新增「工作日志的格式契约」（含最小示例、工作日必须全覆盖、拒绝覆盖已有 json 的行为） |
 | ⑮ | **发行审计门禁不可用** | 整日志 grep `Critical Risk\|High Risk`：① 不限定本 skill 那一行，同批安装的**其它 skill** 的评级会让我们的验收失败；② CLI 那列的字样与平台页面实际 RISK LEVEL 不一致（CLI 写 Critical Risk、页面写 MEDIUM），拿它当严重度判据不可靠；③ 本 skill 的告警源自固有能力，恒红的门禁等于没有门禁 | ✅ 已修：改为**与已复审基线比对**（`tests/fixtures/expected-audit-row.txt`），语义从「干不干净」变成「有没有变」，评级一变即要求人工复审 |
+| ⑯ | **多设备 / 多人场景无任何文档** | 「不要拷贝 state.json」「多设备」「另一台」在全仓出现 **0 次**；而路线图上有 P-B「同事复用包」，分发出去必然撞上：登录态被当普通文件拷贝、多端互踢、同周落两份草稿撞唯一性判定 | ✅ 已修：`SKILL.md`「多设备 / 多人」+ `USER_GUIDE.md` 第 5 节 |
+| ⑰ | **运行日志不落文件** | 12 处 `[fill_form]` 逐步日志只到 stdout，全项目只有 cron keepalive 重定向到文件。**会话一关日志就没了，失败后回溯只剩截图**——截图能看最终状态，看不到「第几行开始不对、等了多久超时」 | ✅ 已修：写 `$WORK/output/fill_form.log`，URL 落盘前脱敏 |
 | ⑬ | **开发流程未成文** | 公开仓无 `CONTRIBUTING.md`，而选 Apache-2.0 的首要理由正是"会收到陌生人 PR" | ✅ 已修（B）：[CONTRIBUTING.md](../CONTRIBUTING.md) + [SOP.md](SOP.md) |
 
 ⑩ 的后果很具体：`npx skills update` 的用户不知道更新到了什么、变了什么；出问题说不清哪版引入；
