@@ -21,6 +21,9 @@
 
 ## 本机开发
 
+流程骨架与决策表（改动类型→必跑验证、发版检查单、回滚路径）见 [SOP.md](SOP.md)；
+外部贡献者规则见 [CONTRIBUTING.md](../CONTRIBUTING.md)。
+
 克隆后**第一件事**是装 pre-push 钩子——CI 在 push 之后才跑，防泄露必须在本地拦：
 
 ```bash
