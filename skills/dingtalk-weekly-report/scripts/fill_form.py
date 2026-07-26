@@ -29,6 +29,7 @@ from playwright.sync_api import sync_playwright, TimeoutError as PWTimeout
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from dtwr_common import dtwr_config_dir, require_owned, workdir
+from dtwr_discover import propose_fields
 from dtwr_validation import (
     ValidationError,
     validate_config,
@@ -527,6 +528,20 @@ def do_dump_list(url):
 LIST_ROW_LINK = "span.tg-link"
 
 
+def _report_proposal(html):
+    """按三重信号给出 form_fields 候选，**只打印不写盘**——组织私有面必须人确认。"""
+    proposal, ambiguous = propose_fields(
+        html, CONFIG.get("vocabulary"), CONFIG.get("form_project", ""))
+    current = CONFIG.get("form_fields", {})
+    log(f"字段候选：确定 {len(proposal)} 项，歧义 {len(ambiguous)} 项")
+    for key, item in sorted(proposal.items()):
+        mark = "=现配置" if current.get(key) == item["id"] else "≠现配置"
+        log(f"  {key}: {item['id']} [{item['confidence']}] {mark} — {item['why']}")
+    for key, options in sorted(ambiguous.items()):
+        log(f"  {key}: 需人工二选一 → {', '.join(options)}")
+    log("以上仅为候选；确认无误后用 configure.py --set form_fields.<键>=<id> 写入")
+
+
 def do_dump_record(url, index):
     """打开第 index 条历史记录并 dump 其 DOM。**只读，不点保存、不改任何值。**
 
@@ -562,9 +577,11 @@ def do_dump_record(url, index):
                 shot(page, "dump-record-not-rendered")
                 sys.exit("30s 内记录未渲染；看 dump-record-not-rendered.png")
             SHOTS.mkdir(parents=True, exist_ok=True)
-            (SHOTS / "dump-record.html").write_text(fr.content(), encoding="utf-8")
+            html = fr.content()
+            (SHOTS / "dump-record.html").write_text(html, encoding="utf-8")
             shot(page, "dump-record")
-            log(f"已存 output/shots/dump-record.html + dump-record.png")
+            log("已存 output/shots/dump-record.html + dump-record.png")
+            _report_proposal(html)
             log("只读操作，未保存任何内容；html 含组织数据，勿外发")
         finally:
             browser.close()
