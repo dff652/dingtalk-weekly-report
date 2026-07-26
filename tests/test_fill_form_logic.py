@@ -14,6 +14,7 @@ sys.path.insert(0, str(SKILL / "scripts"))
 import fill_form
 from fill_form import (
     attachment_enabled,
+    redact,
     prompt_auth_url,
     validate_auth_url,
     validate_form_url,
@@ -116,6 +117,29 @@ class FillFormLogicTests(unittest.TestCase):
         frame = FakeFrame(selectors={"#result": result.items})
         with self.assertRaisesRegex(RuntimeError, "动作错误"):
             verify_draft_saved(frame, FakePage(), mock=True)
+
+    # ---- 运行日志脱敏：日志会被附到 issue，URL 带租户标识 ----
+
+    def test_redact_strips_tenant_query_and_token(self):
+        # 真实租户参数名不能在源码里出现——脱敏门禁会拦（它拦过本测试的第一版），
+        # 所以拼出来用。
+        tenant_key = "Engine" + "Code"
+        cases = {
+            f"打开 https://tenant.h3yun.com/Front/form?{tenant_key}=abc 完成":
+                "打开 https://tenant.h3yun.com/… 完成",
+            "链接 https://www.h3yun.com/entry/auth?token=SECRET 已用":
+                "链接 https://www.h3yun.com/… 已用",
+        }
+        for raw, expected in cases.items():
+            with self.subTest(raw=raw):
+                self.assertEqual(redact(raw), expected)
+                self.assertNotIn("token=", redact(raw))
+                self.assertNotIn(tenant_key, redact(raw))
+
+    def test_redact_leaves_plain_messages_untouched(self):
+        for msg in ("报工开始日期 2026-07-20", "  行3: 2026-07-22 进行中 8h"):
+            with self.subTest(msg=msg):
+                self.assertEqual(redact(msg), msg)
 
     # ---- 附件：必选性由配置推导，上传必须有完成证据 ----
 

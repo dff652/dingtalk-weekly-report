@@ -204,7 +204,36 @@ python3 "$SKILL/scripts/print_form_rows.py" weeks/week_report_YYYYMMDD.json   # 
 | 会话失效 | 首选 `--login` 扫码；URL 兜底由用户本人运行 `--login-url` 后隐藏输入 |
 | 填表失败 | `output/shots/99-error.png` + `references/FIELDS.md` |
 
-## 5. 安全
+## 5. 换设备 / 分发给同事
+
+**登录态不要拷贝。** `~/.config/dtwr/state.json` 是活凭证（一份已登录会话）。新设备自己登录，
+别拷这个文件，也别把它放进同步盘。
+
+**多端登录可能互踢。** 临近提交截止时别在另一台设备上重新登录，否则可能在最需要时被踢下线。
+
+**只在一台设备上落草稿。** 同一周多份草稿会撞表单的「周报唯一性判定」。在新设备上验证时
+跑到预览为止——不加 `--draft`，工具默认就是只填不存：
+
+```bash
+~/weekly-report-data/.venv/bin/python \
+  ~/.claude/skills/dingtalk-weekly-report/scripts/fill_form.py weeks/week_report_YYYYMMDD.json
+```
+
+**搬配置：拷文件或重填，都别经过聊天。** `~/weekly-report-data/config.json` 里是你所在组织的
+表单标识和枚举，用 U 盘 / scp 拷过去，或在新设备重跑 `configure.py` 照着填。**不要**把这些值
+粘贴进 AI 会话、聊天窗口或 issue。
+
+**扫码还是打印链接？** 两条都行，看设备：
+
+| 设备情况 | 用哪条 |
+|---|---|
+| 能打开 `output/shots/login.png` | `--login` 扫码，不产生可复制的秘密 |
+| 无图形界面 / 远程机器 | `--login-url`，你本人在该机终端隐藏输入 |
+
+**别把同一条 auth 链接在设备间转发**——它 48 小时内等效登录凭证，转发会让它留在剪贴板、
+命令历史和传输通道里。换设备就重新获取一条。
+
+## 6. 安全
 
 输入、缺失处理和输出契约见 `references/CONTRACT.md`。只草稿、人提交；勿用他人
 `$WORK`/登录态；auth 链接与 `state.json` 当凭证。auth 链接不得交给 Agent，不得进入参数、

@@ -17,6 +17,7 @@
 """
 import argparse
 import json
+import re
 import sys
 import time
 from datetime import date, timedelta
@@ -41,10 +42,29 @@ STATE = dtwr_config_dir() / "state.json"
 SHOTS = None
 SUB = None
 F = {}
+RUN_LOG = None
+
+_URL_RE = re.compile(r"https?://([^\s/]+)\S*")
+
+
+def redact(msg: str) -> str:
+    """URL 只留 scheme+host。
+
+    运行日志会被用户附到 issue 或发给协助排查的人，而表单 URL 带组织租户标识
+    （见 SECURITY.md「报告安全问题」）。屏幕输出保留原样便于当场排查，落盘的一律脱敏。
+    """
+    return _URL_RE.sub(r"https://\1/…", msg)
 
 
 def log(msg):
     print(f"[fill_form] {msg}", flush=True)
+    if RUN_LOG is None:
+        return
+    try:
+        with RUN_LOG.open("a", encoding="utf-8") as handle:
+            handle.write(f"{time.strftime('%F %T')} {redact(str(msg))}\n")
+    except OSError:
+        pass  # 日志落盘失败不该拖垮填表本身；屏幕输出仍在
 
 
 def shot(page, name):
@@ -55,10 +75,16 @@ def shot(page, name):
 
 
 def init_runtime():
-    global WORK, CONFIG, SHOTS, SUB, F
+    global WORK, CONFIG, SHOTS, SUB, F, RUN_LOG
     WORK = workdir()
     CONFIG = json.loads((WORK / "config.json").read_text(encoding="utf-8"))
     SHOTS = WORK / "output" / "shots"
+    # 截图只记录最终状态；失败时"第几行开始不对、等了多久超时"只有运行日志答得上来。
+    try:
+        (WORK / "output").mkdir(parents=True, exist_ok=True)
+        RUN_LOG = WORK / "output" / "fill_form.log"
+    except OSError:
+        RUN_LOG = None
     fields = CONFIG.get("form_fields", {})
     SUB = f'[id="{fields.get("subgrid_id", "")}"]'
     F = {
@@ -385,7 +411,9 @@ def do_fill(report_path, url, save_draft):
             log("草稿暂存成功，见 30-saved.png")
         except (PWTimeout, RuntimeError) as e:
             shot(page, "99-error")
-            sys.exit(f"失败: {e}（截图 output/shots/99-error.png 发给 Claude 联调）")
+            log(f"失败: {e}")
+            sys.exit(f"失败: {e}（截图 output/shots/99-error.png"
+                     f" + 运行日志 output/fill_form.log 发给协助排查的人）")
         finally:
             browser.close()
 
@@ -460,6 +488,9 @@ def main():
         ap.print_help()
         return
     init_runtime()
+    # 只记文件名不记路径：日志可能被附到 issue，绝对路径会带出用户名与目录结构
+    shown = " ".join(Path(a).name if "/" in a else a for a in sys.argv[1:])
+    log(f"=== run: {shown or '(no args)'} ===")
     try:
         validate_config(CONFIG)
     except ValidationError as exc:
