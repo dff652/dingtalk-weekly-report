@@ -115,7 +115,9 @@ git 操作（若 $WORK 配了仓库）必须 `git -C $WORK`。每用户差异（
 ### 7) 收尾
 
 - 提醒用户：钉钉里打开草稿核对 → 点「提交」；若配置了 `submission_reminder`，同时展示。
-- 若 `$WORK` 是 git 仓库：`git -C $WORK add weeks/ && git -C $WORK commit && git -C $WORK push`。
+- 若 `$WORK` 是 git 仓库：`git -C $WORK add weeks/ && git -C $WORK commit`，然后**告诉用户可以
+  自行 push**。**不得代替用户执行 `git push`**——推送是把用户的周报数据发往远端，属于外发动作，
+  与"提交由用户亲手点"是同一条原则；自动 push 也是外部安全审计对本技能的扣分项之一。
   除非用户明确要求，不添加模型专属 `Co-Authored-By`。
 
 ## 首次安装（$WORK 不存在时）
