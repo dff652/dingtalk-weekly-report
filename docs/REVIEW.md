@@ -170,6 +170,7 @@ mock e2e 挂上 Actions，与 `PUBLISHING.md` 的发布门禁对齐。
 | ⑩ | **完全没有版本概念**：无 CHANGELOG、0 个 git tag、无版本载体、zip 用日期戳 | 见下 | ✅ 已修（A） |
 | ⑪ | **无回滚路径** | 发出坏版本后用户无法退回 | ✅ 已成文（C）；`npx skills` 无版本 pin 是上游缺口，已在 [SOP.md](SOP.md#部署用户侧与回滚) 记录并给出降低影响的做法 |
 | ⑫ | **测试选择无矩阵** | "改了什么必须跑什么"无处可查 | ✅ 已修（C）：[SOP.md「改动类型→必跑验证」](SOP.md#改动类型--必跑验证) |
+| ⑭ | **工作日志格式是隐性契约** | 全仓只说路径 `docs/report/PROGRESS_REPORT.md`，从未说明文件该长什么样；解析要求全埋在 `extract_week.py` 的两个正则里。维护者自己的文件符合是因为工具和它一起长出来的——**换个人配好 progress_report 却写不对格式，只会得到一整周 TODO 且不知道为什么** | ✅ 已修：`references/CONTRACT.md` 新增「工作日志的格式契约」（含最小示例、工作日必须全覆盖、拒绝覆盖已有 json 的行为） |
 | ⑬ | **开发流程未成文** | 公开仓无 `CONTRIBUTING.md`，而选 Apache-2.0 的首要理由正是"会收到陌生人 PR" | ✅ 已修（B）：[CONTRIBUTING.md](../CONTRIBUTING.md) + [SOP.md](SOP.md) |
 
 ⑩ 的后果很具体：`npx skills update` 的用户不知道更新到了什么、变了什么；出问题说不清哪版引入；
