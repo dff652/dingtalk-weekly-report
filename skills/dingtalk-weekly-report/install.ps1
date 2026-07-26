@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 # Windows: 安装技能到 Claude / Codex / Agents 目录
 # 用法:
 #   .\install.ps1

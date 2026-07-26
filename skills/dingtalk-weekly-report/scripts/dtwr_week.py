@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 """目标周和无年份日志标题的纯日期逻辑。"""
 from datetime import date, timedelta
 

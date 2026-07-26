@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: Apache-2.0
 """week_report.json → 钉钉「报工周报」表单粘贴块（路径 C 的人工填表助手）。
 
 用法: python3 print_form_rows.py weeks/week_report_20260713.json

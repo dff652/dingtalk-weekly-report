@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: Apache-2.0
 """从工作日志文件或项目目录抽取指定周内容，生成 week_report.json 草稿（供人工审改）。
 
 用法: python3 extract_week.py 2026-07-13  # 参数=周一日期；缺省=周一取上周、其他日期取本周

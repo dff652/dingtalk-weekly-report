@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 """极简 xlsx 写入器（纯 stdlib，无 openpyxl 依赖）。
 
 只覆盖本项目周报附件模板所需能力：inline string 单元格、数字单元格、

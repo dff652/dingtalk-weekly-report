@@ -44,14 +44,35 @@ MIT 的两个常见优势在此不成立：
 **重估触发**：若目标改为"让 `xlsxlite.py` 这类小组件被尽可能多的项目随手抄走"，MIT 的零摩擦
 更优。当前目标是"整包被安装、被 fork 时行为约束可追溯"，Apache 更贴。
 
-### 配套待补（未完成）
+### 配套（2026-07-25 完成）
 
-- [ ] `LICENSE` 附录的 `Copyright [yyyy] [name of copyright owner]` 仍是占位符。规范做法是保留
-      附录原文不动，另在 `README.md` 或新增 `NOTICE` 中写明版权主体——目前两处都没有。
-- [ ] 每个 `.py` 顶部加 `# SPDX-License-Identifier: Apache-2.0`（Apache 推荐，且让扫描工具在
-      文件级即可判定）。
-- [ ] `tests/test_public_tree.py` 加一条断言：所有分发脚本都带 SPDX 头。脱敏已用测试守住，
-      许可证头用同一机制守是顺手的事。
+- [x] 版权主体写在 `README.md`（`Copyright 2026 dff652`）。`LICENSE` 附录保留 Apache 原文不动
+      （那是给使用者抄的模板，不是待填空）。**刻意用 GitHub handle 而非真实姓名**——与提交身份
+      统一用 noreply 是同一个决定，不把真实身份重新放回公开仓。
+- [x] 全部分发脚本加 `# SPDX-License-Identifier: Apache-2.0`（16 个文件；shebang 仍在第一行）。
+- [x] `tests/test_version.py` 断言分发脚本都带 SPDX 头，且 shebang 没被挤到第二行。
+
+## 版本与发版
+
+版本号**单一事实源** = `skills/dingtalk-weekly-report/VERSION`。
+（刻意不放 `SKILL.md` frontmatter：本机 agent 入口是软链到仓库的，往 frontmatter 加非标准键
+一旦被某个 loader 挑刺就会弄坏正在用的 skill。日后若要让 `npx skills` 显示版本，再提升到
+frontmatter，并加测试守住两处一致。）
+
+约束由 `tests/test_version.py` 强制：`VERSION` 必须是 semver，且 **CHANGELOG 最新的已发布条目
+必须与之一致**——改了版本号就得写变更记录，否则「发了新行为却没人知道变了什么」。
+
+git tag 一致性不在单测里断言（开发期先改 VERSION、发布时才打 tag，中间必然不一致），改由
+`pack-skill.sh` 在发版时门禁：**未打 `v<VERSION>` tag 或工作区不干净，产物自动命名为
+`-dev.<sha>`，不会冒充发行版**。
+
+发版顺序：
+
+1. 改 `VERSION` + 在 CHANGELOG 的 `## [Unreleased]` 下写好条目，改成 `## [x.y.z] - YYYY-MM-DD`；
+2. 提交并推送，等 CI 三个 job 全绿；
+3. `git tag -a vx.y.z -m "..." && git push origin vx.y.z`；
+4. `bash pack-skill.sh` —— 产物名不带 `-dev.` 才算发行物；
+5. 按下节「发布门禁」复验。
 
 ## skills.sh 发布方式
 

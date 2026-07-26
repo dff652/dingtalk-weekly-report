@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 """工作目录解析（技能包脚本共用）。
 
 脚本随技能包分发（只读），运行态数据（config.json/weeks/output/.venv/登录态）

@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: Apache-2.0
 # 首次建 $WORK 运行环境（不装技能；技能用 install.sh）
 # 用法:
 #   bash bootstrap.sh

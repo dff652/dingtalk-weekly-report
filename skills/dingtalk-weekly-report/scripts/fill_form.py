@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: Apache-2.0
 """P2（路径 B）：Playwright 半自动填写钉钉「报工周报」（氚云 H3yun 表单）。
 
 真机已验证（2026-07-21，worker dev box headless chromium）：

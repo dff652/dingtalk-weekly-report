@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: Apache-2.0
 """week_report.json → 「YYYYMMDD-YYYYMMDD本周工作总结与下周计划.xlsx」附件。
 
 用法: python3 gen_attachment.py weeks/week_report_20260713.json [-o output/]

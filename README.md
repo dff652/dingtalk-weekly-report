@@ -8,7 +8,8 @@
 | **触发** | Claude：`/dingtalk-weekly-report`；Codex：`$dingtalk-weekly-report` 或 `/skills` 选择 |
 | **仓库** | https://github.com/dff652/dingtalk-weekly-report |
 | **平台** | 氚云 H3yun（非宜搭） |
-| **许可** | [Apache-2.0](LICENSE) |
+| **许可** | [Apache-2.0](LICENSE)，Copyright 2026 dff652 |
+| **版本** | 见 [`skills/dingtalk-weekly-report/VERSION`](skills/dingtalk-weekly-report/VERSION)（单一事实源）与 [CHANGELOG](CHANGELOG.md) |
 | **隐私边界** | 仓库仅含通用代码；表单 ID、枚举、个人周报和登录态只存每用户私有 `$WORK` |
 
 ---

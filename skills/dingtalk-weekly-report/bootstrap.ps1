@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 # 首次建 $WORK 运行环境（Windows PowerShell）
 # 用法:
 #   .\bootstrap.ps1

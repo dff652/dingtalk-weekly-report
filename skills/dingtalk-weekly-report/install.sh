@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: Apache-2.0
 # dingtalk-weekly-report 技能自安装（本脚本位于技能包根目录）
 # 用法:
 #   bash install.sh              # 复制安装到 Claude；若有 Codex/agents 目录则一并装

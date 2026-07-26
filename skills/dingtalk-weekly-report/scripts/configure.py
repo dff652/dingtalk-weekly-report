@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: Apache-2.0
 """查看、校验或安全更新当前用户的 DTWR 配置。"""
 import argparse
 import json

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 """配置与周报 JSON 的共享校验。"""
 import re
 from datetime import date, timedelta

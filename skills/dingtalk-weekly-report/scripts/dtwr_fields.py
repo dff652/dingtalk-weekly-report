@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 """配置驱动的表单字段与词表结构。"""
 
 FORM_FIELD_KEYS = (

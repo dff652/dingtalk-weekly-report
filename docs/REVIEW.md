@@ -167,8 +167,8 @@ mock e2e 挂上 Actions，与 `PUBLISHING.md` 的发布门禁对齐。
 
 | # | 缺口 | 后果 | 状态 |
 |---|---|---|---|
-| ⑩ | **完全没有版本概念**：无 CHANGELOG、0 个 git tag、`SKILL.md` frontmatter 无 `version`、zip 用日期戳 | 见下 | 待做 |
-| ⑪ | **无回滚路径** | 发出坏版本后用户无法退回：`npx skills` 无版本 pin，zip 无历史归档，文档无说法 | 待做 |
+| ⑩ | **完全没有版本概念**：无 CHANGELOG、0 个 git tag、无版本载体、zip 用日期戳 | 见下 | ✅ 已修（A） |
+| ⑪ | **无回滚路径** | 发出坏版本后用户无法退回：`npx skills` 无版本 pin，zip 无历史归档，文档无说法 | 待做（并入 C） |
 | ⑫ | **测试选择无矩阵** | "改了什么必须跑什么"只在「维护触发表」里部分存在，且按运维触发而非改动类型分 | 待做 |
 | ⑬ | **开发流程未成文** | 分支策略（现直推 main）、提交身份必须 noreply、克隆后必装钩子都没写；公开仓无 `CONTRIBUTING.md`，而选 Apache-2.0 的首要理由正是"会收到陌生人 PR" | 待做 |
 
@@ -191,8 +191,13 @@ mock e2e 挂上 Actions，与 `PUBLISHING.md` 的发布门禁对齐。
 - **C. `docs/SOP.md`**（唯一新增的 SOP 文件）：四阶段流程骨架 + 三张表——改动类型→必跑验证矩阵、
   发版检查单（标明哪些 CI 自动 / 哪些人工）、回滚路径。具体命令一律链回现有文档，**不复制**。
 
-顺序 A → B → C，机制先于文档。Apache-2.0 的三项配套待补（版权主体、SPDX 头、SPDX 断言，
-见 [PUBLISHING.md](PUBLISHING.md#配套待补未完成)）并入 A、B 一起做。
+顺序 A → B → C，机制先于文档。Apache-2.0 的三项配套（版权主体、SPDX 头、SPDX 断言）并入 A。
+
+**A 已于 2026-07-25 完成**：`VERSION`（单一事实源，刻意不入 frontmatter，理由见
+[PUBLISHING.md](PUBLISHING.md#版本与发版)）+ `CHANGELOG.md` + tag `v0.1.0` +
+`pack-skill.sh` 按版本号命名并把未打 tag / 脏工作区标成 `-dev.<sha>` +
+`tests/test_version.py`（semver / CHANGELOG 一致 / SPDX 头 / shebang 未被挤走）+
+Apache 三项配套。⑪ 回滚路径归入 C 一起写。
 
 ## 四、历史泄露：已经发生，不是待办
 
