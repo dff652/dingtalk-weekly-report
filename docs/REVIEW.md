@@ -174,6 +174,8 @@ mock e2e 挂上 Actions，与 `PUBLISHING.md` 的发布门禁对齐。
 | ⑮ | **发行审计门禁不可用** | 整日志 grep `Critical Risk\|High Risk`：① 不限定本 skill 那一行，同批安装的**其它 skill** 的评级会让我们的验收失败；② CLI 那列的字样与平台页面实际 RISK LEVEL 不一致（CLI 写 Critical Risk、页面写 MEDIUM），拿它当严重度判据不可靠；③ 本 skill 的告警源自固有能力，恒红的门禁等于没有门禁 | ✅ 已修：改为**与已复审基线比对**（`tests/fixtures/expected-audit-row.txt`），语义从「干不干净」变成「有没有变」，评级一变即要求人工复审 |
 | ⑯ | **多设备 / 多人场景无任何文档** | 「不要拷贝 state.json」「多设备」「另一台」在全仓出现 **0 次**；而路线图上有 P-B「同事复用包」，分发出去必然撞上：登录态被当普通文件拷贝、多端互踢、同周落两份草稿撞唯一性判定 | ✅ 已修：`SKILL.md`「多设备 / 多人」+ `USER_GUIDE.md` 第 5 节 |
 | ⑰ | **运行日志不落文件** | 12 处 `[fill_form]` 逐步日志只到 stdout，全项目只有 cron keepalive 重定向到文件。**会话一关日志就没了，失败后回溯只剩截图**——截图能看最终状态，看不到「第几行开始不对、等了多久超时」 | ✅ 已修：写 `$WORK/output/fill_form.log`，URL 落盘前脱敏 |
+| ⑱ | **`--dump` 被完整配置校验挡住** | `--dump` 的用途就是**找出字段 id**，却要求字段 id 已配好才能跑——新用户拿空模板运行只会得到「字段不能为空」。这是别人用不起来的**具体机制**，不是抽象的「门槛高」 | ✅ 已修：`--dump` 只校验 `form_texts.add_row` / `start_date_label`，`--login` 只校验 form_url，填表与保活仍走完整校验 |
+| ⑲ | **脱敏把「值长什么样」也删了** | 公开模板里全是空串，新用户不知道该向管理员要什么、拿到的对不对、`dump.html` 里该找什么形状 | ✅ 已修：`FIELDS.md` 加掩码形状表（`F#######` / 32 位十六进制）、可复制的索取模板、以及修正后的获取流程 |
 | ⑬ | **开发流程未成文** | 公开仓无 `CONTRIBUTING.md`，而选 Apache-2.0 的首要理由正是"会收到陌生人 PR" | ✅ 已修（B）：[CONTRIBUTING.md](../CONTRIBUTING.md) + [SOP.md](SOP.md) |
 
 ⑩ 的后果很具体：`npx skills update` 的用户不知道更新到了什么、变了什么；出问题说不清哪版引入；

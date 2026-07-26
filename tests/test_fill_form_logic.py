@@ -16,6 +16,7 @@ from fill_form import (
     attachment_enabled,
     redact,
     prompt_auth_url,
+    require_config_keys,
     validate_auth_url,
     validate_form_url,
     verify_attachment_uploaded,
@@ -117,6 +118,25 @@ class FillFormLogicTests(unittest.TestCase):
         frame = FakeFrame(selectors={"#result": result.items})
         with self.assertRaisesRegex(RuntimeError, "动作错误"):
             verify_draft_saved(frame, FakePage(), mock=True)
+
+    # ---- 诊断模式不得被完整配置校验挡住（先有鸡还是先有蛋）----
+
+    def test_diagnostic_mode_ignores_unset_field_ids(self):
+        """字段 id 全空也要能跑 --dump——找出它们正是 --dump 的用途。"""
+        config = {"form_texts": {"add_row": "新增", "start_date_label": "开始日期"},
+                  "form_fields": {k: "" for k in ("subgrid_id", "start_date")}}
+        require_config_keys(
+            config, ("form_texts.add_row", "form_texts.start_date_label"))
+
+    def test_diagnostic_mode_still_requires_navigation_texts(self):
+        config = {"form_texts": {"add_row": "  "}}
+        with self.assertRaises(SystemExit) as ctx:
+            require_config_keys(
+                config, ("form_texts.add_row", "form_texts.start_date_label"))
+        message = str(ctx.exception)
+        self.assertIn("form_texts.add_row", message)
+        self.assertIn("form_texts.start_date_label", message)
+        self.assertNotIn("subgrid_id", message)
 
     # ---- 运行日志脱敏：日志会被附到 issue，URL 带租户标识 ----
 

@@ -96,6 +96,25 @@ def init_runtime():
     }
 
 
+def require_config_keys(config, paths):
+    """诊断/登录模式只校验自己真正用到的键。
+
+    `--dump` 的用途就是**找出字段 id**；若它像填表一样要求完整配置通过校验，拿不到字段 id
+    的新用户就被死锁在门外（先有鸡还是先有蛋）。因此这些模式只查导航到表单所必需的项，
+    字段 id 一概不查。
+    """
+    missing = []
+    for path in paths:
+        value = config
+        for part in path.split("."):
+            value = value.get(part) if isinstance(value, dict) else None
+        if not (isinstance(value, str) and value.strip()):
+            missing.append(path)
+    if missing:
+        sys.exit("本模式仍需以下配置:\n- " + "\n- ".join(missing)
+                 + "\n（form_fields 里的字段 id 可以留空——找出它们正是 --dump 的用途）")
+
+
 def validate_form_url(url):
     parsed = urlparse(url)
     if parsed.scheme == "file":
@@ -491,20 +510,25 @@ def main():
     # 只记文件名不记路径：日志可能被附到 issue，绝对路径会带出用户名与目录结构
     shown = " ".join(Path(a).name if "/" in a else a for a in sys.argv[1:])
     log(f"=== run: {shown or '(no args)'} ===")
-    try:
-        validate_config(CONFIG)
-    except ValidationError as exc:
-        sys.exit(str(exc))
     if args.login_url:
-        do_login_url(prompt_auth_url())
+        do_login_url(prompt_auth_url())          # 只需登录链接本身
     elif args.login:
-        do_login(resolve_url(args))
-    elif args.keepalive:
-        do_keepalive(resolve_url(args))
+        do_login(resolve_url(args))              # 只需 form_url，由 resolve_url 校验
     elif args.dump:
+        # 找字段 id 的诊断模式：只需能导航到表单，字段 id 正是它要找的东西
+        require_config_keys(
+            CONFIG, ("form_texts.add_row", "form_texts.start_date_label"))
         do_dump(resolve_url(args))
-    elif args.report_json:
-        do_fill(args.report_json, resolve_url(args), args.draft)
+    else:
+        # 保活与填表要真正操作表单，必须完整配置就绪
+        try:
+            validate_config(CONFIG)
+        except ValidationError as exc:
+            sys.exit(str(exc))
+        if args.keepalive:
+            do_keepalive(resolve_url(args))
+        elif args.report_json:
+            do_fill(args.report_json, resolve_url(args), args.draft)
 
 
 if __name__ == "__main__":
