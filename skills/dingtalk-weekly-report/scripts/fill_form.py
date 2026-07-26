@@ -482,6 +482,47 @@ def do_keepalive(url):
 
 # ---------------- 诊断 ----------------
 
+def do_dump_list(url):
+    """dump **列表页**原样，并捞出打开历史记录的候选入口。
+
+    `--dump` 打的是「新增」后的空白表单，只能看到控件 id、看不到值。要按值形状认字段
+    （日期/工时/长文本各有形态），必须打开一条**已填的历史记录**——而"怎么点开一条记录"
+    的选择器目前未知，本模式就是为取证而设：先把列表页整页存下来，再列出候选入口，
+    据此再实现打开记录。只读，不点任何东西。
+    """
+    if not STATE.exists():
+        sys.exit("无登录态，先跑: fill_form.py --login / --login-url")
+    with sync_playwright() as pw:
+        browser = pw.chromium.launch(headless=True)
+        ctx = browser.new_context(storage_state=str(STATE),
+                                  viewport={"width": 1700, "height": 1100})
+        page = ctx.new_page()
+        try:
+            page.goto(url, wait_until="networkidle")
+            page.wait_for_timeout(3000)
+            if "login" in page.url.lower() or "entry/auth" in page.url:
+                sys.exit("登录态过期，重跑 --login / --login-url")
+            SHOTS.mkdir(parents=True, exist_ok=True)
+            (SHOTS / "dump-list.html").write_text(page.content(), encoding="utf-8")
+            shot(page, "dump-list")
+
+            # 候选入口：带 id 参数的链接，或看起来是数据行的元素
+            links = page.eval_on_selector_all(
+                "a[href]", "els => els.map(e => e.getAttribute('href'))")
+            record_links = [h for h in links if h and re.search(
+                r"(objectid|bizobjectid|recordid|id)=", h, re.I)]
+            log(f"列表页链接 {len(links)} 条，其中带记录标识的 {len(record_links)} 条")
+            for selector in ("tr[data-row-key]", ".ant-table-row",
+                             "[class*=list-row]", "[class*=grid-row]"):
+                count = page.locator(selector).count()
+                if count:
+                    log(f"候选数据行 {selector}: {count} 个")
+            log("已存 output/shots/dump-list.html + dump-list.png")
+            log("下一步：把上面几行统计发给维护者（**不要发 html 本身**，它含组织数据）")
+        finally:
+            browser.close()
+
+
 def do_dump(url):
     mock = is_mock(url)
     with sync_playwright() as pw:
@@ -506,7 +547,10 @@ def main():
     ap.add_argument("--login", action="store_true")
     ap.add_argument("--login-url", action="store_true",
                     help="在本机交互终端隐藏输入一次性登录链接；不接受命令行参数")
-    ap.add_argument("--dump", action="store_true")
+    ap.add_argument("--dump", action="store_true",
+                    help="打开「新增」空白表单并 dump DOM（找字段 id）")
+    ap.add_argument("--dump-list", action="store_true",
+                    help="只 dump 列表页并列出打开历史记录的候选入口（取证用，只读）")
     ap.add_argument("--keepalive", action="store_true", help="访问列表页续会话并回存 cookie（cron 用）")
     ap.add_argument("--url", help="覆盖 config.form_url（联调/仿真用）")
     ap.add_argument("--draft", action="store_true", help="填完点「暂存」落草稿")
@@ -519,7 +563,8 @@ def main():
         ap.error("--draft 必须同时提供 --confirmed，表示已完成人审和同周旧草稿检查")
     if args.confirmed and not args.draft:
         ap.error("--confirmed 只能与 --draft 同用")
-    if not any((args.login_url, args.login, args.keepalive, args.dump, args.report_json)):
+    if not any((args.login_url, args.login, args.keepalive, args.dump,
+                args.dump_list, args.report_json)):
         ap.print_help()
         return
     init_runtime()
@@ -530,6 +575,8 @@ def main():
         do_login_url(prompt_auth_url())          # 只需登录链接本身
     elif args.login:
         do_login(resolve_url(args))              # 只需 form_url，由 resolve_url 校验
+    elif args.dump_list:
+        do_dump_list(resolve_url(args))          # 只读列表页，无需任何字段配置
     elif args.dump:
         # 找字段 id 的诊断模式：只需能导航到表单，字段 id 正是它要找的东西
         require_config_keys(
