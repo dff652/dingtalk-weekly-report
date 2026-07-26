@@ -9,6 +9,8 @@
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-07-27
+
 ### 变更
 
 - **行为变更**：`$WORK` 是 git 仓库时，技能不再自动 `git push`，只 `commit` 并提示你自行推送。
@@ -97,5 +99,6 @@
   处置全过程见 [docs/PUBLISHING.md](docs/PUBLISHING.md)。
 - 提交身份统一为 GitHub noreply 地址，真实邮箱不再出现在公开历史中。
 
-[Unreleased]: https://github.com/dff652/dingtalk-weekly-report/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/dff652/dingtalk-weekly-report/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/dff652/dingtalk-weekly-report/releases/tag/v0.2.0
 [0.1.0]: https://github.com/dff652/dingtalk-weekly-report/releases/tag/v0.1.0
