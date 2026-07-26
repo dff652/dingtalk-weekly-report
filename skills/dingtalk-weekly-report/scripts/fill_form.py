@@ -29,7 +29,7 @@ from playwright.sync_api import sync_playwright, TimeoutError as PWTimeout
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from dtwr_common import dtwr_config_dir, require_owned, workdir
-from dtwr_discover import propose_fields
+from dtwr_discover import analyse, propose_fields
 from dtwr_validation import (
     ValidationError,
     validate_config,
@@ -528,6 +528,86 @@ def do_dump_list(url):
 LIST_ROW_LINK = "span.tg-link"
 
 
+def _visible_option_texts(fr):
+    """当前可见的候选项文本集合。
+
+    氚云的 ant-select 菜单**点开后不销毁**（`pick_dropdown` 已记录此行为），所以不能只看
+    "菜单里有哪些项"——那会混进此前打开过的菜单。用点击前后的差集把新菜单隔离出来。
+    """
+    items = fr.locator("li")
+    texts = set()
+    for i in range(min(items.count(), 200)):
+        item = items.nth(i)
+        try:
+            if item.is_visible():
+                text = item.inner_text().strip()
+                if text:
+                    texts.add(text)
+        except Exception:
+            continue
+    return texts
+
+
+def do_harvest_enums(url):
+    """展开每个下拉，收集**完整**合法选项。
+
+    理论上下拉展开才是枚举全集（历史只含**你用过的值**）。但实测在本表单上**孤立点开取不到
+    选项**——与 `references/FIELDS.md` 早已记录的「关联下拉孤立探测无数据、正常流程有数据」
+    是同一现象：菜单只渲染一个占位项。因此本模式**降级为诊断工具**；枚举的实用来源是
+    `--dump-record` 跨多条历史记录取并集（见 `_report_proposal` 输出的「观察到的取值」）。
+
+    **不填任何值、不保存。**
+    """
+    if not STATE.exists():
+        sys.exit("无登录态，先跑: fill_form.py --login / --login-url")
+    mock = is_mock(url)
+    with sync_playwright() as pw:
+        browser = pw.chromium.launch(headless=True)
+        ctx = browser.new_context(storage_state=None if mock else str(STATE),
+                                  viewport={"width": 1700, "height": 1100})
+        page = ctx.new_page()
+        try:
+            fr = open_new_form(page, url, mock)
+            try:                       # 加一行，让子表内的下拉渲染出来
+                fr.locator(SUB).get_by_text(
+                    CONFIG["form_texts"]["add_row"], exact=False).first.click()
+                page.wait_for_timeout(1500)
+            except Exception:
+                log("未能新增子表行，只抓主表下拉")
+
+            drops = fr.locator(".h3-dropdown")
+            total = drops.count()
+            log(f"发现下拉控件 {total} 个")
+            harvested = {}
+            visible = sum(1 for i in range(total) if drops.nth(i).is_visible())
+            log(f"其中可见 {visible} 个")
+            harvested = {}
+            for i in range(total):
+                node = drops.nth(i)
+                if not node.is_visible():
+                    continue
+                owner = node.evaluate(
+                    "el => { let n = el; while (n && !n.id) n = n.parentElement;"
+                    " return n ? n.id : ''; }")
+                before = _visible_option_texts(fr)
+                node.click()
+                page.wait_for_timeout(900)
+                options = sorted(_visible_option_texts(fr) - before)
+                page.keyboard.press("Escape")
+                page.wait_for_timeout(400)
+                key = owner or f"<无 id 的下拉 {i}>"
+                if options and key not in harvested:
+                    harvested[key] = options
+                log(f"  {key}: {len(options)} 个选项")
+            shot(page, "harvest-enums")
+            log("——以下是抓到的完整选项，请对应填进 vocabulary——")
+            for owner, options in harvested.items():
+                log(f"  {owner}: {' / '.join(options)}")
+            log("未填任何值、未保存；选项文本属组织数据，勿外发")
+        finally:
+            browser.close()
+
+
 def _report_proposal(html):
     """按三重信号给出 form_fields 候选，**只打印不写盘**——组织私有面必须人确认。"""
     proposal, ambiguous = propose_fields(
@@ -539,7 +619,30 @@ def _report_proposal(html):
         log(f"  {key}: {item['id']} [{item['confidence']}] {mark} — {item['why']}")
     for key, options in sorted(ambiguous.items()):
         log(f"  {key}: 需人工二选一 → {', '.join(options)}")
-    log("以上仅为候选；确认无误后用 configure.py --set form_fields.<键>=<id> 写入")
+
+    # 顺带把枚举学出来：下拉孤立探测取不到选项（见 do_harvest_enums），
+    # 历史记录里**实际用过的值**才是可得的来源。跨多条记录取并集可提高覆盖，
+    # 但仍**不等于全集**——没用过的选项（如从没休过假）永远学不到，必须人工补。
+    _, candidates = analyse(html)
+    for key in ("row_type", "row_status", "row_project"):
+        field_id = proposal.get(key, {}).get("id")
+        if not field_id or field_id not in candidates:
+            continue
+        seen = sorted(candidates[field_id].texts())
+        if seen:
+            log(f"  {key} 本条记录观察到的取值（{len(seen)} 个）: {' / '.join(seen)}")
+    log("枚举来自历史仅为**用过的值**，不等于全部合法值；多跑几条记录取并集，仍需人工补全")
+    payload = {
+        "proposal": proposal,
+        "ambiguous": ambiguous,
+        "observed": {k: sorted(candidates[v["id"]].texts())
+                     for k, v in proposal.items() if v["id"] in candidates},
+    }
+    out = WORK / "output" / "field-proposal.json"
+    out.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n",
+                   encoding="utf-8")
+    log(f"候选已写入 {out}")
+    log("下一步：configure.py --from-discovery 逐项确认后写入（不会自动落盘）")
 
 
 def do_dump_record(url, index):
@@ -617,6 +720,8 @@ def main():
                     help="只 dump 列表页并列出打开历史记录的候选入口（取证用，只读）")
     ap.add_argument("--dump-record", type=int, metavar="N",
                     help="打开列表第 N 条历史记录并 dump（只读，不保存）")
+    ap.add_argument("--harvest-enums", action="store_true",
+                    help="展开各下拉收集完整合法选项（不填值、不保存）")
     ap.add_argument("--keepalive", action="store_true", help="访问列表页续会话并回存 cookie（cron 用）")
     ap.add_argument("--url", help="覆盖 config.form_url（联调/仿真用）")
     ap.add_argument("--draft", action="store_true", help="填完点「暂存」落草稿")
@@ -630,7 +735,8 @@ def main():
     if args.confirmed and not args.draft:
         ap.error("--confirmed 只能与 --draft 同用")
     if not any((args.login_url, args.login, args.keepalive, args.dump,
-                args.dump_list, args.dump_record, args.report_json)):
+                args.dump_list, args.dump_record, args.harvest_enums,
+                args.report_json)):
         ap.print_help()
         return
     init_runtime()
@@ -645,6 +751,10 @@ def main():
         do_dump_list(resolve_url(args))          # 只读列表页，无需任何字段配置
     elif args.dump_record:
         do_dump_record(resolve_url(args), args.dump_record)
+    elif args.harvest_enums:
+        require_config_keys(
+            CONFIG, ("form_texts.add_row", "form_texts.start_date_label"))
+        do_harvest_enums(resolve_url(args))
     elif args.dump:
         # 找字段 id 的诊断模式：只需能导航到表单，字段 id 正是它要找的东西
         require_config_keys(

@@ -15,6 +15,11 @@ ROOT = Path(__file__).resolve().parents[1]
 SKILL = Path(os.environ.get("DTWR_SKILL", ROOT / "skills" / "dingtalk-weekly-report"))
 sys.path.insert(0, str(SKILL / "scripts"))
 
+import json as _json
+import tempfile
+from unittest.mock import patch
+
+from configure import assignments_from_discovery
 from dtwr_discover import propose_fields, value_shape
 
 
@@ -69,6 +74,36 @@ class DiscoverTests(unittest.TestCase):
             with self.subTest(key=key):
                 self.assertNotIn(key, proposal)
                 self.assertIn(key, ambiguous)
+
+
+class ConfirmBeforeWriteTests(unittest.TestCase):
+    """自动发现只把「手抄十个 id」降为「确认十几个候选」，不把人从回路里拿掉。"""
+
+    PAYLOAD = {
+        "proposal": {"row_hours": {"id": "Xrow05", "confidence": "high",
+                                   "why": "每行取值均为数字"}},
+        "ambiguous": {"row_project": ["Xa", "Xb"]},
+        "observed": {"row_hours": ["8", "0.5"]},
+    }
+
+    def _run(self, answers):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "proposal.json"
+            path.write_text(_json.dumps(self.PAYLOAD), encoding="utf-8")
+            with patch("builtins.input", side_effect=answers):
+                return assignments_from_discovery({"form_fields": {}}, path)
+
+    def test_nothing_is_written_without_explicit_yes(self):
+        self.assertEqual(self._run(["", ""]), [])
+
+    def test_accepted_proposal_becomes_assignment(self):
+        self.assertIn("form_fields.row_hours=Xrow05", self._run(["y", ""]))
+
+    def test_ambiguous_choice_is_by_number(self):
+        self.assertIn("form_fields.row_project=Xb", self._run(["", "2"]))
+
+    def test_out_of_range_choice_is_ignored(self):
+        self.assertEqual(self._run(["", "9"]), [])
 
 
 if __name__ == "__main__":

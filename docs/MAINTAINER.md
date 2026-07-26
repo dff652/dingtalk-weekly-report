@@ -124,7 +124,7 @@ bash tests/run_full_acceptance.sh
 - [x] P-A Skill 包 + install/bootstrap + GitHub/`npx skills`
 - [x] P2 Playwright 真机联调 + 仿真 e2e
 - [ ] P3 氚云 OpenApi（缺 EngineSecret）
-- [ ] P4 配置自动发现（把"手抄十个字段 id + 三组枚举"降为"确认十几个候选"）
+- [x] P4 配置自动发现（阶段 0/A/B/C/D 全部落地，真机 8/10 自动定位、零错误）（把"手抄十个字段 id + 三组枚举"降为"确认十几个候选"）
 
 ### P4 方案（已在真实 DOM 上取证）
 

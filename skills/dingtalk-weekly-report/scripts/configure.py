@@ -172,6 +172,48 @@ def interactive_assignments(config: dict) -> list[str]:
     return assignments
 
 
+
+def assignments_from_discovery(config: dict, path: Path) -> list[str]:
+    """把 `--dump-record` 产出的候选逐项交给用户确认。
+
+    **绝不自动写入**：每一项都要人点头。组织私有面必须由人确认是本项目的不变量——
+    自动发现只是把"手抄十个 id"降为"确认十几个候选"，不是把人从回路里拿掉。
+    """
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise SystemExit(f"读不到候选文件 {path}: {exc}") from exc
+
+    current = config.get("form_fields", {})
+    assignments = []
+    print(f"候选来源: {path}")
+    print("逐项确认；y=采纳，回车=跳过。歧义项输入编号选择。\n")
+
+    for key, item in sorted(payload.get("proposal", {}).items()):
+        target = f"form_fields.{key}"
+        if key == "subgrid_id":
+            target = "form_fields.subgrid_id"
+        now = current.get(key, "")
+        if now == item["id"]:
+            print(f"[已一致] {key} = {item['id']}")
+            continue
+        observed = payload.get("observed", {}).get(key)
+        hint = f"；历史取值: {' / '.join(observed)}" if observed else ""
+        print(f"{key}: {now or '(空)'} -> {item['id']} "
+              f"[{item['confidence']}] {item['why']}{hint}")
+        if input("  采纳？[y/N]: ").strip().lower() in ("y", "yes"):
+            assignments.append(f"{target}={item['id']}")
+
+    for key, options in sorted(payload.get("ambiguous", {}).items()):
+        print(f"{key}: 工具无法区分，请选择")
+        for i, option in enumerate(options, 1):
+            print(f"  {i}) {option}")
+        raw = input("  选编号（回车跳过）: ").strip()
+        if raw.isdigit() and 1 <= int(raw) <= len(options):
+            assignments.append(f"form_fields.{key}={options[int(raw) - 1]}")
+    return assignments
+
+
 def print_changes(before: dict, after: dict, changed: list[str]) -> None:
     print("待保存变更：")
     for path in changed:
@@ -187,6 +229,9 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--set", action="append", default=[], metavar="KEY=VALUE",
         help="更新指定配置项；可重复使用，嵌套项使用 standup.hours 形式")
+    parser.add_argument(
+        "--from-discovery", nargs="?", const="", metavar="PATH",
+        help="读取 --dump-record 产出的候选，逐项确认后写入 form_fields")
     parser.add_argument("--yes", action="store_true", help="确认写入，跳过保存确认")
     return parser
 
@@ -214,7 +259,12 @@ def main() -> int:
             print(f"配置有效: {path}")
             return 0
 
-        assignments = args.set or interactive_assignments(config)
+        if args.from_discovery is not None:
+            source = Path(args.from_discovery) if args.from_discovery else (
+                work / "output" / "field-proposal.json")
+            assignments = assignments_from_discovery(config, source)
+        else:
+            assignments = args.set or interactive_assignments(config)
         candidate, changed = apply_assignments(config, assignments)
         if not changed:
             validate_candidate(candidate)
