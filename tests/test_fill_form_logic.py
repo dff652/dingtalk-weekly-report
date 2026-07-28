@@ -35,15 +35,19 @@ class FakeStdin:
 
 
 class FakeItem:
-    def __init__(self, text="", visible=True):
+    def __init__(self, text="", visible=True, attrs=None):
         self.text = text
         self.visible = visible
+        self.attrs = attrs or {}
 
     def is_visible(self):
         return self.visible
 
     def inner_text(self):
         return self.text
+
+    def get_attribute(self, name):
+        return self.attrs.get(name)
 
 
 class FakeLocator:
@@ -61,15 +65,19 @@ class FakeLocator:
 
 
 class FakeFrame:
-    def __init__(self, selectors=None, texts=None):
+    def __init__(self, selectors=None, texts=None, detached=False):
         self.selectors = selectors or {}
         self.texts = texts or {}
+        self.detached = detached
 
     def locator(self, selector):
         return FakeLocator(self.selectors.get(selector, ()))
 
     def get_by_text(self, text, exact=False):
         return FakeLocator(self.texts.get(text, ()))
+
+    def is_detached(self):
+        return self.detached
 
 
 class FakePage:
@@ -124,6 +132,12 @@ class FillFormLogicTests(unittest.TestCase):
         bad_frame = FakeFrame(selectors={error_sel: [FakeItem("工时超限")]})
         with self.assertRaisesRegex(RuntimeError, "工时超限"):
             verify_draft_saved(None, FakePage([ok_frame, bad_frame]), mock=False)
+
+    def test_detached_form_frame_does_not_mask_main_page_success(self):
+        success_sel = ".ant-message-success, .ant-notification-notice-success"
+        detached = FakeFrame(detached=True)
+        main = FakeFrame(selectors={success_sel: [FakeItem()]})
+        verify_draft_saved(None, FakePage([detached, main]), mock=False)
 
     def test_mock_non_draft_result_is_rejected(self):
         result = FakeLocator([FakeItem(json.dumps({"kind": "submit"}))])
@@ -224,7 +238,31 @@ class FillFormLogicTests(unittest.TestCase):
     def test_attachment_missing_from_file_input_is_rejected(self):
         with self.assertRaisesRegex(RuntimeError, "未进入文件控件"):
             verify_attachment_uploaded(
-                FakeFrame(), FakePage(), FakeFileInput(0), "周报附件", mock=False)
+                FakeFrame(), FakePage(), FakeFileInput(0), "周报附件", mock=True)
+
+    def test_real_controlled_input_may_clear_after_consuming_file(self):
+        """真实受控组件会清空 input；可见附件名才是上传完成证据。"""
+        selector = (
+            'attach-field .h3-upload-list__item.is-success '
+            '.h3-upload-list__item-name')
+        frame = FakeFrame(selectors={
+            selector: [FakeItem(attrs={"title": "周报附件.xlsx"})]})
+        with patch.object(fill_form, "F", {"attach": "attach-field"}):
+            verify_attachment_uploaded(
+                frame, FakePage(), FakeFileInput(0), "周报附件.xlsx",
+                mock=False)
+
+    def test_real_upload_title_must_match_expected_file(self):
+        selector = (
+            'attach-field .h3-upload-list__item.is-success '
+            '.h3-upload-list__item-name')
+        frame = FakeFrame(selectors={
+            selector: [FakeItem(attrs={"title": "旧周报附件.xlsx"})]})
+        with patch.object(fill_form, "F", {"attach": "attach-field"}):
+            with self.assertRaisesRegex(RuntimeError, "无法确认上传完成"):
+                verify_attachment_uploaded(
+                    frame, FakePage(), FakeFileInput(0), "新周报附件.xlsx",
+                    mock=False, timeout_ms=0)
 
     def test_attachment_unconfirmed_upload_is_rejected(self):
         """页面上等不到附件名 = 上传未确认，必须中止而不是继续暂存。"""

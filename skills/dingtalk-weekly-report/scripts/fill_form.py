@@ -25,7 +25,10 @@ from getpass import getpass
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
-from playwright.sync_api import sync_playwright, TimeoutError as PWTimeout
+from playwright.sync_api import (
+    sync_playwright,
+    Error as PWError,
+)
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from dtwr_common import dtwr_config_dir, require_owned, workdir
@@ -498,17 +501,33 @@ def open_new_form(page, url, mock):
 
 def fill_ant_date(fr, page, scope, value):
     """ant-calendar readonly input：点开 → 面板输入框敲日期 → Enter。"""
-    scope.locator("input").first.click()
+    target = scope.locator("input").first
+    if target.input_value() == value:
+        return
     cal = fr.locator(".ant-calendar-input")
-    for _ in range(10):                      # 等面板弹出，而不是赌固定 600ms
-        page.wait_for_timeout(300)
-        if cal.count():
+    visible_cal = None
+    for attempt in range(3):
+        opener = (target if attempt == 0 else
+                  scope.locator(".ant-calendar-picker-icon").first)
+        opener.click()
+        for _ in range(6):                   # 等面板弹出，并允许关闭动画结束后重试
+            page.wait_for_timeout(300)
+            for i in range(cal.count()):
+                if cal.nth(i).is_visible():
+                    visible_cal = cal.nth(i)
+                    break
+            if visible_cal is not None:
+                break
+        if visible_cal is not None:
             break
     else:
-        raise RuntimeError("3s 内日期面板未弹出（.ant-calendar-input 不存在）")
-    cal.first.fill(value)
+        raise RuntimeError("日期面板重试 3 次仍未弹出（.ant-calendar-input 不可见）")
+    visible_cal.fill(value)
     page.keyboard.press("Enter")
     page.wait_for_timeout(500)
+    if target.input_value() != value:
+        raise RuntimeError(
+            f"日期写入后未生效：期望 {value}，实际 {target.input_value() or '(空)'}")
 
 
 def pick_dropdown(fr, page, scope, value):
@@ -553,30 +572,39 @@ def attachment_locator(fr):
         f'{F["attach"]} input[type="file"], input[type="file"]').first
 
 
-def verify_attachment_uploaded(fr, page, file_input, needle, mock,
+def verify_attachment_uploaded(fr, page, file_input, filename, mock,
                                timeout_ms=30000):
     """上传后必须拿到**完成证据**；定长 sleep 不是证据。
 
-    两层：
-    1. 文件控件真的持有文件——`set_input_files` 静默没生效会在这层暴露（两种模式都查）；
-    2. 页面上出现附件名——与人工在 `20-filled-review.png` 上核对「附件已挂」同一判据。
-       仿真表单是同步的，没有异步上传完成信号可等，故只做第 1 层。
+    真实表单的受控上传组件会在消费文件后清空原生 input，因此以页面出现附件名为完成
+    证据——与人工在 `20-filled-review.png` 上核对「附件已挂」同一判据。
+    仿真表单是同步的，没有异步上传完成信号可等，故检查文件控件确实持有文件。
     """
     held = file_input.evaluate("el => el.files.length")
-    if held != 1:
-        raise RuntimeError(f"附件未进入文件控件（files.length={held}）: {needle}")
     if mock:
+        if held != 1:
+            raise RuntimeError(f"附件未进入文件控件（files.length={held}）: {filename}")
         return
+    field = F.get("attach", "")
+    completed_selector = (
+        f"{field} " if field else "") + (
+        ".h3-upload-list__item.is-success .h3-upload-list__item-name")
     deadline = time.time() + timeout_ms / 1000
     while True:
-        matches = fr.get_by_text(needle, exact=False)
+        completed = fr.locator(completed_selector)
+        if any(
+                completed.nth(i).is_visible()
+                and completed.nth(i).get_attribute("title") == filename
+                for i in range(completed.count())):
+            return
+        matches = fr.get_by_text(filename, exact=False)
         if any(matches.nth(i).is_visible() for i in range(matches.count())):
             return
         if time.time() >= deadline:
             break
         page.wait_for_timeout(500)
     raise RuntimeError(
-        f"上传后 {timeout_ms // 1000}s 内页面未出现附件名「{needle}」，"
+        f"上传后 {timeout_ms // 1000}s 内页面未出现附件名「{filename}」，"
         "无法确认上传完成——就此中止，不落缺附件的草稿")
 
 
@@ -597,18 +625,34 @@ def verify_draft_saved(fr, page, mock, success_messages=()):
     # 单趟逐 frame「先查错再查成功、命中成功就返回」会漏掉出现在后置 frame 里的错误——
     # 语义应是「全 frame 无可见错误 ∧ 存在可见成功」。
     for frame in page.frames:
-        errors = frame.locator(error_selector)
-        for i in range(errors.count()):
-            if errors.nth(i).is_visible():
-                raise RuntimeError(f"暂存失败: {errors.nth(i).inner_text().strip()}")
+        if getattr(frame, "is_detached", lambda: False)():
+            continue
+        try:
+            errors = frame.locator(error_selector)
+            for i in range(errors.count()):
+                if errors.nth(i).is_visible():
+                    raise RuntimeError(
+                        f"暂存失败: {errors.nth(i).inner_text().strip()}")
+        except PWError:
+            if getattr(frame, "is_detached", lambda: False)():
+                continue
+            raise
     for frame in page.frames:
-        success = frame.locator(success_selector)
-        if any(success.nth(i).is_visible() for i in range(success.count())):
-            return
-        for text in success_messages:
-            matches = frame.get_by_text(text, exact=False)
-            if any(matches.nth(i).is_visible() for i in range(matches.count())):
+        if getattr(frame, "is_detached", lambda: False)():
+            continue
+        try:
+            success = frame.locator(success_selector)
+            if any(success.nth(i).is_visible() for i in range(success.count())):
                 return
+            for text in success_messages:
+                matches = frame.get_by_text(text, exact=False)
+                if any(matches.nth(i).is_visible()
+                       for i in range(matches.count())):
+                    return
+        except PWError:
+            if getattr(frame, "is_detached", lambda: False)():
+                continue
+            raise
     raise RuntimeError("点击暂存后未检测到可见的成功提示，不能确认草稿已保存")
 
 
@@ -661,7 +705,7 @@ def do_fill(report_path, url, save_draft, new_record=False):
                 file_input = attachment_locator(fr)
                 file_input.set_input_files(str(attach))
                 verify_attachment_uploaded(
-                    fr, page, file_input, attach.stem, mock)
+                    fr, page, file_input, attach.name, mock)
             else:
                 log("未配置 form_fields.attach：本表单无附件字段，跳过上传")
 
@@ -723,7 +767,7 @@ def do_fill(report_path, url, save_draft, new_record=False):
                     page.wait_for_timeout(1000)
             shot(page, "30-saved")
             log("草稿暂存成功，见 30-saved.png")
-        except (PWTimeout, RuntimeError) as e:
+        except (PWError, RuntimeError) as e:
             shot(page, "99-error")
             log(f"失败: {e}")
             sys.exit(f"失败: {e}（截图 output/shots/99-error.png"
