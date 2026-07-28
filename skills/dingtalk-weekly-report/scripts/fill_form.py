@@ -235,6 +235,17 @@ def do_login_sms(url):
                 sys.exit("手机号应为 11 位数字")
             phone_box.fill(phone)
             page.get_by_text(SMS_SEND_TEXT, exact=False).first.click()
+            page.wait_for_timeout(4000)
+            # 正向确认「真的发出去了」，而不是「点过了」。此前只打印一句「已请求发送」，
+            # 而滑块把请求挡下时用户会一直等一条永远不来的短信。
+            body = page.content()
+            if any(marker in body for marker in CAPTCHA_MARKERS):
+                shot(page, "login-sms-captcha")
+                sys.exit(
+                    "发送验证码被安全验证（滑块拼图）拦下，短信不会送达。\n"
+                    "本工具不绕过验证码——请改用扫码登录：\n"
+                    "  fill_form.py --login\n"
+                    f"（截图见 {SHOTS / 'login-sms-captcha.png'}）")
             log("已请求发送验证码，请查收短信")
 
             code = getpass("短信验证码（输入隐藏）: ").strip()
@@ -652,6 +663,9 @@ SMS_TAB_TEXT = "验证码登录"
 SMS_PHONE_INPUT = 'input[placeholder*="手机号"]'
 SMS_CODE_INPUT = 'input[placeholder*="验证码"]'
 SMS_SEND_TEXT = "发送验证码"
+# 点「发送验证码」会触发阿里云滑块拼图（实测本租户如此，VerifyCode F001 即未通过）。
+# **不尝试绕过**——那是反滥用控制，绕它既不合适也不稳定。检测到就 fail-loud 让用户改扫码。
+CAPTCHA_MARKERS = ("请完成安全验证", "拖动滑块", "aliyunCaptcha")
 
 
 def _visible_option_texts(fr):
@@ -838,7 +852,7 @@ def main():
     ap.add_argument("report_json", nargs="?")
     ap.add_argument("--login", action="store_true")
     ap.add_argument("--login-sms", action="store_true",
-                    help="短信验证码登录（不用扫码；你本人在交互终端输入）")
+                    help="短信验证码登录（可能被滑块验证码拦下，届时改用 --login）")
     ap.add_argument("--qr-entry", type=int, default=1, metavar="N",
                     help="登录页「或」下面第 N 个图标是扫码入口（默认 1）")
     ap.add_argument("--login-url", action="store_true",

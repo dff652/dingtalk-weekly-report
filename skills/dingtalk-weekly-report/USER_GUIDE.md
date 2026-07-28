@@ -227,7 +227,7 @@ python3 "$SKILL/scripts/print_form_rows.py" weeks/week_report_YYYYMMDD.json   # 
 
 | 设备情况 | 用哪条 |
 |---|---|
-| 不想找图、能收短信 | **`--login-sms`** —— 输手机号 + 6 位验证码，不存任何长期凭证 |
+| 不想找图、能收短信 | `--login-sms` —— **可能被滑块验证码拦下**（本维护者租户实测即如此），届时会 fail-loud 提示改用扫码 |
 | 能打开 `output/shots/login.png` | `--login` 扫码，不产生可复制的秘密 |
 | 无图形界面 / 远程机器 | `--login-url`，你本人在该机终端隐藏输入 |
 
