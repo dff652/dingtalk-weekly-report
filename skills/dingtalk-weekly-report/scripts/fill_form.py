@@ -284,6 +284,108 @@ def do_login_sms(url):
             browser.close()
 
 
+LOGIN_PAGE = """<!doctype html><meta charset="utf-8">
+<title>登录 dingtalk-weekly-report</title>
+<style>body{font-family:system-ui,sans-serif;text-align:center;padding:2rem;color:#222}
+img{border:1px solid #ddd;border-radius:8px;max-width:min(90vw,760px)}
+#s{margin:1rem;font-size:1.1rem}.ok{color:#137333}.wait{color:#8a6d00}.err{color:#c5221f}</style>
+<h2>用手机钉钉扫下面的二维码</h2><div id="s" class="wait">加载中…</div>
+<img id="q" src="/qr" alt="二维码">
+<p style="color:#666;font-size:.9rem">二维码由本机的无头浏览器生成；扫它才会把登录态交给工具。<br>
+在别处打开氚云登录页扫码是无效的——会话会落到那个浏览器。</p>
+<script>
+const S={waiting:["等待扫码…","wait"],ok:["登录成功，可以关闭本页","ok"],
+        failed:["登录失败或超时，看终端提示","err"],starting:["启动中…","wait"]};
+setInterval(async()=>{
+  const r=await fetch("/status").then(r=>r.json()).catch(()=>null); if(!r)return;
+  const [txt,cls]=S[r.status]||[r.status,"wait"];
+  const e=document.getElementById("s"); e.textContent=txt; e.className=cls;
+  if(r.status==="waiting") document.getElementById("q").src="/qr?"+Date.now();
+},2000);
+</script>"""
+
+
+def _start_login_server(state, port):
+    """本地状态页：只绑 127.0.0.1。
+
+    页面只是**显示**工具自己生成的二维码，不收集任何凭证——收集式的登录界面等同凭证拦截，
+    本项目不做（见 SECURITY.md）。绑本地回环，远程开发经 VSCode 端口转发访问。
+    """
+    import json as _json
+    import threading
+    from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+
+    class Handler(BaseHTTPRequestHandler):
+        def log_message(self, *_args):
+            pass                                  # 不往终端刷访问日志
+
+        def do_GET(self):
+            if self.path.startswith("/status"):
+                body = _json.dumps({"status": state["status"]}).encode()
+                ctype = "application/json"
+            elif self.path.startswith("/qr"):
+                shot_path = SHOTS / "login.png"
+                body = shot_path.read_bytes() if shot_path.exists() else b""
+                ctype = "image/png"
+            else:
+                body, ctype = LOGIN_PAGE.encode(), "text/html; charset=utf-8"
+            self.send_response(200)
+            self.send_header("Content-Type", ctype)
+            self.send_header("Cache-Control", "no-store")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+    server = ThreadingHTTPServer(("127.0.0.1", port), Handler)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    return server
+
+
+def do_login_web(url, qr_entry=1, port=8765):
+    """扫码登录，但二维码显示在本地网页上而不是让你去翻 png 文件。"""
+    ensure_state_owner()
+    STATE.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+    SHOTS.mkdir(parents=True, exist_ok=True)
+    state = {"status": "starting"}
+    try:
+        server = _start_login_server(state, port)
+    except OSError as exc:
+        sys.exit(f"本地端口 {port} 起不来（{exc}）；换一个：--login-web --port 8766")
+    log(f"登录页：http://127.0.0.1:{port}  （远程开发用 VSCode 端口转发打开）")
+    try:
+        with sync_playwright() as pw:
+            browser = pw.chromium.launch(headless=True)
+            ctx = browser.new_context(viewport={"width": 1440, "height": 900})
+            page = ctx.new_page()
+            try:
+                page.goto(url, wait_until="domcontentloaded")
+                page.wait_for_timeout(2500)
+                entries = page.locator(QR_ENTRY_SELECTOR)
+                if entries.count():
+                    entries.nth(min(max(qr_entry, 1), entries.count()) - 1).click()
+                    page.wait_for_timeout(2500)
+                state["status"] = "waiting"
+                deadline = time.time() + 300
+                while time.time() < deadline:
+                    shot(page, "login")
+                    if looks_logged_in(page):
+                        page.wait_for_timeout(3000)
+                        if looks_logged_in(page):
+                            ctx.storage_state(path=str(STATE))
+                            STATE.chmod(0o600)
+                            state["status"] = "ok"
+                            log(f"登录态已保存: {STATE}")
+                            time.sleep(2)      # 让页面来得及显示成功
+                            return
+                    page.wait_for_timeout(2500)
+                state["status"] = "failed"
+                sys.exit("300s 内未确认到已登录页面；未写入登录态")
+            finally:
+                browser.close()
+    finally:
+        server.shutdown()
+
+
 def do_login(url, qr_entry=1):
     ensure_state_owner()
     STATE.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
@@ -864,6 +966,9 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("report_json", nargs="?")
     ap.add_argument("--login", action="store_true")
+    ap.add_argument("--login-web", action="store_true",
+                    help="扫码登录，二维码显示在本地网页（只绑 127.0.0.1）")
+    ap.add_argument("--port", type=int, default=8765, help="--login-web 的本地端口")
     ap.add_argument("--login-sms", action="store_true",
                     help="短信验证码登录（可能被滑块验证码拦下，届时改用 --login）")
     ap.add_argument("--qr-entry", type=int, default=1, metavar="N",
@@ -890,7 +995,8 @@ def main():
         ap.error("--draft 必须同时提供 --confirmed，表示已完成人审和同周旧草稿检查")
     if args.confirmed and not args.draft:
         ap.error("--confirmed 只能与 --draft 同用")
-    if not any((args.login_url, args.login, args.login_sms, args.keepalive, args.dump,
+    if not any((args.login_url, args.login, args.login_web, args.login_sms,
+                args.keepalive, args.dump,
                 args.dump_list, args.dump_record, args.harvest_enums,
                 args.report_json)):
         ap.print_help()
@@ -901,6 +1007,8 @@ def main():
     log(f"=== run: {shown or '(no args)'} ===")
     if args.login_url:
         do_login_url(prompt_auth_url(), CONFIG.get("form_url", ""))          # 只需登录链接本身
+    elif args.login_web:
+        do_login_web(resolve_url(args), args.qr_entry, args.port)
     elif args.login_sms:
         do_login_sms(resolve_url(args))
     elif args.login:
