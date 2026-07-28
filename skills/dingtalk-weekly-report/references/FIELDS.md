@@ -121,5 +121,12 @@
 - 下拉按精确文本从后往前查找可见项，避免命中先前行残留的隐藏菜单。
 - 附件通过 `input[type=file]` 上传。
 - 草稿成功必须观察到可见成功 selector 或配置的 `success_messages`；表单关闭本身不算成功。
+- 列表页**列优先渲染**：每列一个容器、内含各行单元格，所以按「行」切分取不到值；
+  要按列下标对齐读（如 `tg-c-6` = 报工开始日期、`.cell-status` = 状态）。
+- 附件是**受控上传组件**：上传成功后原生 `input[type=file]` 会被清空（`files.length==0` 属正常）。
+  完成证据用 `.h3-upload-list__item.is-success` 的 `title`；已挂文件的移除按钮是 `anticon-close`。
+- 编辑既有记录时：日期控件**已有值则点 input 不弹面板**（改点 `.ant-calendar-picker-icon`），
+  且页面存在多个 `.ant-calendar-input`，只有可见的那个能用；写入后应回读校验。
+- 点「暂存」后 FormAdapter frame 会 **detach**，遍历 `page.frames` 查询它会抛错——需跳过。
 - 列表页是自有网格：行 `.tg-row`、单元格 `.tg-cell.tg-c-<N>`（列序编号，与表头一一对应）、
   记录标题 `span.tg-link`。标题**不是 `<a href>`**，打开记录只能点击，无法用 URL 直取。

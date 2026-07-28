@@ -9,6 +9,15 @@
 
 ## [Unreleased]
 
+### 文档
+
+- `docs/TESTING.md` 新增踩坑 11–17（登录判据、二维码入口、ticket 绑定、滑块验证码、
+  受控上传组件、编辑态日期控件与 detached frame、字段发现要用已生效记录）与本轮真机验收结论。
+- `docs/SOP.md` 新增「零真机里程的分支必然带 bug」：一天内七个 bug、六个同一毛病
+  （只做动作不做正向确认），并给出两条可迁移规则。
+- `references/FIELDS.md` 沉淀四条真机 DOM 事实（列优先渲染、受控上传组件、编辑态日期控件、
+  暂存后 frame detach）。
+
 ### 新增
 
 - **工时口径 `daily_hours` / `weekly_hours_cap`**（均可选）：`daily_hours` 是**每天合计上限、
