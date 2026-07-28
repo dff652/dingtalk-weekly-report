@@ -204,7 +204,9 @@ def do_login(url):
         ctx = browser.new_context(viewport={"width": 1440, "height": 900})
         page = ctx.new_page()
         page.goto(url, wait_until="domcontentloaded")
-        log("等待扫码：VSCode 打开 output/shots/login.png，手机钉钉扫码确认（5 分钟内）")
+        # 打印绝对路径：提示里写相对路径时用户得先知道 $WORK 在哪才找得到
+        log(f"等待扫码：用手机钉钉扫 {SHOTS / 'login.png'}（5 分钟内）")
+        log("  该图每 2.5 秒刷新一次；VSCode 里若看不到变化，关掉标签页重开取最新的一张")
         deadline = time.time() + 300
         while time.time() < deadline:
             shot(page, "login")
