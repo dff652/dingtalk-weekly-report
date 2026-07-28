@@ -40,3 +40,7 @@ VOCABULARY_VALUE_KEYS = (
 # 假期与调休：均为可选的 YYYY-MM-DD 列表，留空即沿用「周一至周五」。
 # 不内置年度节假日表（过期的表比没有表更危险），也不联网获取。
 CALENDAR_LIST_KEYS = ("holidays", "extra_workdays")
+
+# 工时口径：daily_hours 是**每天合计上限（会议含在内）**，weekly_hours_cap 是每周上限。
+# 二者都可选；留空即沿用旧行为（开发行取 hours、不设周上限）。
+HOURS_POLICY_KEYS = ("daily_hours", "weekly_hours_cap")

@@ -8,6 +8,7 @@ from dtwr_week import parse_dates
 
 from dtwr_fields import (
     CALENDAR_LIST_KEYS,
+    HOURS_POLICY_KEYS,
     FORM_FIELD_KEYS,
     FORM_TEXT_KEYS,
     OPTIONAL_FORM_FIELD_KEYS,
@@ -32,6 +33,11 @@ def _hours_ok(value) -> bool:
     return (isinstance(value, (int, float))
             and not isinstance(value, bool)
             and 0 < value <= 24)
+
+
+def _hours_ok_upto(value, limit=168) -> bool:
+    return (isinstance(value, (int, float)) and not isinstance(value, bool)
+            and 0 < value <= limit)
 
 
 def _string_list(value, label: str, errors: list[str]) -> tuple[str, ...]:
@@ -180,6 +186,10 @@ def validate_config(config: dict) -> None:
 
     _validate_form_url(config.get("form_url"), errors)
     _validate_calendar(config, errors)
+    for key in HOURS_POLICY_KEYS:
+        value = config.get(key)
+        if value not in (None, "") and not _hours_ok_upto(value):
+            errors.append(f"{key} 必须是 0~168 的数字（留空表示不限制）")
     _validate_form_metadata(config, errors)
     vocabulary = _validate_vocabulary(config, errors)
     if config.get("project_type") not in vocabulary["project_types"]:
@@ -292,6 +302,24 @@ def validate_report(report: dict, require_complete: bool = True) -> None:
     for row_date, total in daily_hours.items():
         if total > 24:
             errors.append(f"{row_date} 合计工时超过 24 小时（当前 {total}）")
+
+    # 组织口径：每天合计（**会议含在内**）与每周合计各有上限。快照随报告走，
+    # 与 vocabulary / workdays 同款——避免"生成时按一套、校验时按另一套"。
+    policy = report.get("hours_policy") or {}
+    daily_cap = policy.get("daily_hours")
+    weekly_cap = policy.get("weekly_hours_cap")
+    if isinstance(daily_cap, (int, float)) and not isinstance(daily_cap, bool):
+        for row_date, total in sorted(daily_hours.items()):
+            if total > daily_cap:
+                errors.append(
+                    f"{row_date} 合计 {total}h 超过每日上限 {daily_cap}h"
+                    "（会议已含在内）——确有加班请显式说明并调整配置")
+    if isinstance(weekly_cap, (int, float)) and not isinstance(weekly_cap, bool):
+        week_total = sum(daily_hours.values())
+        if week_total > weekly_cap:
+            errors.append(
+                f"本周合计 {week_total}h 超过每周上限 {weekly_cap}h"
+                "——确有加班请显式说明并调整配置")
 
     if require_complete and monday:
         # 应报工作日以报告自带的快照为准（生成时按假期/调休算好）；

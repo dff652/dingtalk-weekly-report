@@ -103,12 +103,22 @@ def main():
         if not title:
             missing.append(str(d))
             title = "TODO(人工补充：该日在 PROGRESS_REPORT.md 无独立标题——现场/传输/会议等非提交工作也要写)"
+        # 会议**含在**每日总工时里：开发行 = daily_hours − 会议工时。
+        # 没配 daily_hours 时沿用旧行为（直接取 config["hours"]）。
+        daily_cap = config.get("daily_hours")
+        if isinstance(daily_cap, (int, float)) and not isinstance(daily_cap, bool):
+            main_hours = round(daily_cap - meet["hours"], 2)
+            if main_hours <= 0:
+                sys.exit(f"{d} 的会议工时 {meet['hours']}h 已占满每日上限 "
+                         f"{daily_cap}h，开发行无工时可分——请检查配置")
+        else:
+            main_hours = config["hours"]
         days.append({
             "date": str(d),
             "project_type": config["project_type"],
             "project": config["form_project"],
             "status": config["status"],
-            "hours": config["hours"],
+            "hours": main_hours,
             "content": title,
         })
 
@@ -132,6 +142,9 @@ def main():
         "week": {"start": str(monday), "end": str(monday + timedelta(days=6))},
         # 应报工作日快照：校验按它判覆盖，避免"生成时算了假期、校验时又按周一到周五"分叉
         "workdays": [str(d) for d in workdays],
+        # 工时口径快照：校验按它判上限，避免生成与校验两套算法
+        "hours_policy": {k: config[k] for k in ("daily_hours", "weekly_hours_cap")
+                         if config.get(k) not in (None, "")},
         "days": days,
         "special_note": "",
         "summary": {

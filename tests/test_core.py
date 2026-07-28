@@ -118,6 +118,34 @@ class CoreTests(unittest.TestCase):
         self.assertEqual(xml_text("正常\x0b内容\x00结束"), "正常内容结束")
         self.assertEqual(xml_text("换行\n制表\t保留"), "换行\n制表\t保留")
 
+    def test_hours_policy_blocks_over_daily_cap(self):
+        """会议含在每日上限内；超了必须拦——加班要显式说明，不能默默多报。"""
+        value = copy.deepcopy(self.report)
+        value["hours_policy"] = {"daily_hours": 8, "weekly_hours_cap": 40}
+        validate_report(value)                       # 每日 8h 应通过
+        over = copy.deepcopy(value)
+        over["days"][1]["hours"] = 10
+        with self.assertRaisesRegex(ValidationError, "超过每日上限"):
+            validate_report(over)
+
+    def test_hours_policy_blocks_over_weekly_cap(self):
+        value = copy.deepcopy(self.report)
+        value["hours_policy"] = {"weekly_hours_cap": 30}
+        with self.assertRaisesRegex(ValidationError, "超过每周上限"):
+            validate_report(value)
+
+    def test_report_without_hours_policy_is_unconstrained(self):
+        """没配口径的旧报告不受新上限影响，向后兼容。"""
+        value = copy.deepcopy(self.report)
+        value.pop("hours_policy", None)
+        validate_report(value)
+
+    def test_config_rejects_bad_hours_policy(self):
+        value = copy.deepcopy(self.config)
+        value["daily_hours"] = 0
+        with self.assertRaisesRegex(ValidationError, "daily_hours"):
+            validate_config(value)
+
     def test_config_rejects_submit_button_as_draft_action(self):
         value = copy.deepcopy(self.config)
         value["form_texts"]["save_draft"] = "提 交"
