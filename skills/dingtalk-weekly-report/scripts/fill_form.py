@@ -196,6 +196,70 @@ def do_login_url(auth_url):
         browser.close()
 
 
+def do_login_sms(url):
+    """短信验证码登录：不用扫码、不存任何长期凭证。
+
+    为什么加这条：扫码要求你能看到无头浏览器生成的那张图；而**在自己浏览器打开登录页扫码
+    是无效的**——二维码是钉钉 OAuth 的 ticket，绑定在生成并轮询它的那个浏览器实例上，
+    你在别处扫，cookie 就落在别处。短信验证码没有这个绑定问题。
+
+    手机号用普通输入（你需要看清有没有敲错），**验证码走隐藏输入**并且用完即弃；
+    与 auth 链接同款约束：非交互终端直接拒绝，不接受命令行参数。
+    """
+    if not sys.stdin.isatty():
+        sys.exit("--login-sms 需要你本人在交互终端运行；验证码不得经由聊天、参数或管道传递")
+    ensure_state_owner()
+    STATE.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+    with sync_playwright() as pw:
+        browser = pw.chromium.launch(headless=True)
+        ctx = browser.new_context(viewport={"width": 1440, "height": 900})
+        page = ctx.new_page()
+        try:
+            page.goto(url, wait_until="domcontentloaded")
+            page.wait_for_timeout(2500)
+            tab = page.get_by_text(SMS_TAB_TEXT, exact=True)
+            if not tab.count():
+                shot(page, "login-sms-no-tab")
+                sys.exit(f"登录页没有「{SMS_TAB_TEXT}」入口；改用 --login 扫码")
+            tab.first.click()
+            page.wait_for_timeout(1500)
+
+            phone_box = page.locator(SMS_PHONE_INPUT).first
+            code_box = page.locator(SMS_CODE_INPUT).first
+            if not phone_box.count() or not code_box.count():
+                shot(page, "login-sms-no-fields")
+                sys.exit("验证码登录面板未渲染出手机号/验证码输入框；改用 --login 扫码")
+
+            phone = input("手机号: ").strip()
+            if not re.fullmatch(r"\d{11}", phone):
+                sys.exit("手机号应为 11 位数字")
+            phone_box.fill(phone)
+            page.get_by_text(SMS_SEND_TEXT, exact=False).first.click()
+            log("已请求发送验证码，请查收短信")
+
+            code = getpass("短信验证码（输入隐藏）: ").strip()
+            if not code:
+                sys.exit("未输入验证码")
+            code_box.fill(code)
+            page.keyboard.press("Enter")
+
+            for _ in range(30):                 # 正向确认才落盘，与 --login 同款
+                page.wait_for_timeout(1000)
+                if looks_logged_in(page):
+                    page.wait_for_timeout(2000)
+                    if looks_logged_in(page):
+                        ctx.storage_state(path=str(STATE))
+                        STATE.chmod(0o600)
+                        shot(page, "login-ok")
+                        log(f"登录态已保存: {STATE}")
+                        return
+            shot(page, "login-sms-failed")
+            sys.exit("30s 内未确认到已登录页面；未写入登录态。"
+                     "验证码可能错误或已过期，重跑 --login-sms")
+        finally:
+            browser.close()
+
+
 def do_login(url, qr_entry=1):
     ensure_state_owner()
     STATE.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
@@ -582,6 +646,12 @@ def do_dump_list(url):
 LIST_ROW_LINK = "span.tg-link"
 # 登录页默认是「密码登录」，二维码藏在「或」下面那排图标后面（无 alt/title，只能按序号点）
 QR_ENTRY_SELECTOR = ".h3-login-type .content-icon img"
+# 短信验证码登录：厂商 UI 常量，与 .ant-calendar-input / FormAdapter 同类。
+# 按 placeholder 定位而不是 antd 自动生成的面板 id（那种 id 会随渲染顺序漂）。
+SMS_TAB_TEXT = "验证码登录"
+SMS_PHONE_INPUT = 'input[placeholder*="手机号"]'
+SMS_CODE_INPUT = 'input[placeholder*="验证码"]'
+SMS_SEND_TEXT = "发送验证码"
 
 
 def _visible_option_texts(fr):
@@ -767,6 +837,8 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("report_json", nargs="?")
     ap.add_argument("--login", action="store_true")
+    ap.add_argument("--login-sms", action="store_true",
+                    help="短信验证码登录（不用扫码；你本人在交互终端输入）")
     ap.add_argument("--qr-entry", type=int, default=1, metavar="N",
                     help="登录页「或」下面第 N 个图标是扫码入口（默认 1）")
     ap.add_argument("--login-url", action="store_true",
@@ -791,7 +863,7 @@ def main():
         ap.error("--draft 必须同时提供 --confirmed，表示已完成人审和同周旧草稿检查")
     if args.confirmed and not args.draft:
         ap.error("--confirmed 只能与 --draft 同用")
-    if not any((args.login_url, args.login, args.keepalive, args.dump,
+    if not any((args.login_url, args.login, args.login_sms, args.keepalive, args.dump,
                 args.dump_list, args.dump_record, args.harvest_enums,
                 args.report_json)):
         ap.print_help()
@@ -802,6 +874,8 @@ def main():
     log(f"=== run: {shown or '(no args)'} ===")
     if args.login_url:
         do_login_url(prompt_auth_url())          # 只需登录链接本身
+    elif args.login_sms:
+        do_login_sms(resolve_url(args))
     elif args.login:
         do_login(resolve_url(args), args.qr_entry)   # 只需 form_url，由 resolve_url 校验
     elif args.dump_list:

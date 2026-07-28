@@ -15,6 +15,7 @@ import fill_form
 from fill_form import (
     attachment_enabled,
     redact,
+    do_login_sms,
     looks_logged_in,
     prompt_auth_url,
     require_config_keys,
@@ -176,6 +177,12 @@ class FillFormLogicTests(unittest.TestCase):
         self.assertIn("form_texts.add_row", message)
         self.assertIn("form_texts.start_date_label", message)
         self.assertNotIn("subgrid_id", message)
+
+    def test_sms_login_refuses_non_interactive(self):
+        """验证码与 auth 链接同款约束：非交互终端一律拒绝，不接受管道/参数传递。"""
+        with patch("fill_form.sys.stdin", FakeStdin(False)):
+            with self.assertRaisesRegex(SystemExit, "交互终端"):
+                do_login_sms("https://www.h3yun.com/application/x")
 
     # ---- 运行日志脱敏：日志会被附到 issue，URL 带租户标识 ----
 
