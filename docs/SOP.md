@@ -36,6 +36,10 @@
 
 三个验收层级**不得互相顶替**，判据见 [TESTING.md](TESTING.md) 末尾。
 
+跑测试用 `$WORK/.venv/bin/python`，**不要用裸 `python3`**——后者缺 playwright，
+`test_fill_form_logic` 会在 loader 阶段整文件不被计数，且红得像"环境问题"容易被跳过。
+**判读时先看 `Ran N tests` 的 N 对不对，再看 OK/FAILED**（TESTING 踩坑 20）。
+
 ### 零真机里程的分支必然带 bug
 
 2026-07-28 首次真机跑登录与编辑既有草稿，**一天内连撞七个 bug**，其中六个是同一种毛病：

@@ -81,6 +81,20 @@ npx skills add dff652/dingtalk-weekly-report -s dingtalk-weekly-report -a claude
 - 登录态：`~/.config/dtwr/state.json`（0600，勿入 git）
 - 一次性 auth 链接：Agent 不得接收；不得进入 argv、聊天、文件或 git
 
+### 独立核对「某周到底提交了没」
+
+不要靠回忆或截图，用 `--dump-list` 读真实列表。列表是**列主序网格**，三列对上就够：
+
+| 列 | 含义 |
+|---|---|
+| `.tg-cell.tg-c-6` | 报工开始日期 |
+| `.tg-cell.tg-c-8` | 周总工时 |
+| `.cell-status` | 状态（草稿 / 进行中 / 已生效） |
+
+判据：**状态离开「草稿」即已提交**（进行中 = 在审批流里）。这也是
+`find_editable_draft` 两道护栏的数据来源——它只认「状态=草稿 且 开始日期=目标周周一」，
+所以已提交的记录不会被误改。
+
 ## 表单硬规则（工具侧）
 
 - 工具只落草稿，不提交；
