@@ -196,7 +196,7 @@ def do_login_url(auth_url):
         browser.close()
 
 
-def do_login(url):
+def do_login(url, qr_entry=1):
     ensure_state_owner()
     STATE.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
     with sync_playwright() as pw:
@@ -204,6 +204,18 @@ def do_login(url):
         ctx = browser.new_context(viewport={"width": 1440, "height": 900})
         page = ctx.new_page()
         page.goto(url, wait_until="domcontentloaded")
+        page.wait_for_timeout(2500)
+        # 登录页默认落在「密码登录」，二维码不会自己出现——必须先点开扫码入口。
+        # 此前 --login 从不点它，于是截出来的 login.png 永远没有二维码。
+        entries = page.locator(QR_ENTRY_SELECTOR)
+        count = entries.count()
+        if count:
+            index = min(max(qr_entry, 1), count) - 1
+            log(f"点开扫码入口（第 {index + 1} / {count} 个图标）")
+            entries.nth(index).click()
+            page.wait_for_timeout(2500)
+        else:
+            log("未找到扫码入口图标；若截图里没有二维码，请检查登录页结构")
         # 打印绝对路径：提示里写相对路径时用户得先知道 $WORK 在哪才找得到
         log(f"等待扫码：用手机钉钉扫 {SHOTS / 'login.png'}（5 分钟内）")
         log("  该图每 2.5 秒刷新一次；VSCode 里若看不到变化，关掉标签页重开取最新的一张")
@@ -568,6 +580,8 @@ def do_dump_list(url):
 
 # 氚云列表页网格的通用 DOM 常量（与 .ant-calendar-input / FormAdapter 同类，属厂商结构而非组织数据）
 LIST_ROW_LINK = "span.tg-link"
+# 登录页默认是「密码登录」，二维码藏在「或」下面那排图标后面（无 alt/title，只能按序号点）
+QR_ENTRY_SELECTOR = ".h3-login-type .content-icon img"
 
 
 def _visible_option_texts(fr):
@@ -753,6 +767,8 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("report_json", nargs="?")
     ap.add_argument("--login", action="store_true")
+    ap.add_argument("--qr-entry", type=int, default=1, metavar="N",
+                    help="登录页「或」下面第 N 个图标是扫码入口（默认 1）")
     ap.add_argument("--login-url", action="store_true",
                     help="在本机交互终端隐藏输入一次性登录链接；不接受命令行参数")
     ap.add_argument("--dump", action="store_true",
@@ -787,7 +803,7 @@ def main():
     if args.login_url:
         do_login_url(prompt_auth_url())          # 只需登录链接本身
     elif args.login:
-        do_login(resolve_url(args))              # 只需 form_url，由 resolve_url 校验
+        do_login(resolve_url(args), args.qr_entry)   # 只需 form_url，由 resolve_url 校验
     elif args.dump_list:
         do_dump_list(resolve_url(args))          # 只读列表页，无需任何字段配置
     elif args.dump_record:

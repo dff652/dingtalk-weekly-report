@@ -179,6 +179,7 @@ mock e2e 挂上 Actions，与 `PUBLISHING.md` 的发布门禁对齐。
 | ⑳ | **工作日硬编码周一~周五，无视节假日与调休** | `extract_week` 只生成 `range(5)` 五天、`validate_report` 缺任一周一~周五即阻断。国庆/春节周会**强迫为放假日填工时**；调休周六上班则**根本不生成该行 → 漏报**。中国假期制度下两头都错 | ✅ 已修：配置项 `holidays` + `extra_workdays`，工作日集合 = (周一~周五 − holidays) ∪ extra_workdays；报告写入 `workdays` 快照供校验，旧报告回落周一~周五 |
 | ㉑ | **登录态过期时静默产出无效 dump** | `--dump-list` / `--dump-record` 只用 URL 含不含 `login`/`entry/auth` 判登录态，而实测氚云过期后落到的登录页 URL **不含**这两个字样——于是照常写文件、给统计、无任何报错。拿登录页去推断字段只会得到垃圾，且是本项目最忌讳的静默成功 | ✅ 已修：抽 `assert_logged_in()`，判据改为**正向确认看见 `form_texts.report_title`**（keepalive 本就这么做，新加的两个模式漏了），四处共用 |
 | ㉒ | **`--login` 在用户还没扫码时就报告成功** | 判据是「URL 里没有 `login` 且含 `h3yun`」，而氚云登录页 URL 恰恰不含 `login`——于是一打开登录页就判定成功，把**未登录**的会话存成 `state.json` 并打印「登录态已保存」。后续所有步骤都会拿这份废登录态去跑。与 ㉑ 同源，我修 ㉑ 时漏了登录这条路径 | ✅ 已修：新增 `looks_logged_in()` 正向判据（必须看见 `report_title`），`--login` 轮询到确认才落盘、`--login-url` 同样；无正向标识时宁可超时也不认 |
+| ㉓ | **`--login` 截出的二维码图里从来没有二维码** | 氚云登录页默认落在「密码登录」，扫码入口藏在「或」下面那排 40×40 图标后面（无 alt/title）。`--login` 从不点它，于是 `login.png` 永远是一张密码登录页，用户「等待扫码」却无码可扫 | ✅ 已修：先点 `.h3-login-type .content-icon img`（`--qr-entry N` 可选第几个），实跑确认第 1 个即「钉钉扫码登录」，二维码正常渲染 |
 | ⑬ | **开发流程未成文** | 公开仓无 `CONTRIBUTING.md`，而选 Apache-2.0 的首要理由正是"会收到陌生人 PR" | ✅ 已修（B）：[CONTRIBUTING.md](../CONTRIBUTING.md) + [SOP.md](SOP.md) |
 
 ⑩ 的后果很具体：`npx skills update` 的用户不知道更新到了什么、变了什么；出问题说不清哪版引入；
