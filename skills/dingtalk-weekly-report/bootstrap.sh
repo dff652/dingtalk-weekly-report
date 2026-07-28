@@ -107,5 +107,9 @@ echo "  配置:   $PY \"$SKILL/scripts/configure.py\""
 echo "  登录:   $PY \"$SKILL/scripts/fill_form.py\" --login"
 echo "  URL兜底: 用户本人在交互终端运行 $PY \"$SKILL/scripts/fill_form.py\" --login-url（隐藏输入）"
 echo "  AI: Claude 用 /dingtalk-weekly-report；Codex 用 \$dingtalk-weekly-report 或 /skills 选择"
-echo "  可选 cron(Linux/mac): 30 9 * * * cd $WORK && $PY $SKILL/scripts/fill_form.py --keepalive >> output/keepalive.log 2>&1"
+# 日志路径必须写绝对：相对路径在 cron 里跟着 cwd 走，cwd 一错重定向就失败，
+# 而 cron 的 stderr 无人看 → 保活每天静默失败（本项目 2026-07-28 踩过，见 TESTING 踩坑 18）。
+echo "  可选 cron(Linux/mac)，日志路径务必写绝对："
+echo "    30 9,15 * * * cd $WORK && $PY $SKILL/scripts/fill_form.py --keepalive >> $WORK/output/keepalive.log 2>&1"
+echo "  装好后第二天务必确认 $WORK/output/keepalive.log 真的有新行——没有就是没跑成"
 echo "  Windows 计划任务可调用同一 keepalive 命令"

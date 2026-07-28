@@ -146,6 +146,20 @@ Windows 将 `.venv/bin/python` 换成 `.venv\Scripts\python.exe`，技能路径�
 向导会升级为 `config_version=2`。旧周报需要在私有 `$WORK` 中重新生成，或补入
 `schema_version=2` 与当前 `vocabulary`。
 
+## 2.5 不知道下一步做什么？先跑自检
+
+```bash
+~/weekly-report-data/.venv/bin/python \
+  ~/.claude/skills/dingtalk-weekly-report/scripts/fill_form.py --status
+```
+
+秒出，不联网。它读**当前真实状态**并直接给下一步：配置是否就绪、登录态与保活日志的新鲜度、
+本周 json 是否存在／有没有 TODO、附件是否已生成。**卡在哪一步都可以先跑它**，
+不用回来翻文档。
+
+（保活日志那一项专门防一类坑：cron 写错路径会**每天静默失败**，而"没有日志"很容易被误读成
+"没到点"。自检直接告诉你日志多久没更新了。）
+
 ## 3. 每周使用
 
 ### 3.1 AI（推荐）

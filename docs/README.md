@@ -6,7 +6,7 @@
 | [../skills/dingtalk-weekly-report/USER_GUIDE.md](../skills/dingtalk-weekly-report/USER_GUIDE.md) | 同事 | 安装细节、CLI 周流程、FAQ（随 skill） |
 | [../skills/dingtalk-weekly-report/SKILL.md](../skills/dingtalk-weekly-report/SKILL.md) | Agent | 周报 SOP |
 | [../skills/dingtalk-weekly-report/references/FIELDS.md](../skills/dingtalk-weekly-report/references/FIELDS.md) | 维护者 | 表单字段 |
-| [SOP.md](SOP.md) | 维护者/贡献者 | **流程骨架与决策表**：改动类型→必跑验证、发版检查单、回滚路径 |
+| [SOP.md](SOP.md) | 维护者/贡献者/用户 | **流程骨架与决策表**：改动类型→必跑验证、发版检查单、回滚路径、**用户旅程 SOP（安装→登录→使用→确认）** |
 | [../CONTRIBUTING.md](../CONTRIBUTING.md) | 贡献者 | 钩子、提交身份、三条硬规则、不接受的改动 |
 | [MAINTAINER.md](MAINTAINER.md) | 维护者 | 打包、测试、调试、路线图 |
 | [REVIEW.md](REVIEW.md) | 维护者 | 设计与实现评审：不变量清单、待修缺陷、发布阻断复核 |

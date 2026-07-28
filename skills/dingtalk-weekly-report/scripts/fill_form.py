@@ -839,6 +839,83 @@ def assert_logged_in(page, context):
                  "重跑 --login / --login-url（截图见 output/shots/state-expired.png）")
 
 
+def do_status():
+    """读真实状态回答「我现在该做什么」，不猜、不联网。
+
+    比再写一份文档有用：文档会漂，自检读的是当前实际状态。**刻意不启动浏览器**——
+    要几秒内出结果；会话是否真有效由 `--keepalive` 回答，这里只看登录态文件与保活日志的新鲜度
+    （后者专门防「cron 静默失败」复发，见 TESTING 踩坑 18）。
+    """
+    from dtwr_week import pick_monday, parse_dates, workdays_for
+
+    ok, warn, bad, todo = "✅", "⚠️ ", "❌", []
+    print(f"工作目录: {WORK}")
+
+    try:
+        validate_config(CONFIG)
+        print(f"{ok} 配置校验通过")
+    except ValidationError as exc:
+        print(f"{bad} 配置未就绪:\n{exc}")
+        todo.append("先跑 configure.py 补齐配置（字段 id 可用 --dump-record N 自动发现）")
+
+    if STATE.exists():
+        age = (time.time() - STATE.stat().st_mtime) / 86400
+        mark = ok if age < 3 else warn
+        print(f"{mark} 登录态文件 {age:.1f} 天前更新"
+              + ("" if age < 3 else "——可能已过期，跑 --keepalive 确认"))
+        if age >= 3:
+            todo.append("跑 --keepalive 确认会话；失效则 --login-web 扫码")
+    else:
+        print(f"{bad} 无登录态文件")
+        todo.append("跑 --login-web（本地网页扫码）或 --login-url 建立登录态")
+
+    keep_log = WORK / "output" / "keepalive.log"
+    if keep_log.exists():
+        age = (time.time() - keep_log.stat().st_mtime) / 86400
+        mark = ok if age < 2 else warn
+        print(f"{mark} 保活日志 {age:.1f} 天前写入"
+              + ("" if age < 2 else "——cron 可能没跑成，检查 crontab 里的**绝对**日志路径"))
+        if age >= 2:
+            todo.append("检查 keepalive cron：日志路径必须绝对，cwd 必须是 $WORK")
+    else:
+        print(f"{warn}未装保活 cron（可选，但装了能免去反复登录）")
+
+    monday = pick_monday([])          # 与 SKILL 同一规则：周一取上周，其余取本周
+    report_path = WORK / "weeks" / f"week_report_{monday:%Y%m%d}.json"
+    print(f"\n目标周: {monday} ~ {monday + timedelta(days=6)}")
+    if not report_path.exists():
+        print(f"{bad} 周报 json 不存在")
+        todo.append(f"跑 extract_week.py {monday} 生成草稿，再人工审改")
+    else:
+        report = json.loads(report_path.read_text(encoding="utf-8"))
+        print(f"{ok} 周报 json：{len(report.get('days', []))} 行，"
+              f"合计 {sum(r.get('hours', 0) for r in report.get('days', []))}h")
+        try:
+            validate_report(report)
+            validate_report_against_config(report, CONFIG)
+            print(f"{ok} 周报校验通过")
+        except ValidationError as exc:
+            first = str(exc).splitlines()[1:4]
+            print(f"{bad} 周报未就绪:\n  " + "\n  ".join(first))
+            todo.append("补齐周报 json 里的 TODO / 修正工时后重跑校验")
+        if attachment_enabled():
+            attach = attach_path(report["week"]["start"])
+            if attach.exists():
+                print(f"{ok} 附件已生成 {attach.name}")
+            else:
+                print(f"{bad} 附件缺失 {attach.name}")
+                todo.append("跑 gen_attachment.py 生成附件")
+
+    print("\n下一步：")
+    if todo:
+        for i, item in enumerate(todo, 1):
+            print(f"  {i}. {item}")
+    else:
+        print("  1. 先跑一次预览（不带 --draft）核对 20-filled-review.png")
+        print("  2. 确认无误后加 --draft --confirmed 落草稿")
+        print("  3. 到钉钉打开草稿核对并**亲手提交**——工具没有提交能力")
+
+
 def do_dump_list(url):
     """dump **列表页**原样，并捞出打开历史记录的候选入口。
 
@@ -1081,6 +1158,8 @@ def do_dump(url):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("report_json", nargs="?")
+    ap.add_argument("--status", action="store_true",
+                    help="自检当前状态并给出下一步（不联网，秒出）")
     ap.add_argument("--login", action="store_true")
     ap.add_argument("--login-web", action="store_true",
                     help="扫码登录，二维码显示在本地网页（只绑 127.0.0.1）")
@@ -1113,7 +1192,7 @@ def main():
         ap.error("--draft 必须同时提供 --confirmed，表示已完成人审和同周旧草稿检查")
     if args.confirmed and not args.draft:
         ap.error("--confirmed 只能与 --draft 同用")
-    if not any((args.login_url, args.login, args.login_web, args.login_sms,
+    if not any((args.status, args.login_url, args.login, args.login_web, args.login_sms,
                 args.keepalive, args.dump,
                 args.dump_list, args.dump_record, args.harvest_enums,
                 args.report_json)):
@@ -1123,7 +1202,9 @@ def main():
     # 只记文件名不记路径：日志可能被附到 issue，绝对路径会带出用户名与目录结构
     shown = " ".join(Path(a).name if "/" in a else a for a in sys.argv[1:])
     log(f"=== run: {shown or '(no args)'} ===")
-    if args.login_url:
+    if args.status:
+        do_status()
+    elif args.login_url:
         do_login_url(prompt_auth_url(), CONFIG.get("form_url", ""))          # 只需登录链接本身
     elif args.login_web:
         do_login_web(resolve_url(args), args.qr_entry, args.port)
