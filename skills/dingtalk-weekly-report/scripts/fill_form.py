@@ -167,8 +167,13 @@ def ensure_state_owner():
     require_owned(STATE, "登录态文件")
 
 
-def do_login_url(auth_url):
-    """带 token 的一次性登录链接直接建立登录态，免扫码。"""
+def do_login_url(auth_url, form_url=""):
+    """带 token 的一次性登录链接直接建立登录态，免扫码。
+
+    token 落地页**未必是周报列表页**（取决于链接里的 goto 目标），所以不能直接在落地页上
+    找「报工周报」——那会把成功的登录误判成失败。正确做法是：token 先把 cookie 建起来，
+    再主动导航到配置的 form_url，在那里做正向确认。
+    """
     try:
         validate_auth_url(auth_url)
     except ValueError as exc:
@@ -182,13 +187,21 @@ def do_login_url(auth_url):
         page.goto(auth_url, wait_until="domcontentloaded")
         page.wait_for_timeout(6000)
         shot(page, "login-url-landed")
-        for _ in range(10):                     # 等跳转落地，正向确认后才落盘
+        if "entry/auth" in page.url:
+            shot(page, "login-url-failed")
+            sys.exit("登录链接未完成跳转，token 多半已过期（48h）；未写入登录态。"
+                     "重新打印二维码取新链接")
+        if form_url:                            # 换到已知页面再做正向确认
+            page.goto(form_url, wait_until="networkidle")
+            page.wait_for_timeout(2000)
+        for _ in range(20):
             if looks_logged_in(page):
                 break
             page.wait_for_timeout(1000)
         else:
             shot(page, "login-url-failed")
-            sys.exit("登录链接未能进入应用（token 可能已过期）；未写入登录态。"
+            sys.exit("登录链接未能进入应用；未写入登录态。"
+                     f"看 {SHOTS / 'login-url-failed.png'}——若停在登录页说明 token 已过期，"
                      "重新打印二维码取新链接，或改用 --login 扫码")
         ctx.storage_state(path=str(STATE))
         STATE.chmod(0o600)
@@ -887,7 +900,7 @@ def main():
     shown = " ".join(Path(a).name if "/" in a else a for a in sys.argv[1:])
     log(f"=== run: {shown or '(no args)'} ===")
     if args.login_url:
-        do_login_url(prompt_auth_url())          # 只需登录链接本身
+        do_login_url(prompt_auth_url(), CONFIG.get("form_url", ""))          # 只需登录链接本身
     elif args.login_sms:
         do_login_sms(resolve_url(args))
     elif args.login:
