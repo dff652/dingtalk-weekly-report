@@ -33,9 +33,10 @@ HR 表单上的内部工具做成可开源的通用技能包——已经解决�
    脚本无提交能力、`form_texts.save_draft` 指向提交按钮会被 config 校验拒绝、暂存成功必须正向
    观测到可见提示（表单关闭不算成功）。跑飞的 agent 在这套约束下也提交不了。
    **「无提交能力」自 2026-07-28 起由 `tests/test_invariants.py` 守住**——此前它只是
-   「代码里恰好没有那条路径」，一次顺手的改动就能抹掉且 diff 看着合理；改走 OpenApi（P3）
-   时这条会从结构性保证退化成主动选择，届时该测试必须改断言目标而**不是删掉**，
-   见 [MAINTAINER.md 的 P3 评估](MAINTAINER.md#p3-评估改走氚云-openapi未启动2026-07-28)。
+   「代码里恰好没有那条路径」，一次顺手的改动就能抹掉且 diff 看着合理。
+   **氚云 OpenApi（P3）已于同日决定暂不采用**，直接原因就是它的 `CreateBizObject.IsSubmit`
+   会把这条结构性保证降级成"每次写入传对一个布尔值"；决定与重估触发条件见
+   [MAINTAINER.md 的 P3 决定](MAINTAINER.md#p3-决定暂不采用氚云-openapi2026-07-28)。
 5. **凭证处理**：一次性 auth 链接只接受 TTY 上的 `getpass` 隐藏输入，非 tty 退出，拒绝 argv，
    拒绝存成 `form_url`；`state.json` 0600；共享机上对 `$WORK` 与登录态做 uid 属主校验。
 6. **校验单一事实源 + 一次性报全错**。`dtwr_validation.py` 被 4 个入口共用，错误汇总后一起抛。
