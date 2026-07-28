@@ -9,6 +9,8 @@
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-07-28
+
 ### 文档
 
 - `docs/TESTING.md` 新增踩坑 11–17（登录判据、二维码入口、ticket 绑定、滑块验证码、
@@ -156,6 +158,7 @@
   处置全过程见 [docs/PUBLISHING.md](docs/PUBLISHING.md)。
 - 提交身份统一为 GitHub noreply 地址，真实邮箱不再出现在公开历史中。
 
-[Unreleased]: https://github.com/dff652/dingtalk-weekly-report/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/dff652/dingtalk-weekly-report/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/dff652/dingtalk-weekly-report/releases/tag/v0.3.0
 [0.2.0]: https://github.com/dff652/dingtalk-weekly-report/releases/tag/v0.2.0
 [0.1.0]: https://github.com/dff652/dingtalk-weekly-report/releases/tag/v0.1.0
