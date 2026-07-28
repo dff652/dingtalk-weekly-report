@@ -469,11 +469,7 @@ def do_keepalive(url):
         try:
             page.goto(url, wait_until="networkidle")
             page.wait_for_timeout(3000)
-            if "login" in page.url.lower() or "entry/auth" in page.url:
-                sys.exit(f"keepalive: 会话已失效（落在 {page.url[:80]}）——需用户本人重新登录")
-            report_title = CONFIG["form_texts"]["report_title"]
-            if not page.get_by_text(report_title).count():
-                sys.exit(f"keepalive: 页面未出现「{report_title}」，会话状态可疑")
+            assert_logged_in(page, "keepalive")
             ctx.storage_state(path=str(STATE))
             STATE.chmod(0o600)
             print(f"keepalive OK: {time.strftime('%F %T')} 会话有效，cookie 已回存")
@@ -482,6 +478,26 @@ def do_keepalive(url):
 
 
 # ---------------- 诊断 ----------------
+
+def assert_logged_in(page, context):
+    """正向确认已登录，而不是"没看到失败迹象"就继续。
+
+    只看 URL 含不含 login/entry/auth 是不够的——实测氚云过期后落到的登录页 URL **不含**
+    这两个字样，`--dump-list` 因此静默产出了一份登录页的 dump，还照常写文件、给统计。
+    拿登录页去推断字段只会得到垃圾。判据必须是**看见预期页面标识**（与 keepalive 同款）。
+    """
+    if "login" in page.url.lower() or "entry/auth" in page.url:
+        shot(page, "state-expired")
+        sys.exit(f"{context}: 登录态过期，重跑 --login / --login-url")
+    title = (CONFIG.get("form_texts") or {}).get("report_title", "").strip()
+    if not title:
+        log(f"{context}: 未配置 form_texts.report_title，无法正向确认登录态")
+        return
+    if not page.get_by_text(title).count():
+        shot(page, "state-expired")
+        sys.exit(f"{context}: 页面未出现「{title}」——多为登录态过期，"
+                 "重跑 --login / --login-url（截图见 output/shots/state-expired.png）")
+
 
 def do_dump_list(url):
     """dump **列表页**原样，并捞出打开历史记录的候选入口。
@@ -501,8 +517,7 @@ def do_dump_list(url):
         try:
             page.goto(url, wait_until="networkidle")
             page.wait_for_timeout(3000)
-            if "login" in page.url.lower() or "entry/auth" in page.url:
-                sys.exit("登录态过期，重跑 --login / --login-url")
+            assert_logged_in(page, "dump-list")
             SHOTS.mkdir(parents=True, exist_ok=True)
             (SHOTS / "dump-list.html").write_text(page.content(), encoding="utf-8")
             shot(page, "dump-list")
@@ -662,8 +677,7 @@ def do_dump_record(url, index):
         try:
             page.goto(url, wait_until="networkidle")
             page.wait_for_timeout(3000)
-            if "login" in page.url.lower() or "entry/auth" in page.url:
-                sys.exit("登录态过期，重跑 --login / --login-url")
+            assert_logged_in(page, "dump-record")
             links = page.locator(LIST_ROW_LINK)
             total = links.count()
             log(f"列表页记录标题 {total} 条，打开第 {index} 条")

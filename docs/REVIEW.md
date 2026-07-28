@@ -177,6 +177,7 @@ mock e2e 挂上 Actions，与 `PUBLISHING.md` 的发布门禁对齐。
 | ⑱ | **`--dump` 被完整配置校验挡住** | `--dump` 的用途就是**找出字段 id**，却要求字段 id 已配好才能跑——新用户拿空模板运行只会得到「字段不能为空」。这是别人用不起来的**具体机制**，不是抽象的「门槛高」 | ✅ 已修：`--dump` 只校验 `form_texts.add_row` / `start_date_label`，`--login` 只校验 form_url，填表与保活仍走完整校验 |
 | ⑲ | **脱敏把「值长什么样」也删了** | 公开模板里全是空串，新用户不知道该向管理员要什么、拿到的对不对、`dump.html` 里该找什么形状 | ✅ 已修：`FIELDS.md` 加掩码形状表（`F#######` / 32 位十六进制）、可复制的索取模板、以及修正后的获取流程 |
 | ⑳ | **工作日硬编码周一~周五，无视节假日与调休** | `extract_week` 只生成 `range(5)` 五天、`validate_report` 缺任一周一~周五即阻断。国庆/春节周会**强迫为放假日填工时**；调休周六上班则**根本不生成该行 → 漏报**。中国假期制度下两头都错 | ✅ 已修：配置项 `holidays` + `extra_workdays`，工作日集合 = (周一~周五 − holidays) ∪ extra_workdays；报告写入 `workdays` 快照供校验，旧报告回落周一~周五 |
+| ㉑ | **登录态过期时静默产出无效 dump** | `--dump-list` / `--dump-record` 只用 URL 含不含 `login`/`entry/auth` 判登录态，而实测氚云过期后落到的登录页 URL **不含**这两个字样——于是照常写文件、给统计、无任何报错。拿登录页去推断字段只会得到垃圾，且是本项目最忌讳的静默成功 | ✅ 已修：抽 `assert_logged_in()`，判据改为**正向确认看见 `form_texts.report_title`**（keepalive 本就这么做，新加的两个模式漏了），四处共用 |
 | ⑬ | **开发流程未成文** | 公开仓无 `CONTRIBUTING.md`，而选 Apache-2.0 的首要理由正是"会收到陌生人 PR" | ✅ 已修（B）：[CONTRIBUTING.md](../CONTRIBUTING.md) + [SOP.md](SOP.md) |
 
 ⑩ 的后果很具体：`npx skills update` 的用户不知道更新到了什么、变了什么；出问题说不清哪版引入；

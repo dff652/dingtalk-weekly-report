@@ -9,6 +9,13 @@
 
 ## [Unreleased]
 
+### 修复
+
+- `--dump-list` / `--dump-record` 在登录态过期时**静默产出无效 dump**：它们只用 URL 含不含
+  `login`/`entry/auth` 判断，而氚云过期后落到的登录页 URL 不含这两个字样。现抽出
+  `assert_logged_in()`，判据改为正向确认页面出现 `form_texts.report_title`，
+  与 `--keepalive` 同款，四处共用。
+
 ## [0.2.0] - 2026-07-27
 
 ### 变更
