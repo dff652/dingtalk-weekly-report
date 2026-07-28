@@ -31,6 +31,7 @@
 | 安装 / bootstrap 脚本 | `bash tests/run_full_acceptance.sh`（隔离 HOME） |
 | 打包 / 发布链路 | `run_smoke.sh` + `pack-skill.sh` + push 后 `run_release_acceptance.sh` |
 | 版本号 / CHANGELOG | 单元测试（`test_version.py` 守一致性） |
+| **点击 / 端点 / 配置键**（碰到"这个动作能不能做"的边界） | `tests/test_invariants.py` 守「无提交能力」。它红了别急着改测试——**先确认承诺是不是真的被削弱了** |
 | 文档 | pre-push（脱敏）；判断 [docs/README.md](README.md) 索引是否要更新 |
 
 三个验收层级**不得互相顶替**，判据见 [TESTING.md](TESTING.md) 末尾。
