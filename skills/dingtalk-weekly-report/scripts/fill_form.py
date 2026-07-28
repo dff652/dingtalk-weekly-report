@@ -612,7 +612,7 @@ def verify_draft_saved(fr, page, mock, success_messages=()):
     raise RuntimeError("点击暂存后未检测到可见的成功提示，不能确认草稿已保存")
 
 
-def do_fill(report_path, url, save_draft):
+def do_fill(report_path, url, save_draft, new_record=False):
     report = json.loads(Path(report_path).read_text(encoding="utf-8"))
     try:
         validate_report(report)
@@ -628,6 +628,7 @@ def do_fill(report_path, url, save_draft):
     if not mock and not STATE.exists():
         sys.exit("无登录态，先跑: fill_form.py --login / --login-url")
 
+    monday = date.fromisoformat(w["start"])
     with sync_playwright() as pw:
         browser = pw.chromium.launch(headless=True)
         ctx = browser.new_context(
@@ -635,13 +636,27 @@ def do_fill(report_path, url, save_draft):
             viewport={"width": 1700, "height": 1100})
         page = ctx.new_page()
         try:
-            fr = open_new_form(page, url, mock)
+            # 优先改目标周的既有草稿：同周再新增一条会撞「周报唯一性判定」，
+            # 而**这个租户的记录删不掉**（只能清空内容），所以"先删旧草稿"根本不可行。
+            fr = False if (mock or new_record) else open_existing_draft(page, url, monday)
+            editing = fr is not False
+            if not editing:
+                fr = open_new_form(page, url, mock)
+            log("编辑既有草稿" if editing else "新建记录")
             shot(page, "00-form-open")
 
             log(f"报工开始日期 {w['start']}")
             fill_ant_date(fr, page, fr.locator(F["start_date"]), w["start"])
 
             if attach_required:
+                if editing:
+                    removers = fr.locator(f'{F["attach"]} {ATTACH_REMOVE_SELECTOR}')
+                    for _ in range(5):          # 逐个移除已挂附件，避免新旧并存
+                        if not removers.count():
+                            break
+                        removers.first.click()
+                        page.wait_for_timeout(1200)
+                    log("已移除草稿中的旧附件")
                 log(f"上传附件 {attach.name}")
                 file_input = attachment_locator(fr)
                 file_input.set_input_files(str(attach))
@@ -658,6 +673,11 @@ def do_fill(report_path, url, save_draft):
             log(f"工作详情 {len(report['days'])} 行")
             # 只取外层行：行内滚动容器与行同名 .subgrid-sheet__row，直匹配会翻倍并覆盖上一行
             rows = fr.locator(f"{SUB} .ant-spin-container > .subgrid-sheet__row")
+            if editing and rows.count() > len(report["days"]):
+                shot(page, "99-error")
+                sys.exit(
+                    f"草稿已有 {rows.count()} 行，多于本周的 {len(report['days'])} 行。"
+                    "删行路径尚未在真机验证，不猜——请在钉钉里手工删掉多余行后重跑")
             for i, d in enumerate(report["days"]):
                 if i >= rows.count():  # 首行表单自带，后续行点「新增」并确认行数真的涨了
                     for attempt in range(3):
@@ -831,6 +851,8 @@ CAPTCHA_MARKERS = ("请完成安全验证", "拖动滑块", "aliyunCaptcha")
 # 列表页是列优先渲染的自有网格：每列一个容器、内含各行单元格，所以按「行」切分取不到值。
 LIST_STATUS_CELL = ".cell-status"
 LIST_DRAFT_STATUS = "草稿"
+# 附件控件里已挂文件的移除图标。先移除再上传，避免赌"重复上传是替换还是追加"。
+ATTACH_REMOVE_SELECTOR = ".h3-icon-close, .anticon-close"
 
 
 def _visible_option_texts(fr):
@@ -1035,6 +1057,8 @@ def main():
                     help="展开各下拉收集完整合法选项（不填值、不保存）")
     ap.add_argument("--keepalive", action="store_true", help="访问列表页续会话并回存 cookie（cron 用）")
     ap.add_argument("--url", help="覆盖 config.form_url（联调/仿真用）")
+    ap.add_argument("--new-record", action="store_true", dest="new_record",
+                    help="强制新建记录，不改既有草稿（默认优先改目标周草稿）")
     ap.add_argument("--draft", action="store_true", help="填完点「暂存」落草稿")
     ap.add_argument("--confirmed", action="store_true",
                     help="确认内容已经人工审核、同周旧草稿已经检查（与 --draft 同用）")
@@ -1085,7 +1109,8 @@ def main():
         if args.keepalive:
             do_keepalive(resolve_url(args))
         elif args.report_json:
-            do_fill(args.report_json, resolve_url(args), args.draft)
+            do_fill(args.report_json, resolve_url(args), args.draft,
+                    args.new_record)
 
 
 if __name__ == "__main__":
