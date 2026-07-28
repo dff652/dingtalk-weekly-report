@@ -182,8 +182,14 @@ def do_login_url(auth_url):
         page.goto(auth_url, wait_until="domcontentloaded")
         page.wait_for_timeout(6000)
         shot(page, "login-url-landed")
-        if "entry/auth" in page.url or "login" in page.url.lower():
-            sys.exit(f"登录链接未完成跳转（现在在 {page.url}），token 可能过期；重新打印二维码取新链接")
+        for _ in range(10):                     # 等跳转落地，正向确认后才落盘
+            if looks_logged_in(page):
+                break
+            page.wait_for_timeout(1000)
+        else:
+            shot(page, "login-url-failed")
+            sys.exit("登录链接未能进入应用（token 可能已过期）；未写入登录态。"
+                     "重新打印二维码取新链接，或改用 --login 扫码")
         ctx.storage_state(path=str(STATE))
         STATE.chmod(0o600)
         log(f"登录态已保存: {STATE}")
@@ -202,9 +208,9 @@ def do_login(url):
         deadline = time.time() + 300
         while time.time() < deadline:
             shot(page, "login")
-            if "login" not in page.url.lower() and "h3yun" in page.url:
+            if looks_logged_in(page):
                 page.wait_for_timeout(3000)
-                if "login" not in page.url.lower():
+                if looks_logged_in(page):       # 复确认，避免抓到跳转中间态
                     ctx.storage_state(path=str(STATE))
                     STATE.chmod(0o600)
                     shot(page, "login-ok")
@@ -213,7 +219,8 @@ def do_login(url):
                     return
             page.wait_for_timeout(2500)
         shot(page, "login-timeout")
-        sys.exit("300s 内未完成扫码登录；重跑 --login")
+        sys.exit("300s 内未确认到已登录页面；未写入登录态。重跑 --login，"
+                 "并确认手机上完成了扫码确认")
 
 
 # ---------------- 表单定位 ----------------
@@ -478,6 +485,24 @@ def do_keepalive(url):
 
 
 # ---------------- 诊断 ----------------
+
+def looks_logged_in(page):
+    """页面是否已进入应用（正向判据）。
+
+    **不能**用「URL 里没有 login」来判断：实测氚云登录页 URL 恰恰不含 `login`，
+    `--login` 因此在用户还没扫码时就把未登录的会话存成了 state.json 并报告成功——
+    典型的静默成功，且后果是拿一份废登录态去跑后续所有步骤。
+    """
+    if "login" in page.url.lower() or "entry/auth" in page.url:
+        return False
+    title = (CONFIG.get("form_texts") or {}).get("report_title", "").strip()
+    if not title:
+        return False          # 没有正向判据就不认为已登录，宁可等超时
+    try:
+        return page.get_by_text(title).count() > 0
+    except Exception:
+        return False
+
 
 def assert_logged_in(page, context):
     """正向确认已登录，而不是"没看到失败迹象"就继续。

@@ -15,6 +15,7 @@ import fill_form
 from fill_form import (
     attachment_enabled,
     redact,
+    looks_logged_in,
     prompt_auth_url,
     require_config_keys,
     validate_auth_url,
@@ -128,6 +129,34 @@ class FillFormLogicTests(unittest.TestCase):
         frame = FakeFrame(selectors={"#result": result.items})
         with self.assertRaisesRegex(RuntimeError, "动作错误"):
             verify_draft_saved(frame, FakePage(), mock=True)
+
+    # ---- 登录判据必须正向确认，不能靠「URL 里没有 login」----
+
+    class FakeLoginPage:
+        def __init__(self, url, title_hits):
+            self.url = url
+            self._hits = title_hits
+
+        def get_by_text(self, _text, exact=False):
+            return FakeLocator([FakeItem()] * self._hits)
+
+    def test_login_page_without_login_in_url_is_not_logged_in(self):
+        """实测氚云登录页 URL 不含 login——旧判据会在用户还没扫码时就存下废登录态。"""
+        page = self.FakeLoginPage("https://www.h3yun.com/application/x", 0)
+        with patch.object(fill_form, "CONFIG",
+                          {"form_texts": {"report_title": "报工周报"}}):
+            self.assertFalse(looks_logged_in(page))
+
+    def test_seeing_report_title_counts_as_logged_in(self):
+        page = self.FakeLoginPage("https://www.h3yun.com/application/x", 1)
+        with patch.object(fill_form, "CONFIG",
+                          {"form_texts": {"report_title": "报工周报"}}):
+            self.assertTrue(looks_logged_in(page))
+
+    def test_without_positive_marker_never_claims_logged_in(self):
+        page = self.FakeLoginPage("https://www.h3yun.com/application/x", 9)
+        with patch.object(fill_form, "CONFIG", {"form_texts": {}}):
+            self.assertFalse(looks_logged_in(page))
 
     # ---- 诊断模式不得被完整配置校验挡住（先有鸡还是先有蛋）----
 

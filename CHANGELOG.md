@@ -11,6 +11,11 @@
 
 ### 修复
 
+- **`--login` 会在用户还没扫码时就报告「登录态已保存」**：判据是「URL 里没有 `login`」，
+  而氚云登录页 URL 恰恰不含该字样，于是打开登录页即判定成功，存下一份**未登录**的
+  `state.json`。`--login-url` 同源。现改为正向确认——必须看见 `form_texts.report_title`
+  才落盘，看不见宁可超时也不写。
+
 - `--dump-list` / `--dump-record` 在登录态过期时**静默产出无效 dump**：它们只用 URL 含不含
   `login`/`entry/auth` 判断，而氚云过期后落到的登录页 URL 不含这两个字样。现抽出
   `assert_logged_in()`，判据改为正向确认页面出现 `form_texts.report_title`，
