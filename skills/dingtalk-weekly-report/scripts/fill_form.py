@@ -429,6 +429,53 @@ def do_login(url, qr_entry=1):
 
 # ---------------- 表单定位 ----------------
 
+def find_editable_draft(page, monday):
+    """在列表里找出**目标周的草稿**，返回其行序号（0 基）；找不到返回 None。
+
+    两道硬护栏，缺一不可：
+      1. 状态必须是「草稿」——已生效/进行中/已取消一律不碰，编辑既有记录意味着**修改已存在
+         的数据**，选错一条就会覆盖真实申报；
+      2. 报工开始日期必须等于目标周周一——防止选错行。
+
+    列表是列优先渲染，同一列的单元格按行序排列，故按下标对齐取值。
+    """
+    dates = page.locator('.tg-cell.tg-c-6')
+    statuses = page.locator(LIST_STATUS_CELL)
+    want = str(monday)
+    for i in range(min(dates.count(), statuses.count())):
+        try:
+            if dates.nth(i).inner_text().strip() != want:
+                continue
+            status = statuses.nth(i).inner_text().strip()
+        except Exception:
+            continue
+        if status == LIST_DRAFT_STATUS:
+            log(f"命中目标周草稿：第 {i + 1} 行（{want} / {status}）")
+            return i
+        log(f"目标周已有记录但状态是「{status}」，不可编辑——本工具只改草稿")
+        return None
+    return None
+
+
+def open_existing_draft(page, url, monday):
+    """打开目标周的既有草稿；没有可编辑草稿时返回 False，由调用方走新增。"""
+    page.goto(url, wait_until="networkidle")
+    page.wait_for_timeout(3000)
+    assert_logged_in(page, "open-draft")
+    index = find_editable_draft(page, monday)
+    if index is None:
+        return False
+    page.locator(LIST_ROW_LINK).nth(index).click()
+    for _ in range(30):
+        page.wait_for_timeout(1000)
+        fr = next((f for f in page.frames if "FormAdapter" in f.url), None)
+        if fr and fr.get_by_text(CONFIG["form_texts"]["start_date_label"]).count():
+            page.wait_for_timeout(1500)
+            return fr
+    shot(page, "draft-not-rendered")
+    sys.exit("30s 内草稿未渲染；看 draft-not-rendered.png")
+
+
 def open_new_form(page, url, mock):
     """打开列表页→点新增→返回表单所在 frame（真机=FormAdapter iframe；mock=主 frame）。"""
     page.goto(url, wait_until="domcontentloaded" if mock else "networkidle")
@@ -781,6 +828,9 @@ SMS_SEND_TEXT = "发送验证码"
 # 点「发送验证码」会触发阿里云滑块拼图（实测本租户如此，VerifyCode F001 即未通过）。
 # **不尝试绕过**——那是反滥用控制，绕它既不合适也不稳定。检测到就 fail-loud 让用户改扫码。
 CAPTCHA_MARKERS = ("请完成安全验证", "拖动滑块", "aliyunCaptcha")
+# 列表页是列优先渲染的自有网格：每列一个容器、内含各行单元格，所以按「行」切分取不到值。
+LIST_STATUS_CELL = ".cell-status"
+LIST_DRAFT_STATUS = "草稿"
 
 
 def _visible_option_texts(fr):
