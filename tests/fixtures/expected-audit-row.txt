@@ -13,7 +13,10 @@
 #           用户提供的 h3yun 表单 URL，远端页面内容可影响执行。
 #   两者都准确描述了当前设计，属已知且必要的风险；处置说明见 SECURITY.md。
 #
-# 注意：CLI 这一列印的是「Critical Risk」，而平台页面上 Snyk 的实际 RISK LEVEL 是 MEDIUM。
-# 两处口径不一致是 skills.sh 的渲染差异，不代表存在 Critical 级问题。正因如此，旧门禁那种
-# 「整日志 grep Critical Risk 就判失败」既会误判，也会被同批安装的其它 skill 带偏。
-dingtalk-weekly-report Safe 1 alert Critical Risk
+# 2026-07-28 复审：CLI 那一列从「Critical Risk」变为「Med Risk」，与平台页面上 Snyk 的
+# RISK LEVEL: MEDIUM **终于一致**。此前两处不一致（CLI 说 Critical、页面说 MEDIUM）是
+# skills.sh 的渲染差异，并非真的存在 Critical 级问题——这次是渲染口径对齐，不是我们改动
+# 导致风险下降。告警内容本身（Snyk W012 / Socket LOW Anomaly）未变，处置说明仍见 SECURITY.md。
+#
+# 门禁本身按预期工作：评级一变即 FAIL 并要求人工复审，而不是默默放行。
+dingtalk-weekly-report Safe 1 alert Med Risk
