@@ -26,6 +26,14 @@ import dtwr_fields
 
 SCRIPTS = SKILL / "scripts"
 FILL_FORM = (SCRIPTS / "fill_form.py").read_text(encoding="utf-8")
+ACTIVE_DRAFT_DOCS = {
+    "SKILL.md": (SKILL / "SKILL.md").read_text(encoding="utf-8"),
+    "USER_GUIDE.md": (SKILL / "USER_GUIDE.md").read_text(encoding="utf-8"),
+    "CONTRACT.md": (SKILL / "references" / "CONTRACT.md").read_text(encoding="utf-8"),
+    "MANUAL_ACCEPTANCE.md": (
+        ROOT / "docs" / "MANUAL_ACCEPTANCE.md").read_text(encoding="utf-8"),
+    "SOP.md": (ROOT / "docs" / "SOP.md").read_text(encoding="utf-8"),
+}
 
 # 提交类词汇。注意 "submit" 只在这里当"要拦的词"用；不要放宽成正则通配，
 # 否则会把 "submitted"（LICENSE 措辞）之类无关文本也算进来。
@@ -72,6 +80,38 @@ class SubmitCapabilityAbsent(unittest.TestCase):
     # 第二道闸——「即使有人把 save_draft 配成提交按钮，校验层也要拦下」——
     # 已由 test_core.py::test_config_rejects_submit_button_as_draft_action 守住。
     # 这里不重复实现：上面三条守**代码**，那一条守**配置**，两者合起来才完整。
+
+
+class DraftHandlingContract(unittest.TestCase):
+    def test_active_docs_do_not_restore_delete_first_guidance(self):
+        """现行操作文档不得退回「先删旧草稿」或「无法自动识别」的旧契约。"""
+        legacy_phrases = (
+            "先提醒用户删同周旧草稿",
+            "有则由用户判断并删除旧草稿",
+            "同周旧草稿目前无法可靠自动识别",
+            "事后由用户在钉钉删掉多余草稿",
+            "用户在钉钉删掉草稿",
+        )
+        offenders = []
+        for name, content in ACTIVE_DRAFT_DOCS.items():
+            for phrase in legacy_phrases:
+                if phrase in content:
+                    offenders.append(f"{name}: {phrase}")
+        self.assertEqual(offenders, [], f"旧草稿契约回退：{offenders}")
+
+    def test_distributed_skill_documents_default_editable_draft(self):
+        """分发包必须说明默认编辑目标周草稿且不要求先删除。"""
+        skill = ACTIVE_DRAFT_DOCS["SKILL.md"]
+        guide = ACTIVE_DRAFT_DOCS["USER_GUIDE.md"]
+        contract = ACTIVE_DRAFT_DOCS["CONTRACT.md"]
+        for name, content in (
+                ("SKILL.md", skill),
+                ("USER_GUIDE.md", guide),
+                ("CONTRACT.md", contract)):
+            self.assertIn("状态=草稿", content, f"{name} 缺草稿状态护栏")
+            self.assertIn("目标周周一", content, f"{name} 缺目标周日期护栏")
+        self.assertIn("不需要先删", skill)
+        self.assertIn("不需要先删", guide)
 
 
 if __name__ == "__main__":
