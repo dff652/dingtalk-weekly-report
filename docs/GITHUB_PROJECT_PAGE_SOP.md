@@ -163,9 +163,10 @@ Social preview 目前必须在 GitHub 网页
 Issue 或评论中的 `@claude` 只是文本提及，不会连接到维护者本机已经打开的 Claude Code、
 Codex 或 IDE 会话。自动执行需要仓库另行安装服务端集成。
 
-本仓于 2026-07-30 核查时只有 `.github/workflows/ci.yml`，监听 `push`、`pull_request` 和
-`workflow_dispatch`；没有监听 `issue_comment` 的 Claude workflow，仓库 Actions Secret /
-Variable 也为空。因此 Issue #1 中的 `@claude` 没有产生 workflow run，也不会自动改代码。
+Issue #1 提交 `@claude` 时，本仓只有 `.github/workflows/ci.yml`，没有监听
+`issue_comment` 的 AI workflow，因此没有产生 workflow run。后来增加的
+`.github/workflows/issue-assistance.yml` 也只在新建 Issue 时发送固定回执，不监听评论、
+不调用模型、不会自动改代码。
 
 按 [Claude Code GitHub Actions 官方文档](https://code.claude.com/docs/en/github-actions)，
 启用至少需要：
@@ -182,57 +183,57 @@ prompt-injection 面，必须单独授权。公开仓推荐只允许维护者触
 `ai-approved` 标签；AI 只能提交 PR，禁止自动合并。外部用户的单独 `@claude` 不应直接取得
 仓库写入和付费调用能力。
 
-### 本项目决策：回复与修改分离
+### 当前决定：只自动回执，AI 处理由维护者启动
 
-本项目不允许外部用户通过 Issue、评论或 `@AI` 直接触发代码修改。若以后启用 AI Issue
-辅助，只采用两阶段门控：
+本项目不允许外部用户通过 Issue、评论或 `@AI` 直接触发模型调用或代码修改。当前自动化只做：
 
-1. 新 Issue 只收到固定回执，不调用 AI。维护者添加 `ai-triage` 标签后，AI 才以
-   `contents: read`、`issues: write` 的最小权限读取默认分支并回复问题复述、分析、建议方案
-   与验收标准；不得编辑文件、创建分支或 PR，也不得自动关闭 Issue。
-2. 回复中可附“建议固化内容”，但不能直接写入仓库。维护者确认后，由本地工具更新文档；
-   如以后改用自动化，则必须通过独立 `docs-approved` 门控创建仅含文档的 PR，并由人工审核，
-   禁止自动合并。
+- `issues: opened` 时用短期 `GITHUB_TOKEN` 发布固定安全回执；
+- workflow 默认 `permissions: {}`，回执 job 只有 `issues: write`；
+- 不 checkout 仓库，不读取 Secret，不监听 `issue_comment`，不创建分支 / PR，不自动关单。
 
-“写项目文档”仍属于仓库内容变更，不能与“完全不修改仓库”同时成立。默认安全路径是：
-外部用户提交 Issue → 维护者审核并触发分析 → AI 只在 Issue 回复 → 维护者批准后本地固化文档。
-触发方式统一使用标签，不使用可能提及真实 GitHub 用户的 `@AI` 文本。第一阶段不安装权限
-较宽的 Claude GitHub App，而用仓库短期 `GITHUB_TOKEN` 发布回复；模型 API 只返回文本，
-没有 GitHub 工具或文件写能力。
+Claude Issue 自动排查方案已经完成技术评估：可由仓库所有者添加 `ai-triage` 标签，以
+`contents: read`、`issues: write` 运行无 tools 的 Messages API 文本分析，并更新一条机器人
+评论；输出还应中和半角 `@`，防止意外提及用户。但该方案需要独立的 Anthropic Console
+API Key 与计费，收益不足以覆盖当前低 Issue 量下的 Secret 管理、费用和 prompt-injection
+治理成本，**当前不启用、不配置 `ANTHROPIC_API_KEY`、不保留模型 job**。仅当 Issue 量明显
+增加、人工排查成为持续负担且有明确预算时重估。
 
-未来如确需由 AI 实施代码，必须另设 `ai-implement`，且只能由仓库所有者或具有写权限的
-维护者触发。该流程只能创建受保护分支上的待审 PR；不得直接 push `main`、自动合并或在 PR
-合并前关闭 Issue。`ai-implement` 不属于第一阶段交付。
+“写项目文档”仍属于仓库内容变更。Issue 回复可以提出“建议固化内容”，但必须由维护者另行
+批准后在本地更新；不允许回复 workflow 直接写文档。
 
-### 第一阶段实现与启用
+### Codex 处理 Issue：当前采用的人工门控 SOP
 
-仓库内实现：
+OpenAI 官方的 GitHub `@codex` 集成目前面向 PR review 与 PR 分支修复；官方文档没有把公开
+Issue 评论列为同等触发入口。`openai/codex-action@v1` 可以在自定义 GitHub Actions 中运行，
+但 CI 仍需要 `OPENAI_API_KEY`；官方还明确不建议在公开开源仓中把个人 ChatGPT/Codex 登录态
+作为 CI 凭据。因此 Codex 不是“免 API Key 的 Issue 自动机器人”替代品：
 
-- `.github/workflows/issue-assistance.yml`
-  - `issues: opened`：用短期 `GITHUB_TOKEN` 发布固定安全回执，不 checkout 仓库、不调用模型；
-  - `issues: labeled`：仅当标签为 `ai-triage` 且加标签者等于仓库所有者时运行；
-  - workflow 默认 `permissions: {}`，两个 job 分别声明最小权限；
-  - 不监听 `issue_comment`，不接受外部 `@AI` 触发。
-- `.github/scripts/issue_ai_triage.py`
-  - 只把 Issue 标题/正文和固定白名单中的 README、SKILL、用户指南摘录发送给 Messages API；
-  - 请求不包含 tools，模型无法读写文件、运行命令或调用 GitHub；
-  - 只创建或更新带隐藏标记的 `github-actions[bot]` 排查评论；
-  - 输出中的半角 `@` 全部改为全角 `＠`，避免意外提及 GitHub 用户。
+- [Codex code review in GitHub](https://learn.chatgpt.com/docs/third-party/github)
+- [Codex GitHub Action](https://learn.chatgpt.com/docs/github-action)
+- [Codex non-interactive mode](https://learn.chatgpt.com/docs/non-interactive-mode)
 
-推送默认分支后，管理员还需完成以下外部配置，AI 排查才会生效：
+当前使用已有本地 Codex 会话和 GitHub CLI，按 Issue 逐项人工启动：
 
-1. 创建 `ai-triage` 标签；
-2. 在 Settings → Secrets and variables → Actions 中添加 `ANTHROPIC_API_KEY`；
-3. 可选添加 Actions Variable `AI_TRIAGE_MODEL`；未配置时使用
-   `claude-sonnet-4-6`；
-4. 新建一次性测试 Issue，确认固定回执出现；
-5. 由仓库所有者添加 `ai-triage`，确认只生成一条“AI 初步排查”评论；
-6. 移除再重新添加标签，确认更新原评论而非重复刷屏；
-7. 检查 Actions 日志与 Issue，确认没有分支、commit、PR、关单或用户提及。
+1. 用户要求“查看并处理 Issue #N”；Codex 运行
+   `gh issue view N --repo dff652/dingtalk-weekly-report --comments`，只读取得原始事实。
+2. Codex 先检查代码、文档、测试和当前工作区，给出根因、方案、风险与验收标准；此阶段不回复
+   Issue、不改外部状态。
+3. 用户批准后，Codex 在本地做最小实现、补测试并运行项目门禁；是否更新文档由结论决定。
+4. Codex 汇报 diff 与验证结果；commit、push、Issue 回复和关闭分别按用户授权执行。
+5. 回复只写已经完成且可验证的事实；修复尚未推送时必须注明，合并 / 推送完成后再关闭。
 
-模型会接收公开 Issue 和上述三个公开文件的摘录；不得把密钥、Cookie、登录链接或组织私有
-配置写入 Issue。Secret 缺失时排查 job 必须显式失败，不能降级为伪造的分析回复。固定回执不
-依赖模型 Secret，仍可独立工作。
+授权方式与当前日常使用 Codex 完全一致：
+
+- “查看 / 评估 / 给方案”只授权只读检查，不授权修改文件或外部状态；
+- “同意方案 / 按方案执行”授权本地完成该方案必要的代码、测试和文档改动，不需要逐文件确认；
+- “提交”只授权创建本地 git commit，不自动包含 push；
+- “push”授权推送已确认提交；
+- “回复 / 关闭 Issue”属于 GitHub 外部状态变更，必须明确授权，且关闭前要确认修复已经推送；
+- 用户中途变更方向时，以最新指令为准，未获批的后续动作立即停止。
+
+该流程使用当前交互式 Codex 授权，不新增仓库 API Secret，也不会因外部 Issue 内容自动消耗
+模型额度。若未来 Issue 量达到需要无人值守处理的程度，再单独评估
+`openai/codex-action@v1` 的 `read-only` sandbox、维护者 allowlist 和 PR-only 写入分层。
 
 ## 提交、发布后验证与回滚
 

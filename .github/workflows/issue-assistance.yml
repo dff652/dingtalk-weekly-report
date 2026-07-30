@@ -2,7 +2,7 @@ name: Issue assistance
 
 on:
   issues:
-    types: [opened, labeled]
+    types: [opened]
 
 permissions: {}
 
@@ -25,34 +25,7 @@ jobs:
           GH_REPO: ${{ github.repository }}
           ISSUE_NUMBER: ${{ github.event.issue.number }}
           BODY: |
-            感谢反馈。维护者会先审核此 Issue；如需 AI 辅助排查，将由维护者添加 `ai-triage` 标签。
+            感谢反馈。维护者会按项目的 Issue 处理流程审核、复现并回复。
 
-            外部提及不会自动修改代码、创建 PR、关闭 Issue 或消耗模型额度。请勿在公开 Issue 中粘贴登录链接、令牌、Cookie 或组织私有配置。
+            外部提及不会自动调用 AI、修改代码、创建 PR 或关闭 Issue。请勿在公开 Issue 中粘贴登录链接、令牌、Cookie 或组织私有配置。
         run: gh issue comment "$ISSUE_NUMBER" --body "$BODY"
-
-  ai-triage:
-    name: 维护者门控的只读 AI 排查
-    if: >-
-      github.event.action == 'labeled' &&
-      github.event.label.name == 'ai-triage' &&
-      github.event.sender.login == github.repository_owner
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    permissions:
-      contents: read
-      issues: write
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          fetch-depth: 1
-          persist-credentials: false
-      - uses: actions/setup-python@v7
-        with:
-          python-version: "3.12"
-      - name: Analyze and update the triage comment
-        env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          AI_TRIAGE_MODEL: ${{ vars.AI_TRIAGE_MODEL || 'claude-sonnet-4-6' }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          EXPECTED_LABEL: ai-triage
-        run: python .github/scripts/issue_ai_triage.py

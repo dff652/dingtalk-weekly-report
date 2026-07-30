@@ -11,11 +11,11 @@
 
 ### 新增
 
-- **安全的 GitHub Issue 辅助**：新增 `issue-assistance.yml`。新 Issue 自动收到不调用模型的
-  固定回执；只有仓库所有者添加 `ai-triage` 标签才会触发只读模型排查。模型只接收公开 Issue
-  与三份固定白名单文档摘录，没有 tools 或文件写能力；回复使用短期 `GITHUB_TOKEN` 且重复
-  触发更新原评论。workflow 没有 Contents / Pull requests 写权限，也不自动改代码、建 PR、
-  关单或响应外部提及。
+- **安全的 GitHub Issue 回执**：新增 `issue-assistance.yml`，只在新 Issue 创建时用短期
+  `GITHUB_TOKEN` 回复维护策略；不 checkout、不读取模型 Secret、不响应外部提及，也不改代码、
+  建 PR 或关单。Claude API 自动排查方案因独立 Key / 计费和治理成本暂不启用；项目页 SOP
+  补充维护者人工启动本地 Codex 的 Issue 排查、实现、验证与外部动作授权流程，并明确
+  `查看/评估` 只读、`同意方案/执行` 才授权本地改动，commit / push / 回复 / 关闭分别授权。
 - **首次配置主动引导（Issue #1）**：`configure.py --missing [--json]` 将缺项分成“需要用户
   提供”和“需要真实表单发现”，且结构化输出不包含当前私有值；`--guided` 只询问缺失的姓名、
   表单 URL 与项目等基础信息，并允许在字段 ID 尚未发现时分阶段原子保存。

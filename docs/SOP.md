@@ -33,7 +33,7 @@
 | 打包 / 发布链路 | `run_smoke.sh` + `pack-skill.sh` + push 后 `run_release_acceptance.sh` |
 | 版本号 / CHANGELOG | 单元测试（`test_version.py` 守一致性） |
 | README / SVG / Social preview | `tests/test_readme_assets.py` + README audit + 900px / 360px 浏览器预览；完整流程见 [GITHUB_PROJECT_PAGE_SOP.md](GITHUB_PROJECT_PAGE_SOP.md) |
-| GitHub Issue / `@AI` 自动化 | 外部 `@AI` 不触发代码修改；新 Issue 只有固定回执，仓库所有者添加 `ai-triage` 后才做只读 AI 排查。实现、权限、Secret 与验收见 [GITHUB_PROJECT_PAGE_SOP.md](GITHUB_PROJECT_PAGE_SOP.md#github-issue-中的-ai-自动触发) |
+| GitHub Issue / `@AI` 自动化 | 新 Issue 只收固定回执；Claude/Codex CI 模型调用当前均不启用。`查看/评估`=只读，`同意方案/执行`=本地代码+测试+文档，commit / push / 回复 / 关闭分别授权。见 [GITHUB_PROJECT_PAGE_SOP.md](GITHUB_PROJECT_PAGE_SOP.md#github-issue-中的-ai-自动触发) |
 | **点击 / 端点 / 配置键**（碰到"这个动作能不能做"的边界） | `tests/test_invariants.py` 守「无提交能力」。它红了别急着改测试——**先确认承诺是不是真的被削弱了** |
 | 文档 | pre-push（脱敏）；判断 [docs/README.md](README.md) 索引是否要更新 |
 
