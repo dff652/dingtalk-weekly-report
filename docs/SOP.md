@@ -112,11 +112,12 @@
 |---|---|---|---|
 | 1 | `npx skills add dff652/dingtalk-weekly-report` | 用户/AI | 无 Node 走 zip + `install.sh` |
 | 2 | 调用 `/dingtalk-weekly-report`，首次会引导 bootstrap | AI | 或手动 `bash bootstrap.sh` |
-| 3 | **取表单元数据**（十个字段 id + 枚举） | 用户 | `--dump-record N` 自动发现 → `configure.py --from-discovery` 确认写入 |
+| 3 | **基础配置**（含表单 URL 与列表页周报标题） | 用户/AI | `configure.py --guided`；标题必须由用户确认，不猜 |
 | 4 | **登录** | **只能用户** | 见下方登录决策表 |
-| 5 | 装 keepalive cron（可选但强烈建议） | 用户 | 日志路径**必须绝对**；装完次日务必确认日志真有新行 |
-| 6 | 每周：内容 → 人审 → 附件 → 预览 → 落草稿 | AI 带做 | 先跑 `--status` |
-| 7 | **钉钉里核对并提交** | **只能用户** | 工具无提交能力，这是设计 |
+| 5 | **取其余表单元数据**（字段 id + 枚举） | 用户 | `--dump-record N` 自动发现 → `configure.py --from-discovery` 确认写入 |
+| 6 | 装 keepalive cron（可选但强烈建议） | 用户 | 日志路径**必须绝对**；装完次日务必确认日志真有新行 |
+| 7 | 每周：内容 → 人审 → 附件 → 预览 → 落草稿 | AI 带做 | 先跑 `--status` |
+| 8 | **钉钉里核对并提交** | **只能用户** | 工具无提交能力，这是设计 |
 
 **任何一步不知道该干什么，先跑 `--status`** —— 它读真实状态直接给下一步，不用回来翻文档。
 
@@ -128,6 +129,10 @@
 | 只能看文件 | `--login` | 扫 `$WORK/output/shots/login.png`，图每 2.5 秒刷新 |
 | 无图形界面 | `--login-url` | 「打印**内部**二维码」解出链接，本人在终端隐藏输入 |
 | 想用短信 | `--login-sms` | **可能被滑块验证码拦下**，届时会 fail-loud 提示改扫码 |
+
+`--login-web` 的 `127.0.0.1` 页面只展示二维码和状态，不持有登录 Cookie。Cookie 属于生成
+二维码的 Playwright context；扫码后工具在同一 context 用独立页面访问 `form_url`，只有看到
+用户确认过的可见 `report_title` 才保存登录态。不要为远程访问改绑 `0.0.0.0`，使用端口转发。
 
 三条硬规矩：
 

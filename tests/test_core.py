@@ -176,11 +176,18 @@ class CoreTests(unittest.TestCase):
         plan = configuration_plan(value)
         self.assertEqual(
             [item["path"] for item in plan["needs_user"]],
-            ["name", "form_url", "form_project", "attach_project"],
+            [
+                "name",
+                "form_url",
+                "form_project",
+                "attach_project",
+                "form_texts.report_title",
+            ],
         )
         form_paths = {item["path"] for item in plan["needs_form"]}
         self.assertIn("form_fields.subgrid_id", form_paths)
         self.assertIn("vocabulary.project_types", form_paths)
+        self.assertNotIn("form_texts.report_title", form_paths)
         self.assertNotIn("form_fields.attach", form_paths)
         self.assertNotIn("progress_report", form_paths)
         self.assertFalse(plan["ready"])

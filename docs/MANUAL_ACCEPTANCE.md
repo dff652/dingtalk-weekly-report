@@ -131,13 +131,19 @@ cd "$WORK"
 .venv/bin/python "$SKILL/scripts/fill_form.py" --keepalive
 ```
 
-失效时首选扫码：
+失效时首选本地网页扫码；先确认私有配置里的 `form_texts.report_title` 是本人看到的准确标题：
 
 ```bash
-.venv/bin/python "$SKILL/scripts/fill_form.py" --login
+.venv/bin/python "$SKILL/scripts/fill_form.py" --login-web
 ```
 
-用户扫描 `$WORK/output/shots/login.png`。若扫码不可用，用户本人在本机交互终端运行：
+打开终端给出的 `http://127.0.0.1:8765`（远程开发使用端口转发），用户扫码并在手机端确认。
+验收必须同时看到本地页变为「登录成功」、终端打印「登录态已保存」，且随后
+`.venv/bin/python "$SKILL/scripts/fill_form.py" --keepalive` 返回 `keepalive OK`。
+本地页只展示二维码/状态，Cookie 应只进入生成二维码的 Playwright context。
+
+只能看文件时改用 `--login`，扫描 `$WORK/output/shots/login.png`。若扫码不可用，用户本人在
+本机交互终端运行：
 
 ```bash
 .venv/bin/python "$SKILL/scripts/fill_form.py" --login-url

@@ -120,6 +120,7 @@ class FillFormLogicTests(unittest.TestCase):
         self.assertIn("需要用户提供", text)
         self.assertIn("姓名", text)
         self.assertIn("表单项目完整原文", text)
+        self.assertIn("列表页周报标题", text)
         self.assertIn("Agent 主动逐项询问", text)
 
     def test_form_closed_without_success_is_rejected(self):
@@ -170,12 +171,25 @@ class FillFormLogicTests(unittest.TestCase):
     # ---- 登录判据必须正向确认，不能靠「URL 里没有 login」----
 
     class FakeLoginPage:
-        def __init__(self, url, title_hits):
+        def __init__(self, url, title_hits, title_visible=True):
             self.url = url
             self._hits = title_hits
+            self._title_visible = title_visible
+            self.goto_calls = []
+            self.waits = 0
 
         def get_by_text(self, _text, exact=False):
-            return FakeLocator([FakeItem()] * self._hits)
+            return FakeLocator([
+                FakeItem(visible=self._title_visible)
+                for _ in range(self._hits)
+            ])
+
+        def goto(self, url, wait_until=None, timeout=None):
+            self.url = url
+            self.goto_calls.append((url, wait_until, timeout))
+
+        def wait_for_timeout(self, _ms):
+            self.waits += 1
 
     def test_login_page_without_login_in_url_is_not_logged_in(self):
         """实测氚云登录页 URL 不含 login——旧判据会在用户还没扫码时就存下废登录态。"""
@@ -190,10 +204,59 @@ class FillFormLogicTests(unittest.TestCase):
                           {"form_texts": {"report_title": "报工周报"}}):
             self.assertTrue(looks_logged_in(page))
 
+    def test_hidden_report_title_is_not_login_evidence(self):
+        page = self.FakeLoginPage(
+            "https://www.h3yun.com/application/x", 1, title_visible=False)
+        with patch.object(fill_form, "CONFIG",
+                          {"form_texts": {"report_title": "报工周报"}}):
+            self.assertFalse(looks_logged_in(page))
+
     def test_without_positive_marker_never_claims_logged_in(self):
         page = self.FakeLoginPage("https://www.h3yun.com/application/x", 9)
         with patch.object(fill_form, "CONFIG", {"form_texts": {}}):
             self.assertFalse(looks_logged_in(page))
+
+    def test_login_requires_user_confirmed_report_title(self):
+        with patch.object(fill_form, "CONFIG", {"form_texts": {}}):
+            with self.assertRaisesRegex(SystemExit, "form_texts.report_title"):
+                fill_form.require_login_marker()
+
+    def test_login_web_missing_marker_fails_before_opening_local_server(self):
+        with patch.object(fill_form, "CONFIG", {"form_texts": {}}), \
+                patch.object(fill_form, "_start_login_server") as start_server:
+            with self.assertRaisesRegex(SystemExit, "form_texts.report_title"):
+                fill_form.do_login_web(
+                    "https://www.h3yun.com/application/report")
+        start_server.assert_not_called()
+
+    def test_login_probe_revisits_target_after_generic_oauth_landing(self):
+        landing = self.FakeLoginPage(
+            "https://www.h3yun.com/workbench", title_hits=0)
+        probe = self.FakeLoginPage(
+            "about:blank", title_hits=1)
+        target = "https://www.h3yun.com/application/report"
+        with patch.object(fill_form, "CONFIG",
+                          {"form_texts": {"report_title": "报工周报"}}):
+            confirmed = fill_form.login_confirmation_page(
+                landing, probe, target)
+        self.assertIs(confirmed, probe)
+        self.assertEqual(
+            probe.goto_calls, [(target, "domcontentloaded", 5000)])
+        self.assertEqual(probe.waits, 1)
+
+    def test_login_probe_navigation_error_is_retryable(self):
+        landing = self.FakeLoginPage(
+            "https://www.h3yun.com/workbench", title_hits=0)
+        probe = self.FakeLoginPage("about:blank", title_hits=0)
+        target = "https://www.h3yun.com/application/report"
+        with patch.object(probe, "goto",
+                          side_effect=fill_form.PWError("timeout")), \
+                patch.object(fill_form, "CONFIG",
+                             {"form_texts": {"report_title": "报工周报"}}):
+            confirmed = fill_form.login_confirmation_page(
+                landing, probe, target)
+        self.assertIsNone(confirmed)
+        self.assertEqual(probe.waits, 0)
 
     # ---- 诊断模式不得被完整配置校验挡住（先有鸡还是先有蛋）----
 

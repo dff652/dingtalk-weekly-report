@@ -54,7 +54,8 @@ git 操作（若 $WORK 配了仓库）必须 `git -C $WORK`。每用户差异（
 读真实状态给出下一步：配置、登录态与保活日志新鲜度、本周 json 与附件。
 遇到任何"不知道该做什么"或用户报错时，**先跑它再判断**，不要凭猜测执行后续步骤。
 
-若输出「需要用户提供」，Agent 必须主动逐项询问列出的姓名、表单 URL、项目等信息，
+若输出「需要用户提供」，Agent 必须主动逐项询问列出的姓名、表单 URL、项目和
+`form_texts.report_title`（用户看到的列表页周报标题）等信息，
 不得只让用户自行编辑 `config.json`。也可先运行
 `python3 "$SKILL/scripts/configure.py" --missing --json` 取得不含当前私有值的结构化清单；
 用户明确回答后，用重复的 `--set KEY=VALUE` 配合 `--guided --yes` 分阶段保存。用户不愿在聊天
@@ -108,8 +109,11 @@ git 操作（若 $WORK 配了仓库）必须 `git -C $WORK`。每用户差异（
 ### 5) 登录态
 
 - `.venv/bin/python "$SKILL/scripts/fill_form.py" --keepalive` 验会话（若装了 cron 保活通常直接过）。
-- 报「会话已失效」→ 首选运行 `.venv/bin/python "$SKILL/scripts/fill_form.py" --login`，
-  请用户用手机钉钉扫描 `$WORK/output/shots/login.png`。
+- 报「会话已失效」→ 有本地浏览器或 VS Code 端口转发时首选运行
+  `.venv/bin/python "$SKILL/scripts/fill_form.py" --login-web`，打开终端给出的
+  `http://127.0.0.1:8765` 扫码；只能看文件时改用 `--login`，扫描
+  `$WORK/output/shots/login.png`。回环网页只展示二维码/状态，登录态进入生成二维码的
+  Playwright context，不把 Cookie 交给网页。
 - 若必须使用一次性 auth 链接：请用户**本人在本机交互终端**运行
   `.venv/bin/python "$SKILL/scripts/fill_form.py" --login-url`，再按隐藏提示粘贴。
   Agent 不得索要、接收、回显或代输链接，也不得把链接放入命令参数、聊天、文件或 git。
@@ -143,14 +147,15 @@ git 操作（若 $WORK 配了仓库）必须 `git -C $WORK`。每用户差异（
    会建 `$WORK`、`.venv`、playwright+Chromium、`config.json` 模板、`~/.config/dtwr/root`。
    失败时展示原始错误并查 `USER_GUIDE.md`，不得自行拼一套简化环境。
 2. 运行 `configure.py --missing --json`。对 `needs_user` 主动访谈，至少取得姓名、form_url、
-   form_project（表单下拉**完整原文**）与 attach_project；已取得明确值时用
+   form_project（表单下拉**完整原文**）、attach_project 与
+   `form_texts.report_title`（列表页周报标题准确原文）；已取得明确值时用
    `configure.py --guided --set KEY=VALUE ... --yes` 分阶段原子保存，旧配置备份为
    `$WORK/config.json.bak`。用户希望本地私密输入时改由其运行 `configure.py --guided`。
-3. 登录后按 `references/FIELDS.md` 运行 `--dump-record N`，再用
+3. 登录：走第 5 步「会话已失效」分支；一次性 auth 链接只能由用户本人在交互终端隐藏输入。
+4. 登录后按 `references/FIELDS.md` 运行 `--dump-record N`，再用
    `configure.py --from-discovery` 逐项确认字段候选；枚举与按钮文字也必须来自本人或管理员
    确认，不得从公开仓库猜；Agent 可继续用 `configure.py --guided --set KEY=VALUE ... --yes`
    分阶段保存这些已确认值。最后运行 `configure.py --check`，完整校验通过前不得生成或填写周报。
-4. 登录：走第 5 步「会话已失效」分支；一次性 auth 链接只能由用户本人在交互终端隐藏输入；
    保活、升级、环境重建和重新配置命令见 `USER_GUIDE.md`，不要在未核对私有路径时凭记忆拼命令。
 
 ## 多设备 / 多人
@@ -158,7 +163,8 @@ git 操作（若 $WORK 配了仓库）必须 `git -C $WORK`。每用户差异（
 - 登录态不跨设备复制：`~/.config/dtwr/state.json` 是活凭证，每台设备各自登录。
 - 只在一台设备落草稿；其他设备最多跑到预览，避免撞同周唯一性判定。
 - `$WORK/config.json` 含组织私有值，只能拷文件或重跑向导，不得粘贴到聊天或 issue。
-- 能看截图时用 `--login` 扫码；远程机器由用户本人运行 `--login-url` 并隐藏输入。
+- 能开本地页面或端口转发时用 `--login-web`；只能看截图时用 `--login`；两者都不可用时，
+  远程机器由用户本人运行 `--login-url` 并隐藏输入。
 - auth 链接不得跨设备转发；换设备就重新获取。多端登录和迁移细节见 `USER_GUIDE.md`。
 
 ## 出错处理

@@ -104,7 +104,8 @@ cd ~/weekly-report-data
 .venv/bin/python ~/.claude/skills/dingtalk-weekly-report/scripts/configure.py --missing
 ```
 
-   用户本人在本机交互填写缺少的姓名、表单 URL、表单项目和附件项目：
+   用户本人在本机交互填写缺少的姓名、表单 URL、表单项目、附件项目和**列表页周报标题**
+   （必须是本人看到的准确原文；工具不会猜测组织字段）：
 
 ```bash
 .venv/bin/python ~/.claude/skills/dingtalk-weekly-report/scripts/configure.py --guided
@@ -114,12 +115,18 @@ cd ~/weekly-report-data
    完整 `--check`。每次保存都会备份旧配置为 `$WORK/config.json.bak`。一次性 entry/auth
    登录链接会被拒绝，不得保存为 `form_url`。
 
-2. 登录首选扫码：会话里跟 Agent，或在终端运行：
+2. 登录首选本地网页扫码：会话里跟 Agent，或在终端运行：
 
 ```bash
 cd ~/weekly-report-data
-.venv/bin/python ~/.claude/skills/dingtalk-weekly-report/scripts/fill_form.py --login
+.venv/bin/python ~/.claude/skills/dingtalk-weekly-report/scripts/fill_form.py --login-web
 ```
+
+打开终端显示的 `http://127.0.0.1:8765`；远程开发使用 VS Code 端口转发。该网页只展示
+无头浏览器生成的二维码和状态，不接收账号、密码或 Cookie；扫码后登录态进入生成二维码的
+Playwright context，工具在同一 context 访问 `form_url` 正向确认后才保存 `state.json`。
+`127.0.0.1` 是刻意的安全边界，不需要改为外网监听。只能看文件时改用 `--login`，
+扫描 `$WORK/output/shots/login.png`。
 
 若必须使用一次性 auth 链接，由你本人在本机交互终端运行以下命令，再按隐藏提示粘贴：
 
@@ -227,7 +234,8 @@ python3 "$SKILL/scripts/print_form_rows.py" weeks/week_report_YYYYMMDD.json   # 
 |------|------|
 | `json` | 只填不存 |
 | `json --draft --confirmed` | 人审并检查旧草稿后，正式落草稿 |
-| `--login` | 首选扫码登录 |
+| `--login-web` | 首选本地网页扫码；只绑 `127.0.0.1` |
+| `--login` | 截图扫码兜底 |
 | `--login-url` | 用户本人在交互终端隐藏输入 auth 链接；不接受 URL 参数 |
 | `--keepalive` / `--dump` | 续期 / 诊断 |
 
@@ -242,7 +250,7 @@ python3 "$SKILL/scripts/print_form_rows.py" weeks/week_report_YYYYMMDD.json   # 
 | 已 bootstrap，换目录运行却报 cwd 缺 config | 先升级 skill；临时可 `cd $WORK` 或显式设置 `DTWR_HOME=$WORK` |
 | `npx skills` 找不到 skill | 确认仓库 public 且含 `skills/dingtalk-weekly-report/SKILL.md` |
 | extract 拒绝写 | json 已存在 |
-| 会话失效 | 首选 `--login` 扫码；URL 兜底由用户本人运行 `--login-url` 后隐藏输入 |
+| 会话失效 | 首选 `--login-web` 扫码；只能看文件时用 `--login`；URL 兜底由用户本人运行 `--login-url` 后隐藏输入 |
 | 填表失败 | `output/shots/99-error.png` + `references/FIELDS.md` |
 
 ## 5. 换设备 / 分发给同事

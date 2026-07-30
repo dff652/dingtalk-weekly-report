@@ -77,6 +77,7 @@ USER_INPUT_PATHS = (
     "form_url",
     "form_project",
     "attach_project",
+    "form_texts.report_title",
 )
 FORM_INPUT_PATHS = (
     *(f"vocabulary.{key}" for key in VOCABULARY_LIST_KEYS),
@@ -87,7 +88,8 @@ FORM_INPUT_PATHS = (
     "monday_meeting.status",
     *(f"form_fields.{key}" for key in FORM_FIELD_KEYS
       if key not in OPTIONAL_FORM_FIELD_KEYS),
-    *(f"form_texts.{key}" for key in FORM_TEXT_KEYS),
+    *(f"form_texts.{key}" for key in FORM_TEXT_KEYS
+      if key != "report_title"),
     "form_texts.success_messages",
 )
 

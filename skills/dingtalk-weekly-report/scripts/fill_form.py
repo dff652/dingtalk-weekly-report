@@ -8,7 +8,8 @@
   「项目/产品名称」关联下拉必须成功选中；失败时阻断，不保存不完整草稿。
 
 用法：
-  登录(首选扫码): .venv/bin/python fill_form.py --login
+  登录(首选扫码): .venv/bin/python fill_form.py --login-web
+  登录(截图扫码): .venv/bin/python fill_form.py --login
   登录(URL):      .venv/bin/python fill_form.py --login-url  # 用户在本机终端隐藏输入
   填表:           .venv/bin/python fill_form.py weeks/week_report_20260713.json
                   默认填完截图停下；人工确认内容并检查旧草稿后，
@@ -171,6 +172,36 @@ def ensure_state_owner():
     require_owned(STATE, "登录态文件")
 
 
+def require_login_marker():
+    """登录必须有与组织表单匹配的正向判据，不能靠 URL 或 Cookie 猜。"""
+    title = (CONFIG.get("form_texts") or {}).get("report_title", "").strip()
+    if not title:
+        sys.exit(
+            "登录前必须配置 form_texts.report_title（列表页周报标题），"
+            "否则无法正向确认扫码是否成功。\n"
+            "请先运行 configure.py --guided，填写本人看到的准确标题；工具不会猜测组织字段。")
+    return title
+
+
+def login_confirmation_page(login_page, probe_page, target_url):
+    """返回已确认进入目标表单的页面；二维码页与探测页共享同一登录 context。
+
+    扫码后可能落到工作台而非 `form_url`。不能因此把登录误判为失败，也不能退回到只看 URL
+    或 Cookie 的弱判据。独立探测页不会破坏二维码页；它只复用同一 context 中的登录态，
+    主动访问目标页并查找用户确认过的 `report_title`。
+    """
+    if looks_logged_in(login_page):
+        return login_page
+    try:
+        # 探测只是轮询的一部分；单次网络抖动不能终止整个 5 分钟扫码窗口。
+        probe_page.goto(
+            target_url, wait_until="domcontentloaded", timeout=5000)
+    except PWError:
+        return None
+    probe_page.wait_for_timeout(1000)
+    return probe_page if looks_logged_in(probe_page) else None
+
+
 def do_login_url(auth_url, form_url=""):
     """带 token 的一次性登录链接直接建立登录态，免扫码。
 
@@ -182,6 +213,7 @@ def do_login_url(auth_url, form_url=""):
         validate_auth_url(auth_url)
     except ValueError as exc:
         sys.exit(str(exc))
+    require_login_marker()
     ensure_state_owner()
     STATE.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
     with sync_playwright() as pw:
@@ -225,6 +257,7 @@ def do_login_sms(url):
     """
     if not sys.stdin.isatty():
         sys.exit("--login-sms 需要你本人在交互终端运行；验证码不得经由聊天、参数或管道传递")
+    require_login_marker()
     ensure_state_owner()
     STATE.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
     with sync_playwright() as pw:
@@ -271,14 +304,16 @@ def do_login_sms(url):
             code_box.fill(code)
             page.keyboard.press("Enter")
 
+            probe = ctx.new_page()
             for _ in range(30):                 # 正向确认才落盘，与 --login 同款
                 page.wait_for_timeout(1000)
-                if looks_logged_in(page):
-                    page.wait_for_timeout(2000)
-                    if looks_logged_in(page):
+                confirmed_page = login_confirmation_page(page, probe, url)
+                if confirmed_page:
+                    confirmed_page.wait_for_timeout(2000)
+                    if looks_logged_in(confirmed_page):
                         ctx.storage_state(path=str(STATE))
                         STATE.chmod(0o600)
-                        shot(page, "login-ok")
+                        shot(confirmed_page, "login-ok")
                         log(f"登录态已保存: {STATE}")
                         return
             shot(page, "login-sms-failed")
@@ -347,6 +382,7 @@ def _start_login_server(state, port):
 
 def do_login_web(url, qr_entry=1, port=8765):
     """扫码登录，但二维码显示在本地网页上而不是让你去翻 png 文件。"""
+    require_login_marker()
     ensure_state_owner()
     STATE.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
     SHOTS.mkdir(parents=True, exist_ok=True)
@@ -368,22 +404,29 @@ def do_login_web(url, qr_entry=1, port=8765):
                 if entries.count():
                     entries.nth(min(max(qr_entry, 1), entries.count()) - 1).click()
                     page.wait_for_timeout(2500)
+                probe = ctx.new_page()
                 state["status"] = "waiting"
                 deadline = time.time() + 300
                 while time.time() < deadline:
                     shot(page, "login")
-                    if looks_logged_in(page):
-                        page.wait_for_timeout(3000)
-                        if looks_logged_in(page):
+                    confirmed_page = login_confirmation_page(page, probe, url)
+                    if confirmed_page:
+                        confirmed_page.wait_for_timeout(3000)
+                        if looks_logged_in(confirmed_page):
                             ctx.storage_state(path=str(STATE))
                             STATE.chmod(0o600)
                             state["status"] = "ok"
+                            shot(confirmed_page, "login-ok")
                             log(f"登录态已保存: {STATE}")
-                            time.sleep(2)      # 让页面来得及显示成功
+                            time.sleep(3)      # 状态页每 2s 轮询，至少留出一次刷新
                             return
                     page.wait_for_timeout(2500)
                 state["status"] = "failed"
-                sys.exit("300s 内未确认到已登录页面；未写入登录态")
+                shot(page, "login-timeout")
+                time.sleep(3)
+                sys.exit("300s 内未确认到已登录页面；未写入登录态。"
+                         "确认手机端已完成授权，并检查 "
+                         "output/shots/login-timeout.png")
             finally:
                 browser.close()
     finally:
@@ -391,6 +434,7 @@ def do_login_web(url, qr_entry=1, port=8765):
 
 
 def do_login(url, qr_entry=1):
+    require_login_marker()
     ensure_state_owner()
     STATE.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
     with sync_playwright() as pw:
@@ -413,15 +457,17 @@ def do_login(url, qr_entry=1):
         # 打印绝对路径：提示里写相对路径时用户得先知道 $WORK 在哪才找得到
         log(f"等待扫码：用手机钉钉扫 {SHOTS / 'login.png'}（5 分钟内）")
         log("  该图每 2.5 秒刷新一次；VSCode 里若看不到变化，关掉标签页重开取最新的一张")
+        probe = ctx.new_page()
         deadline = time.time() + 300
         while time.time() < deadline:
             shot(page, "login")
-            if looks_logged_in(page):
-                page.wait_for_timeout(3000)
-                if looks_logged_in(page):       # 复确认，避免抓到跳转中间态
+            confirmed_page = login_confirmation_page(page, probe, url)
+            if confirmed_page:
+                confirmed_page.wait_for_timeout(3000)
+                if looks_logged_in(confirmed_page):  # 复确认，避免抓到跳转中间态
                     ctx.storage_state(path=str(STATE))
                     STATE.chmod(0o600)
-                    shot(page, "login-ok")
+                    shot(confirmed_page, "login-ok")
                     log(f"登录态已保存: {STATE}")
                     browser.close()
                     return
@@ -815,7 +861,11 @@ def looks_logged_in(page):
     if not title:
         return False          # 没有正向判据就不认为已登录，宁可等超时
     try:
-        return page.get_by_text(title).count() > 0
+        matches = page.get_by_text(title)
+        return any(
+            matches.nth(index).is_visible()
+            for index in range(matches.count())
+        )
     except Exception:
         return False
 
@@ -1223,6 +1273,7 @@ def main():
     if args.status:
         do_status()
     elif args.login_url:
+        require_login_marker()  # 在用户粘贴敏感 auth URL 之前先拦配置缺项
         do_login_url(prompt_auth_url(), CONFIG.get("form_url", ""))          # 只需登录链接本身
     elif args.login_web:
         do_login_web(resolve_url(args), args.qr_entry, args.port)

@@ -34,6 +34,12 @@ ACTIVE_DRAFT_DOCS = {
         ROOT / "docs" / "MANUAL_ACCEPTANCE.md").read_text(encoding="utf-8"),
     "SOP.md": (ROOT / "docs" / "SOP.md").read_text(encoding="utf-8"),
 }
+ONBOARDING_SCRIPTS = (
+    SKILL / "install.sh",
+    SKILL / "install.ps1",
+    SKILL / "bootstrap.sh",
+    SKILL / "bootstrap.ps1",
+)
 
 # 提交类词汇。注意 "submit" 只在这里当"要拦的词"用；不要放宽成正则通配，
 # 否则会把 "submitted"（LICENSE 措辞）之类无关文本也算进来。
@@ -112,6 +118,17 @@ class DraftHandlingContract(unittest.TestCase):
             self.assertIn("目标周周一", content, f"{name} 缺目标周日期护栏")
         self.assertIn("不需要先删", skill)
         self.assertIn("不需要先删", guide)
+
+
+class LoginOnboardingContract(unittest.TestCase):
+    def test_install_and_bootstrap_prompts_prefer_login_web(self):
+        """安装提示不得把旧的截图扫码重新写成首选路径。"""
+        missing = [
+            str(path.relative_to(ROOT))
+            for path in ONBOARDING_SCRIPTS
+            if "--login-web" not in path.read_text(encoding="utf-8")
+        ]
+        self.assertEqual(missing, [])
 
 
 if __name__ == "__main__":

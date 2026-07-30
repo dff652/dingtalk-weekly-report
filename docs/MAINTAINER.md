@@ -55,7 +55,8 @@ npx skills add dff652/dingtalk-weekly-report -s dingtalk-weekly-report -a claude
 |------|------|--------|
 | `… json` | 只填不存 | 预览 |
 | `… json --draft --confirmed` | 人审并检查旧草稿后暂存 | **每周正式** |
-| `--login` | 扫码 | 会话失效时首选 |
+| `--login-web` | 本地网页扫码 | 会话失效时首选；只绑 `127.0.0.1` |
+| `--login` | 截图扫码 | 只能查看文件时使用 |
 | `--login-url` | 用户在交互终端隐藏输入 auth 链接 | 扫码不可用时兜底 |
 | `--keepalive` | 续 cookie | cron / 计划任务 |
 | `--dump` | DOM 诊断 | 联调 |
@@ -67,7 +68,7 @@ npx skills add dff652/dingtalk-weekly-report -s dingtalk-weekly-report -a claude
 | 触发 | 动作 |
 |------|------|
 | 每周例行 | 在私有 `$WORK` 更新内容源与 `weeks/week_report_*.json` |
-| 会话失效 | 首选 `--login` 扫码；auth URL 兜底由用户本人在交互终端隐藏输入 |
+| 会话失效 | 首选 `--login-web` 扫码；只能看文件用 `--login`；auth URL 兜底由用户本人在交互终端隐藏输入 |
 | 换项目/默认值 | `scripts/configure.py`（校验后写入并备份旧配置） |
 | 组织改字段/枚举 | 只更新私有 `config.json` 的 `form_fields` / `form_texts` / `vocabulary` |
 | DOM 变化 | `--dump` → 改选择器 → `run_mock_test.sh` |
