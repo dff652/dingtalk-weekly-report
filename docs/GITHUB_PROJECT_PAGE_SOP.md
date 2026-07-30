@@ -204,6 +204,36 @@ prompt-injection 面，必须单独授权。公开仓推荐只允许维护者触
 维护者触发。该流程只能创建受保护分支上的待审 PR；不得直接 push `main`、自动合并或在 PR
 合并前关闭 Issue。`ai-implement` 不属于第一阶段交付。
 
+### 第一阶段实现与启用
+
+仓库内实现：
+
+- `.github/workflows/issue-assistance.yml`
+  - `issues: opened`：用短期 `GITHUB_TOKEN` 发布固定安全回执，不 checkout 仓库、不调用模型；
+  - `issues: labeled`：仅当标签为 `ai-triage` 且加标签者等于仓库所有者时运行；
+  - workflow 默认 `permissions: {}`，两个 job 分别声明最小权限；
+  - 不监听 `issue_comment`，不接受外部 `@AI` 触发。
+- `.github/scripts/issue_ai_triage.py`
+  - 只把 Issue 标题/正文和固定白名单中的 README、SKILL、用户指南摘录发送给 Messages API；
+  - 请求不包含 tools，模型无法读写文件、运行命令或调用 GitHub；
+  - 只创建或更新带隐藏标记的 `github-actions[bot]` 排查评论；
+  - 输出中的半角 `@` 全部改为全角 `＠`，避免意外提及 GitHub 用户。
+
+推送默认分支后，管理员还需完成以下外部配置，AI 排查才会生效：
+
+1. 创建 `ai-triage` 标签；
+2. 在 Settings → Secrets and variables → Actions 中添加 `ANTHROPIC_API_KEY`；
+3. 可选添加 Actions Variable `AI_TRIAGE_MODEL`；未配置时使用
+   `claude-sonnet-4-6`；
+4. 新建一次性测试 Issue，确认固定回执出现；
+5. 由仓库所有者添加 `ai-triage`，确认只生成一条“AI 初步排查”评论；
+6. 移除再重新添加标签，确认更新原评论而非重复刷屏；
+7. 检查 Actions 日志与 Issue，确认没有分支、commit、PR、关单或用户提及。
+
+模型会接收公开 Issue 和上述三个公开文件的摘录；不得把密钥、Cookie、登录链接或组织私有
+配置写入 Issue。Secret 缺失时排查 job 必须显式失败，不能降级为伪造的分析回复。固定回执不
+依赖模型 Secret，仍可独立工作。
+
 ## 提交、发布后验证与回滚
 
 1. 提交前检查 `git diff --check`、完整 diff 和工作区范围，只暂存本任务文件。
