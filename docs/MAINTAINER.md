@@ -143,7 +143,7 @@ bash tests/run_full_acceptance.sh
 - [x] P4 配置自动发现（阶段 0/A/B/C/D 全部落地，真机 8/10 自动定位、零错误）（把"手抄十个字段 id + 三组枚举"降为"确认十几个候选"）
 - [x] README visual refresh —— 静态 Hero、工作流图与内容重排已在本地落地并通过宽/窄屏预览
 - [~] GitHub 项目页元数据 —— About、Topics、skills.sh Homepage 与 v0.3.0 Release 已完成；
-      Social preview 待导出 1280×640 位图并在 GitHub Settings 上传
+      Social preview 1280×640 PNG 已生成，待在 GitHub Settings 上传
 
 ### GitHub 项目页 / README 优化决定（2026-07-30）
 
@@ -221,8 +221,9 @@ bootstrap、补链和验证命令。新访客尚未建立「它解决什么问�
       三条铁律、`$WORK` 属主检查、内容人审、登录凭证、同周草稿和完整周流程仍在正文；
 - [x] 900px / 360px 本地预览、README audit、Skill validate、102 项单测、公开树、历史扫描
       和完整 smoke 全部通过；隔离安装仍包含 scripts、bootstrap、references 与用户指南；
-- [x] 本轮 README / SKILL / docs 改动已完成本地提交；尚未推送；
-- [ ] 远端刷新后制作并上传 Social preview；
+- [x] 本轮 README / SKILL / docs 改动已完成提交并推送；
+- [x] 远端刷新后制作 1280×640 Social preview PNG；
+- [ ] 在 GitHub Settings 上传 Social preview；
 - [ ] skills-hub.ai 仅做多文件安装 PoC，未通过前不公开发布。
 
 #### GitHub 页面元数据是另一项工作
@@ -232,7 +233,8 @@ bootstrap、补链和验证命令。新访客尚未建立「它解决什么问�
 - [x] About description：一句话说明「工作日志 → 人审 → 氚云草稿 → 人工提交」；
 - [x] Topics：`dingtalk`、`h3yun`、`agent-skill`、`claude-code`、`codex-skill`、
   `weekly-report`；
-- [ ] Social preview：从已验收的静态视觉系统导出，不含真实业务数据；
+- [~] Social preview：已从验收过的静态视觉系统导出 SVG 源文件与 1280×640 PNG，
+  不含真实业务数据；待在 GitHub Settings 上传；
 - [x] Releases：`v0.3.0` 已挂从 tag 直接导出并逐文件对账的版本化 zip。
 
 这些是 GitHub 外部状态变更；README 预览获批不等于授权修改设置、创建 Release 或推送。

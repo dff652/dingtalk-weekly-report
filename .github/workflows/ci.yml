@@ -6,13 +6,16 @@ on:
   pull_request:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   unit:
     name: 单元测试
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
       # test_fill_form_logic 会 import fill_form，而 fill_form 顶层 import playwright，
@@ -24,8 +27,8 @@ jobs:
     name: 仿真表单 e2e
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
       - run: pip install -r skills/dingtalk-weekly-report/requirements-runtime.txt
@@ -40,10 +43,10 @@ jobs:
     steps:
       # fetch-depth: 0 = 取全部历史；扫工作树不够，2026-07-25 的教训是
       # 工作树干净而历史仍在公网可取（见 docs/PUBLISHING.md）。
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
       - run: python tests/scan_history.py

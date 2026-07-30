@@ -22,6 +22,10 @@
 
 ### 文档
 
+- **补齐 GitHub Social preview 交付物**：新增可编辑的
+  `assets/readme/social-preview.svg` 与 1280×640 最终上传文件
+  `assets/readme/social-preview.png`，沿用 README 的静态视觉系统，展示“工作日志 → 内容人审
+  → XLSX → 氚云草稿 → 用户提交”，不含真实租户或个人数据。
 - **完成 GitHub README visual refresh**：基于固定的
   `oil-oil/beautify-github-readme@55bdb1c05414cd7a0cf911d02e55ece79777206e`，
   新增纯静态 SVG Hero 与工作流图，并按「价值与边界 → 工作流 → 快速开始 → 完整操作」
@@ -69,6 +73,9 @@
 
 ### 修复
 
+- **消除 GitHub Actions Node 20 弃用警告**：CI 中 `actions/checkout` 与
+  `actions/setup-python` 升级到官方当前 `v7`，并显式限制默认 token 权限为
+  `contents: read`；测试矩阵与 Python 3.12 运行口径不变。
 - **正式包版本门禁**：`pack-skill.sh` 现在除检查版本 tag 与工作区外，还要求
   `HEAD == v<VERSION>^{}`；避免旧 tag 仍存在时，较新的干净 HEAD 被错误命名成无 `-dev`
   的正式包。新增临时 Git 仓库回归测试，真实复现「tag 后继续提交」场景。
