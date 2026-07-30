@@ -11,7 +11,7 @@
     <path d="M80 0V640M160 0V640M240 0V640M320 0V640M400 0V640M480 0V640M560 0V640M640 0V640M720 0V640M800 0V640M880 0V640M960 0V640M1040 0V640M1120 0V640M1200 0V640"/>
   </g>
 
-  <g font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif">
+  <g font-family="'Noto Sans CJK SC', 'PingFang SC', 'Microsoft YaHei', sans-serif">
     <g transform="translate(72 64)">
       <text x="0" y="0" dominant-baseline="hanging"
             font-family="ui-monospace, SFMono-Regular, Menlo, monospace"
@@ -19,10 +19,12 @@
         H3YUN WEEKLY REPORT · AGENT SKILL
       </text>
 
-      <text x="0" y="82" font-size="64" font-weight="750" fill="#F7F4EC">
+      <text x="0" y="82"
+            font-family="'Noto Sans', 'Segoe UI', Arial, sans-serif"
+            font-size="64" font-weight="700" fill="#F7F4EC">
         dingtalk-weekly-report
       </text>
-      <text x="0" y="139" font-size="28" font-weight="650" fill="#F7F4EC">
+      <text x="0" y="139" font-size="28" font-weight="700" fill="#F7F4EC">
         工作日志，经过人审，才进入氚云草稿
       </text>
       <text x="0" y="181" font-size="20" fill="#9FB0C7">
@@ -35,41 +37,41 @@
 
       <g transform="translate(34 34)">
         <rect width="190" height="130" rx="18" fill="#F7F4EC"/>
-        <text x="20" y="32" font-size="16" font-weight="700" fill="#66758A">INPUT</text>
+        <text x="20" y="32" font-size="16" font-weight="700" fill="#607086">INPUT</text>
         <path d="M20 54H170M20 76H146M20 98H158" stroke="#D7DDE6" stroke-width="8"
               stroke-linecap="round"/>
         <text x="20" y="120" font-size="20" font-weight="700" fill="#111B2D">工作日志</text>
       </g>
 
-      <path d="M240 99H286" stroke="#2F7CF6" stroke-width="3" stroke-linecap="round"/>
-      <path d="M278 91l10 8-10 8" fill="none" stroke="#2F7CF6" stroke-width="3"
+      <path d="M240 99H286" stroke="#246BDE" stroke-width="3" stroke-linecap="round"/>
+      <path d="M278 91l10 8-10 8" fill="none" stroke="#246BDE" stroke-width="3"
             stroke-linecap="round" stroke-linejoin="round"/>
 
       <g transform="translate(304 34)">
         <rect width="190" height="130" rx="18" fill="#F7F4EC"/>
-        <circle cx="32" cy="36" r="12" fill="#2F7CF6"/>
+        <circle cx="32" cy="36" r="12" fill="#246BDE"/>
         <path d="M26 36l5 5 9-11" fill="none" stroke="#FFFFFF" stroke-width="3"
               stroke-linecap="round" stroke-linejoin="round"/>
         <text x="54" y="43" font-size="20" font-weight="700" fill="#111B2D">内容人审</text>
-        <text x="20" y="82" font-size="17" fill="#66758A">逐日内容 · 工时</text>
-        <text x="20" y="112" font-size="17" fill="#66758A">项目 · 缺失项</text>
+        <text x="20" y="82" font-size="17" fill="#607086">逐日内容 · 工时</text>
+        <text x="20" y="112" font-size="17" fill="#607086">项目 · 缺失项</text>
       </g>
 
-      <path d="M510 99H556" stroke="#2F7CF6" stroke-width="3" stroke-linecap="round"/>
-      <path d="M548 91l10 8-10 8" fill="none" stroke="#2F7CF6" stroke-width="3"
+      <path d="M510 99H556" stroke="#246BDE" stroke-width="3" stroke-linecap="round"/>
+      <path d="M548 91l10 8-10 8" fill="none" stroke="#246BDE" stroke-width="3"
             stroke-linecap="round" stroke-linejoin="round"/>
 
       <g transform="translate(574 34)">
         <rect width="190" height="130" rx="18" fill="#F7F4EC"/>
         <path d="M24 24h56l24 24v58H24z" fill="#FFFFFF" stroke="#D7DDE6" stroke-width="2"/>
         <path d="M80 24v24h24" fill="none" stroke="#D7DDE6" stroke-width="2"/>
-        <text x="122" y="53" font-size="22" font-weight="750" fill="#111B2D">XLSX</text>
-        <text x="122" y="82" font-size="17" fill="#66758A">周报附件</text>
+        <text x="122" y="53" font-size="22" font-weight="700" fill="#111B2D">XLSX</text>
+        <text x="122" y="82" font-size="17" fill="#607086">周报附件</text>
         <text x="24" y="118" font-size="18" font-weight="700" fill="#111B2D">确定性生成</text>
       </g>
 
-      <path d="M780 99H826" stroke="#2F7CF6" stroke-width="3" stroke-linecap="round"/>
-      <path d="M818 91l10 8-10 8" fill="none" stroke="#2F7CF6" stroke-width="3"
+      <path d="M780 99H826" stroke="#246BDE" stroke-width="3" stroke-linecap="round"/>
+      <path d="M818 91l10 8-10 8" fill="none" stroke="#246BDE" stroke-width="3"
             stroke-linecap="round" stroke-linejoin="round"/>
 
       <g transform="translate(844 34)">
@@ -77,26 +79,26 @@
         <rect x="18" y="18" width="222" height="42" rx="10" fill="#111B2D"/>
         <text x="34" y="46" font-size="20" font-weight="700" fill="#F7F4EC">氚云报工周报</text>
         <rect x="174" y="24" width="52" height="30" rx="15" fill="#F4B740"/>
-        <text x="200" y="45" text-anchor="middle" font-size="15" font-weight="750"
+        <text x="200" y="45" text-anchor="middle" font-size="15" font-weight="700"
               fill="#0B1220">草稿</text>
-        <circle cx="34" cy="88" r="10" fill="#2F7CF6"/>
+        <circle cx="34" cy="88" r="10" fill="#246BDE"/>
         <path d="M29 88l4 4 7-8" fill="none" stroke="#FFFFFF" stroke-width="2.5"
               stroke-linecap="round" stroke-linejoin="round"/>
-        <text x="54" y="95" font-size="18" font-weight="650" fill="#111B2D">用户核对后提交</text>
+        <text x="54" y="95" font-size="18" font-weight="700" fill="#111B2D">用户核对后提交</text>
       </g>
     </g>
 
     <g transform="translate(72 532)">
-      <rect width="208" height="46" rx="23" fill="#2F7CF6"/>
+      <rect width="208" height="46" rx="23" fill="#246BDE"/>
       <text x="104" y="30" text-anchor="middle"
             font-family="ui-monospace, SFMono-Regular, Menlo, monospace"
-            font-size="17" font-weight="750" fill="#F7F4EC">NO AUTO SUBMIT</text>
+            font-size="17" font-weight="700" fill="#F7F4EC">NO AUTO SUBMIT</text>
 
       <rect x="224" width="200" height="46" rx="23" fill="none"
             stroke="#9FB0C7" stroke-width="1.5"/>
       <text x="324" y="30" text-anchor="middle"
             font-family="ui-monospace, SFMono-Regular, Menlo, monospace"
-            font-size="17" font-weight="750" fill="#F7F4EC">PRIVATE $WORK</text>
+            font-size="17" font-weight="700" fill="#F7F4EC">PRIVATE $WORK</text>
 
       <text x="1136" y="30" text-anchor="end"
             font-family="ui-monospace, SFMono-Regular, Menlo, monospace"

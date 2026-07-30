@@ -22,6 +22,10 @@
 
 ### 文档
 
+- **统一 README 视觉资产规范与回归门禁**：三张 SVG 显式使用跨平台中文/英文/等宽字体栈，
+  字重只保留真实存在的 400/700；收深蓝色与 muted 灰，使关键文本对比度不低于 4.5:1。
+  新增 `tests/test_readme_assets.py` 固定画布、ARIA、安全特性、许可色板、字体、对比度及
+  Social preview PNG 尺寸/体积；维护文档补充长期视觉规范。
 - **补齐 GitHub Social preview 交付物**：新增可编辑的
   `assets/readme/social-preview.svg` 与 1280×640 最终上传文件
   `assets/readme/social-preview.png`，沿用 README 的静态视觉系统，展示“工作日志 → 内容人审

@@ -143,7 +143,7 @@ bash tests/run_full_acceptance.sh
 - [x] P4 配置自动发现（阶段 0/A/B/C/D 全部落地，真机 8/10 自动定位、零错误）（把"手抄十个字段 id + 三组枚举"降为"确认十几个候选"）
 - [x] README visual refresh —— 静态 Hero、工作流图与内容重排已在本地落地并通过宽/窄屏预览
 - [~] GitHub 项目页元数据 —— About、Topics、skills.sh Homepage 与 v0.3.0 Release 已完成；
-      Social preview 1280×640 PNG 已生成，待在 GitHub Settings 上传
+      Social preview 首版已上传，跨平台字体修正版待替换
 
 ### GitHub 项目页 / README 优化决定（2026-07-30）
 
@@ -155,10 +155,10 @@ bash tests/run_full_acceptance.sh
 
 **实施状态（2026-07-30）：** 已按该固定 commit 的规则完成 `assets/readme/hero.svg`、
 `assets/readme/workflow.svg` 和 README 阅读顺序重排。本地 Chromium 预览覆盖 900px 与
-360px 内容宽度；窄屏流程图同时由紧邻的纯文本序列兜底。用户已另行授权本地提交，
-尚未授权推送；此前另行授权后已更新 GitHub About、Topics、skills.sh Homepage，并补建
-v0.3.0 Release。验收结果：上游 README audit、公开树 4 项、历史扫描、Skill 校验、
-102 项单测及完整 smoke（含隔离安装与 mock 草稿 e2e）全部通过。
+360px 内容宽度；窄屏流程图同时由紧邻的纯文本序列兜底。用户已授权提交并推送；
+此前另行授权后已更新 GitHub About、Topics、skills.sh Homepage，并补建 v0.3.0 Release。
+验收结果：上游 README audit、公开树 4 项、历史扫描、Skill 校验、106 项单测及完整 smoke
+（含隔离安装与 mock 草稿 e2e）全部通过。
 
 #### 为什么值得做
 
@@ -187,6 +187,27 @@ bootstrap、补链和验证命令。新访客尚未建立「它解决什么问�
 - 保留安装、隐私、安全、回滚和完整文档入口；允许折叠或后移，不允许为了首屏简洁删除。
 - 上游 `audit_readme.py` 只检查本地图片引用、SVG 基础兼容和 alt text，不能替代内容正确性、
   脱敏和真实安装验收。
+
+#### README 视觉资产规范
+
+| 资产 | 画布 | 作用 |
+|---|---:|---|
+| `assets/readme/hero.svg` | 1200×400 | GitHub README 首屏价值与安全边界 |
+| `assets/readme/workflow.svg` | 1200×520 | 五步 fail-closed 流程 |
+| `assets/readme/social-preview.svg` / `.png` | 1280×640 | GitHub 分享预览的可编辑源与上传成品 |
+
+- 中文字体栈统一为 `Noto Sans CJK SC → PingFang SC → Microsoft YaHei → sans-serif`；
+  纯英文项目名用 `Noto Sans → Segoe UI → Arial`，元数据用系统等宽字体。
+- 只使用真实存在的 `400` / `700` 字重，禁止 `600` / `650` / `750` 等依赖浏览器合成的中间值。
+- 主色板固定为 navy `#0B1220`、ink `#111B2D`、blue `#246BDE`、amber `#F4B740`、
+  warm white `#F7F4EC`、muted `#607086` / `#9FB0C7`；新增颜色必须说明语义并复验对比度。
+- README 全宽资产保留至少 48–64 SVG 单位安全边距；Social preview 保留至少 72 单位，
+  其成品必须是 1280×640、纯色底、PNG 小于 1MB。
+- SVG 必须有 `title` / `desc` / `role=img` / `aria-labelledby`，不得使用脚本、
+  `foreignObject`、远程字体、远程图片、内嵌位图或依赖动画。
+- 自动门禁见 `tests/test_readme_assets.py`；合入前另用 Chromium 检查实际字体、文本边界及
+  README 900px / 360px 渲染。360px 下非关键说明允许缩小，但核心标题、阶段名称和相邻
+  Markdown 必须独立表达完整流程。
 
 #### README / SKILL / docs 信息分层决定（2026-07-30）
 
@@ -219,11 +240,11 @@ bootstrap、补链和验证命令。新访客尚未建立「它解决什么问�
       改由随包 `USER_GUIDE.md` 与根 `docs/` 承担；
 - [x] `SKILL.md` 从 203 行 / 644 词收短为 163 行 / 487 词；首屏逐文件清单和重复升级说明已移除，
       三条铁律、`$WORK` 属主检查、内容人审、登录凭证、同周草稿和完整周流程仍在正文；
-- [x] 900px / 360px 本地预览、README audit、Skill validate、102 项单测、公开树、历史扫描
+- [x] 900px / 360px 本地预览、README audit、Skill validate、106 项单测、公开树、历史扫描
       和完整 smoke 全部通过；隔离安装仍包含 scripts、bootstrap、references 与用户指南；
 - [x] 本轮 README / SKILL / docs 改动已完成提交并推送；
 - [x] 远端刷新后制作 1280×640 Social preview PNG；
-- [ ] 在 GitHub Settings 上传 Social preview；
+- [~] GitHub Settings 已上传首版 Social preview；字体修正版待替换；
 - [ ] skills-hub.ai 仅做多文件安装 PoC，未通过前不公开发布。
 
 #### GitHub 页面元数据是另一项工作
@@ -234,7 +255,7 @@ bootstrap、补链和验证命令。新访客尚未建立「它解决什么问�
 - [x] Topics：`dingtalk`、`h3yun`、`agent-skill`、`claude-code`、`codex-skill`、
   `weekly-report`；
 - [~] Social preview：已从验收过的静态视觉系统导出 SVG 源文件与 1280×640 PNG，
-  不含真实业务数据；待在 GitHub Settings 上传；
+  不含真实业务数据；首版已上传，跨平台字体修正版待替换；
 - [x] Releases：`v0.3.0` 已挂从 tag 直接导出并逐文件对账的版本化 zip。
 
 这些是 GitHub 外部状态变更；README 预览获批不等于授权修改设置、创建 Release 或推送。
