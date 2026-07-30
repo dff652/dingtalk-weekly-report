@@ -111,7 +111,7 @@
 | # | 步骤 | 谁做 | 卡住时 |
 |---|---|---|---|
 | 1 | `npx skills add dff652/dingtalk-weekly-report` | 用户/AI | 无 Node 走 zip + `install.sh` |
-| 2 | 调用 `/dingtalk-weekly-report`，首次会引导 bootstrap | AI | 或手动 `bash bootstrap.sh` |
+| 2 | 调用 `/dingtalk-weekly-report`，首次会引导 bootstrap | AI | Skill 升级不重装环境；先用 `bootstrap.sh --diagnose` |
 | 3 | **基础配置**（含表单 URL 与列表页周报标题） | 用户/AI | `configure.py --guided`；标题必须由用户确认，不猜 |
 | 4 | **登录** | **只能用户** | 见下方登录决策表 |
 | 5 | **取其余表单元数据**（字段 id + 枚举） | 用户 | `--dump-record N` 自动发现 → `configure.py --from-discovery` 确认写入 |

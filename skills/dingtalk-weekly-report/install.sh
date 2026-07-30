@@ -146,7 +146,8 @@ fi
 
 echo ""
 echo "下一步:"
-echo "  1) 建运行环境: bash \"$SRC/bootstrap.sh\"   # Windows: .\\bootstrap.ps1"
+echo "  1) 首次安装才建运行环境: bash \"$SRC/bootstrap.sh\"   # Windows: .\\bootstrap.ps1"
+echo "     更新 Skill 不重装环境；排查: bash \"$SRC/bootstrap.sh\" --diagnose"
 echo "  2) 配置: AI 首次调用会主动询问；本机可运行 \$WORK/.venv/bin/python \"$SRC/scripts/configure.py\" --guided"
 echo "  3) 新会话: Claude 用 /dingtalk-weekly-report；Codex 用 \$dingtalk-weekly-report 或 /skills 选择"
 echo "     首次登录首选 --login-web（127.0.0.1；远程使用端口转发）"

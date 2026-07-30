@@ -173,6 +173,8 @@ git 操作（若 $WORK 配了仓库）必须 `git -C $WORK`。每用户差异（
   检查私有字段配置与通用 DOM 约束；确认表单结构确已变化后再修 `scripts/fill_form.py`
   选择器（技能包持有者改后应跑维护仓的仿真回归）。
 - 表单结构疑变：`.venv/bin/python "$SKILL/scripts/fill_form.py" --dump` 拿新 DOM。
-- 环境损坏：按 `USER_GUIDE.md` 用对应平台的 bootstrap 强制重建 venv
-  （Linux/macOS/WSL：`bash "$SKILL/bootstrap.sh" --force-venv`；
-  Windows：`powershell -File "$SKILL/bootstrap.ps1" -ForceVenv`）。
+- Skill 升级不重装 `$WORK/.venv`。先用 bootstrap 无安装体检（只追加私有日志，不改配置/登录态）
+  （Linux/macOS/WSL：`bash "$SKILL/bootstrap.sh" --diagnose`；
+  Windows：`powershell -File "$SKILL/bootstrap.ps1" -Diagnose`），并查看私有
+  `$WORK/output/bootstrap.log`。体检失败再普通运行 bootstrap 同步依赖；只有 venv 明确损坏才
+  用 `--force-venv` / `-ForceVenv` 重建。

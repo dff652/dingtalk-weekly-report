@@ -130,6 +130,21 @@ class LoginOnboardingContract(unittest.TestCase):
         ]
         self.assertEqual(missing, [])
 
+    def test_onboarding_separates_skill_update_from_runtime_install(self):
+        """升级提示不得再让用户无条件重装体积较大的 Playwright 运行环境。"""
+        missing = []
+        for path in ONBOARDING_SCRIPTS:
+            content = path.read_text(encoding="utf-8")
+            required = (
+                "更新 Skill",
+                "bootstrap.log" if "bootstrap" in path.name else "不重装环境",
+            )
+            for phrase in required:
+                if phrase not in content:
+                    missing.append(
+                        f"{path.relative_to(ROOT)}: missing {phrase}")
+        self.assertEqual(missing, [])
+
 
 if __name__ == "__main__":
     unittest.main()

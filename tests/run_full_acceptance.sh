@@ -27,6 +27,25 @@ bash "$SKILL/bootstrap.sh" --work "$TMP/work"
 PY="$TMP/work/.venv/bin/python"
 test -x "$PY"
 "$PY" -c "import playwright; print('playwright runtime OK')"
+DIAGNOSE_OUT="$TMP/bootstrap-diagnose.out"
+bash "$SKILL/bootstrap.sh" --diagnose | tee "$DIAGNOSE_OUT"
+grep -q 'runtime_diagnose=PASS' "$DIAGNOSE_OUT"
+grep -q '更新 Skill 不需要重装' "$DIAGNOSE_OUT"
+WARM_OUT="$TMP/bootstrap-warm.out"
+bash "$SKILL/bootstrap.sh" | tee "$WARM_OUT"
+grep -q '复用现有 .venv 与 Chromium' "$WARM_OUT"
+if grep -q '同步 Python 运行依赖' "$WARM_OUT"; then
+  echo "FAIL: 健康环境重跑 bootstrap 仍进入依赖安装阶段" >&2
+  exit 1
+fi
+grep -q 'bootstrap_result=PASS' "$TMP/work/output/bootstrap.log"
+mkdir -p "$TMP/broken-work"
+if bash "$SKILL/bootstrap.sh" --work "$TMP/broken-work" --diagnose; then
+  echo "FAIL: 缺 venv 的诊断不应通过" >&2
+  exit 1
+fi
+grep -q 'bootstrap_result=FAIL stage=检查现有运行环境' \
+  "$TMP/broken-work/output/bootstrap.log"
 
 echo "======== 3) configure + validate ========"
 cp "$ROOT/tests/fixtures/config.json" "$TMP/work/config.json"
@@ -48,4 +67,4 @@ DTWR_HOME="$TMP/work" DTWR_PYTHON="$PY" DTWR_SKILL="$SKILL" \
   bash "$ROOT/tests/run_mock_test.sh"
 
 echo "======== FULL ACCEPTANCE PASS ========"
-echo "安装、运行时、配置校验、附件、粘贴块、仿真草稿全部通过；下一步只做真实钉钉人工验收。"
+echo "安装、运行时、配置校验、附件、粘贴块、仿真草稿全部通过；真实钉钉由人工验收单独确认。"

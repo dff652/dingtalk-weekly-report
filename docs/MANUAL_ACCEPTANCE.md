@@ -51,6 +51,7 @@ if [ -f "$AGENTS_SKILL/SKILL.md" ] && [ -f "$CLAUDE_SKILL/SKILL.md" ]; then
 fi
 stat -c '%U %a %n' "$WORK" ~/.config/dtwr ~/.config/dtwr/root
 "$WORK/.venv/bin/python" -c "import playwright; print('playwright OK')"
+bash "$SKILL/bootstrap.sh" --work "$WORK" --diagnose
 ```
 
 通过标准：
@@ -62,6 +63,8 @@ stat -c '%U %a %n' "$WORK" ~/.config/dtwr ~/.config/dtwr/root
 - `$WORK` 与 `$SKILL`/源码仓库分离；
 - `$WORK` 与登录态目录属于当前用户；
 - venv 与 Playwright 可加载。
+- 诊断输出含 `runtime_diagnose=PASS`，且 `$WORK/output/bootstrap.log` 记录
+  `bootstrap_result=PASS`；健康环境再次运行 bootstrap 应明确显示复用，不进入依赖同步阶段。
 
 Windows 不提供 POSIX uid 闸，须人工确认当前 Windows 账户与目录 ACL。
 

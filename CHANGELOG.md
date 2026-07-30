@@ -9,6 +9,14 @@
 
 ## [Unreleased]
 
+### 改进
+
+- **Skill 升级不再被误解为重装运行环境**：安装提示和用户指南明确区分 Skill 代码更新与
+  `$WORK/.venv`；正常升级无需重跑 bootstrap。bootstrap 新增 `--diagnose` / `-Diagnose`
+  无安装体检，健康环境直接复用现有 venv 与 Chromium，只有依赖版本不符、浏览器缓存缺失或
+  显式 `--force-venv` 时才进入同步/重建。阶段、耗时、失败阶段及安装器原始输出统一追加到
+  私有 `$WORK/output/bootstrap.log`，方便判断慢在 Python 包还是 Chromium。
+
 ### 修复
 
 - **修复 `--login-web` 扫码成功后仍停在“等待扫码”（Issue #3）**：首次引导现在会先询问
@@ -16,6 +24,8 @@
   扫码页与独立目标页共用同一 Playwright context，后者主动访问 `form_url`，即使 OAuth
   落到工作台也能确认登录。只有目标页出现用户确认过的可见标题才保存 `state.json`；
   不使用 URL 或 Cookie 变化猜测成功。`127.0.0.1` 状态页仍只展示二维码和状态，不接收凭证。
+  2026-07-30 已完成真实扫码验收：页面显示成功、`state.json` 以 `0600` 保存，随后
+  `--keepalive` 返回会话有效。
 
 ## [0.4.0] - 2026-07-30
 

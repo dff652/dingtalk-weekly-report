@@ -540,7 +540,32 @@ fail-loud。**本项目不绕过验证码**——那是反滥用控制，绕它�
    `127.0.0.1` 状态页。
 
 单测覆盖“空标题立即拒绝”“OAuth 落到工作台后目标页确认”“隐藏标题不算证据”与首次配置分类。
-真实扫码仍须按 `MANUAL_ACCEPTANCE.md` 复验；自动测试不能证明第三方登录流程未变。
+本次已于 2026-07-30 按 `MANUAL_ACCEPTANCE.md` 完成真实扫码；后续若再改登录链仍须复验，
+自动测试不能证明第三方登录流程未变。
+
+### 踩坑 24：把 Skill 更新误当成环境重装——慢点其实只在依赖/浏览器变化
+
+Skill 代码、用户运行态和浏览器缓存是三层独立状态：
+
+- `npx skills update` / `install --force` 只更新 Skill 目录；
+- `$WORK/.venv`、`config.json` 与 `~/.config/dtwr/state.json` 不应随之删除；
+- Playwright Chromium 位于本用户浏览器缓存，只有首次安装、Playwright revision 变化或缓存被清理
+  才需要下载。
+
+2026-07-30 本机基线：已有环境按旧 bootstrap 重跑仅 `0.60s`，`uv` 显示依赖检查 `3ms`；
+完整隔离首次安装则需要下载 Playwright 包和 Chromium，明显更慢。因此“每次升级都重装”不是
+当前事实，真正问题是安装提示没有区分首次安装与升级，bootstrap 输出也没有持久阶段日志。
+
+现行处理：
+
+1. 普通升级后运行 `bootstrap.sh --diagnose` / `bootstrap.ps1 -Diagnose`；通过即直接使用；
+2. 普通 bootstrap 先用锁定依赖 + Chromium headless launch 做健康检查，通过后明确显示复用；
+3. 只有检查失败才运行 `uv pip install` 与 `playwright install chromium`；
+4. `$WORK/output/bootstrap.log` 追加每次阶段、耗时、原始安装输出及
+   `bootstrap_result=PASS|FAIL`；失败同时记录 `stage`。
+
+日志可能含本机用户名和路径，不能原样贴到公开 Issue。先摘录 `bootstrap_result`、失败阶段与
+对应错误行；不得上传 `config.json`、`state.json` 或 auth 链接。
 
 ## 尚未完成
 
@@ -548,7 +573,7 @@ fail-loud。**本项目不绕过验证码**——那是反滥用控制，绕它�
 |---|---|---|
 | Windows PowerShell 实机 | 未验证 | 当前环境无 PowerShell |
 | Skills.sh 安全重扫 | ✅ 已完成 | 2026-07-28 `RELEASE ACCEPTANCE PASS`；评级 Critical→Med 已人工复审并更新基线 |
-| Issue #3 `--login-web` 新路径真机验收 | 待验证 | 自动测试已覆盖判据与探测页；仍需用户实际扫码并确认 `state.json` + `--keepalive` |
+| Issue #3 `--login-web` 新路径真机验收 | ✅ 已通过 | 2026-07-30 真实扫码被目标页可见标题确认；`state.json` 为 0600，随后 `--keepalive` 返回会话有效 |
 | 真实氚云暂存验收（`verify_draft_saved` 那一段） | 部分完成 | 填表与附件已真机通过；**点「暂存」后的正向确认那一小段仍未跑到**——07-28 那次暂存是在脚本外完成的。下次报工自然覆盖 |
 | 钉钉最终提交 | 不自动测试 | 设计上只能由用户人工执行 |
 

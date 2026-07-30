@@ -44,6 +44,23 @@ bash ~/.claude/skills/dingtalk-weekly-report/bootstrap.sh
 
 升级：`npx skills update dingtalk-weekly-report -g -y`
 
+**更新 Skill 只替换技能代码，不会删除 `$WORK`、配置或登录态，也不需要重新安装环境。**
+更新后先做无安装体检（只会追加诊断日志，不改配置或登录态）：
+
+```bash
+bash ~/.claude/skills/dingtalk-weekly-report/bootstrap.sh --diagnose
+```
+
+看到 `runtime_diagnose=PASS` 即可直接使用。仅当体检失败、发行说明明确变更运行依赖，或首次安装
+没有 `.venv` 时才运行普通 `bootstrap.sh`；只有明确修复损坏环境时才用 `--force-venv`。
+每次 bootstrap/体检的阶段、耗时和失败位置都会追加到私有
+`$WORK/output/bootstrap.log`。日志可能含本机用户名与路径，公开求助时只摘录
+`bootstrap_result` 和相关失败阶段，不要整份上传。
+
+```bash
+tail -n 80 "$(cat ~/.config/dtwr/root)/output/bootstrap.log"
+```
+
 ### 2.2 只给仓库 URL：复制给 AI
 
 ```text
@@ -90,6 +107,7 @@ fi
 [ -f ~/.config/dtwr/root ] && echo "dtwr: $(cat ~/.config/dtwr/root)" || echo "dtwr MISSING"
 ~/weekly-report-data/.venv/bin/python -c "import playwright; print('playwright OK')" 2>/dev/null \
   || echo "playwright MISSING"
+bash ~/.claude/skills/dingtalk-weekly-report/bootstrap.sh --diagnose
 ~/weekly-report-data/.venv/bin/python \
   ~/.claude/skills/dingtalk-weekly-report/scripts/configure.py --check
 ```
@@ -246,7 +264,9 @@ python3 "$SKILL/scripts/print_form_rows.py" weeks/week_report_YYYYMMDD.json   # 
 | npx 只写了 `~/.agents/skills` | 先用 `npx skills list -g` 确认 Agents 含 Codex；仅当 Codex 确实无法发现时做 §2.1 补链 |
 | Codex 无 skill | 做 §2.1 补链；或 `install.sh --force` |
 | `node:util` 缺 `styleText` / `EBADENGINE` | Node 过旧；`skills@1.5.20` 升到 Node `>=22.20.0` |
-| Chromium 下载处长时间无新输出 | 检查下载进程是否仍在运行；看到 `bootstrap 完成` 且 `~/.config/dtwr/root` 已写入才算成功，失败可原命令重跑 |
+| 更新 Skill 后是否要重装环境 | 不需要；先运行 `bootstrap.sh --diagnose`，通过后直接使用 |
+| Chromium 下载处长时间无新输出 | 查看 `$WORK/output/bootstrap.log` 的当前阶段和原始安装输出；首次下载或 Playwright 版本变化可能较慢，健康环境会直接复用 |
+| bootstrap 失败 | `tail -n 80 "$(cat ~/.config/dtwr/root)/output/bootstrap.log"` 查看 `bootstrap_result=FAIL stage=...`；按提示普通重跑，只有 venv 确认损坏才用 `--force-venv` |
 | 已 bootstrap，换目录运行却报 cwd 缺 config | 先升级 skill；临时可 `cd $WORK` 或显式设置 `DTWR_HOME=$WORK` |
 | `npx skills` 找不到 skill | 确认仓库 public 且含 `skills/dingtalk-weekly-report/SKILL.md` |
 | extract 拒绝写 | json 已存在 |
