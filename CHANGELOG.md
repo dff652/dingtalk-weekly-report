@@ -9,6 +9,8 @@
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-07-30
+
 ### 新增
 
 - **安全的 GitHub Issue 回执**：新增 `issue-assistance.yml`，只在新 Issue 创建时用短期
@@ -32,6 +34,12 @@
 
 ### 文档
 
+- **完成 Issue 固定安全回执的远端验收**：一次性
+  [Issue #2](https://github.com/dff652/dingtalk-weekly-report/issues/2) 只收到一条
+  `github-actions` 预设评论；对应
+  [Actions run](https://github.com/dff652/dingtalk-weekly-report/actions/runs/30521947460)
+  成功，自动化未关闭 Issue，且主分支 SHA、分支集合和开放 PR 均无变化。验收结论由维护者
+  另行回复后手动关单。
 - **记录 `@claude` 未触发原因与安全启用门槛**：本仓只有 CI workflow，未配置
   `issue_comment` 触发器、Claude Action 或 `ANTHROPIC_API_KEY`，文字提及不会连接到本机 AI
   会话。项目页 SOP 补充 GitHub App、Secret、workflow、权限和验证要求；公开仓建议仅维护者或

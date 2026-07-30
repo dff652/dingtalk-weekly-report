@@ -145,7 +145,9 @@ bash tests/run_full_acceptance.sh
       确认十几个候选”）
 - [x] P5 GitHub Issue 安全辅助 —— 新 Issue 只自动发送固定安全回执；Claude API 方案已评估但
       因独立 Key / 计费与治理成本暂不启用。Issue 由维护者明确发起本地 Codex 排查与实施，
-      commit / push / 回复 / 关闭分别授权
+      commit / push / 回复 / 关闭分别授权。2026-07-30 已用一次性 Issue #2 完成远端验收：
+      workflow 成功且仅回复预设文本，主分支 / 分支集合 / 开放 PR 无变化，测试 Issue 由维护者
+      手动关闭；证据见 [GitHub 项目页 SOP](GITHUB_PROJECT_PAGE_SOP.md#当前决定只自动回执ai-处理由维护者启动)
 - [x] README visual refresh —— 静态 Hero、工作流图与内容重排已在本地落地并通过宽/窄屏预览
 - [~] GitHub 项目页元数据 —— About、Topics、skills.sh Homepage 与 v0.3.0 Release 已完成；
       Social preview 首版已上传，跨平台字体修正版待替换

@@ -191,6 +191,17 @@ prompt-injection 面，必须单独授权。公开仓推荐只允许维护者触
 - workflow 默认 `permissions: {}`，回执 job 只有 `issues: write`；
 - 不 checkout 仓库，不读取 Secret，不监听 `issue_comment`，不创建分支 / PR，不自动关单。
 
+远端验收记录（2026-07-30）：
+
+- 维护者创建一次性 [Issue #2](https://github.com/dff652/dingtalk-weekly-report/issues/2)，
+  [Issue assistance run](https://github.com/dff652/dingtalk-weekly-report/actions/runs/30521947460)
+  成功；
+- `github-actions` 只发布一条预设安全回执，自动化结束后 Issue 仍为 `OPEN`；
+- 验收前后 `main` 均为 `de1d894db6a4bd2e0ad8f0b963c87cdb5acab415`，远端只有 `main`
+  分支且没有开放 PR；
+- 维护者另行写入验收结论并手动关闭测试 Issue。由此验证“固定回复”与“修改代码 / 关闭 Issue”
+  确实分离，不只是 workflow 静态配置上的承诺。
+
 Claude Issue 自动排查方案已经完成技术评估：可由仓库所有者添加 `ai-triage` 标签，以
 `contents: read`、`issues: write` 运行无 tools 的 Messages API 文本分析，并更新一条机器人
 评论；输出还应中和半角 `@`，防止意外提及用户。但该方案需要独立的 Anthropic Console
