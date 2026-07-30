@@ -5,19 +5,11 @@ description: 每周钉钉「报工周报」半自动流程——从个人工作�
 
 # 钉钉报工周报半自动流程
 
-**自包含技能包**：本目录携带全部执行资源，无需 clone 仓库——
-`USER_GUIDE.md`（给人看的安装与每周使用说明）、
-`install.sh` / `install.ps1`（装 Claude `~/.claude/skills/`、Codex `~/.codex/skills/`、可选 `~/.agents/skills/`；
-`--link` / `--force`；清理旧名 `weekly-report` 与过时 Codex prompts 桥接）、
-`bootstrap.sh` / `bootstrap.ps1`（建 `$WORK`、uv venv、playwright+Chromium、config、`~/.config/dtwr/root`）、
-`requirements-runtime.txt`（锁定 Playwright 运行时版本）、
-`scripts/`（configure / extract_week / gen_attachment / print_form_rows / fill_form / xlsxlite）、
-`references/FIELDS.md`（私有配置键、字段获取方法与通用 DOM 约束）、
-`references/CONTRACT.md`（输入、缺失处理、输出与失败契约）、
-`assets/config.example.json`（无组织数据的个人配置模板）、`LICENSE`（Apache-2.0）。
-分发 zip 根目录即本目录（平铺）。
+这是一个**自包含的多文件 Skill**，安装目录已携带脚本、bootstrap、模板、用户指南和 references，
+无需 clone 仓库。安装、升级、纯 CLI 与 FAQ 见同目录 `USER_GUIDE.md`；输入输出契约见
+`references/CONTRACT.md`，字段与 DOM 约束见 `references/FIELDS.md`。
 
-两个路径变量贯穿全文（**均在运行时解析，本文件不含任何具体用户的路径**）：
+两个路径变量贯穿流程，均在运行时解析，本文件不含具体用户路径：
 
 - `$SKILL` = 本 SKILL.md 所在目录（只读技能代码；通常即 `~/.claude/skills/dingtalk-weekly-report`）。
 - `$WORK` = 每用户私有工作目录（运行态：config.json / weeks/ / output/ / .venv/；登录态在 `~/.config/dtwr/`）。
@@ -135,64 +127,30 @@ git 操作（若 $WORK 配了仓库）必须 `git -C $WORK`。每用户差异（
 
 ## 首次安装（$WORK 不存在时）
 
-**前提**：技能已装到 agent 目录，故 `$SKILL` 可读。常见装法（仓库 README）：
-`npx skills add https://github.com/dff652/dingtalk-weekly-report -s dingtalk-weekly-report -a claude-code -a codex -g -y`，
-或 zip/`install.sh`，或维护仓 `--link`。若用户**只给了仓库 URL** 且本机尚无 skill，先按 README
-「只给仓库 URL 时：复制给 AI」完成安装，再继续本步。
-
-本步只建运行态（`$WORK`），不改技能包。
+**前提**：Skill 已装到 Agent 目录，`$SKILL` 可读。本节只建立当前用户的运行态 `$WORK`，
+不修改技能包；完整安装方式见同目录 `USER_GUIDE.md`。
 
 1. **推荐一键 bootstrap**（优先于逐步手敲；完整安装说明见同目录 `USER_GUIDE.md`）：
    - Linux/macOS / WSL: `bash "$SKILL/bootstrap.sh"`（或 `--work ~/weekly-report-data`）
    - Windows: `powershell -File "$SKILL/bootstrap.ps1"`
    会建 `$WORK`、`.venv`、playwright+Chromium、`config.json` 模板、`~/.config/dtwr/root`。
-2. 若未跑 bootstrap：问用户工作目录（默认 `~/weekly-report-data`，只存个人数据，**不是代码目录**），
-   再按旧步骤 mkdir + `uv venv` + playwright + 拷 config + 写 dtwr root。
-3. 访谈取得姓名、form_project（表单下拉**完整原文**）、attach_project、
+   失败时展示原始错误并查 `USER_GUIDE.md`，不得自行拼一套简化环境。
+2. 访谈取得姓名、form_project（表单下拉**完整原文**）、attach_project、
    progress_report（没有则留空走访谈式）、会议/工时默认值，以及用户或表单管理员确认的
    `vocabulary`、`form_fields`、`form_texts`；不得从公开仓库猜测任何组织字段。再运行
    `python3 "$SKILL/scripts/configure.py"` 交互填写；Agent 已取得明确值时可使用重复的
    `--set KEY=VALUE --yes`。脚本在完整校验通过后才原子写入，并将旧配置保存为
    `$WORK/config.json.bak`；一次性 entry/auth 登录链接不得作为 `form_url`。
-4. 登录：走第 5 步「会话已失效」分支；一次性 auth 链接只能由用户本人在交互终端隐藏输入；
-   可选保活：
-   - Linux/mac: cron `30 9 * * * cd <WORK> && .venv/bin/python <SKILL>/scripts/fill_form.py --keepalive >> output/keepalive.log 2>&1`
-   - Windows: 计划任务调用同一命令（路径用 `Scripts\python.exe`）。
-
-**技能升级**（保留 `$WORK`/config/登录态）：
-- 生态：`npx skills update dingtalk-weekly-report -g -y`（必要时重做 Codex 补链）
-- zip / 本地：`bash install.sh --force`（Win: `.\install.ps1 -Force`）
-环境损坏：`bash bootstrap.sh --force-venv`。
-从 config v1 升级时重新运行配置向导，补齐组织私有的 `vocabulary`、`form_fields`、
-`form_texts`；向导会写入 `config_version=2`。旧周报需重新生成或由用户在私有 `$WORK`
-中补入 `schema_version=2` 与当前 `vocabulary`，不得把真实值提交到技能仓库。
-
-**查看/重新配置**（不需重跑 bootstrap）：
-- `python3 "$SKILL/scripts/configure.py" --show`：查看；
-- `python3 "$SKILL/scripts/configure.py" --check`：校验；
-- `python3 "$SKILL/scripts/configure.py"`：交互更新。回车保留原值，`-` 清空可选项。
+3. 登录：走第 5 步「会话已失效」分支；一次性 auth 链接只能由用户本人在交互终端隐藏输入；
+   保活、升级、环境重建和重新配置命令见 `USER_GUIDE.md`，不要在未核对私有路径时凭记忆拼命令。
 
 ## 多设备 / 多人
 
-同一个人在多台设备上使用，或把技能分发给同事时，以下四条必须遵守：
-
-1. **登录态不跨设备复制。** `~/.config/dtwr/state.json` 是**活凭证**，等同于一份已登录会话。
-   每台设备各自登录，不要拷贝该文件，也不要把它放进任何同步盘或仓库。
-2. **多端登录可能互相踢下线。** 临近提交截止时，不要在别的设备上重新登录主力设备的账号，
-   否则可能在最需要时把自己锁在门外。
-3. **只在一台设备上落草稿。** 同一周落多份草稿会撞表单的「周报唯一性判定」。非主力设备做
-   验证时**跑到预览为止**（不加 `--draft`）。若已经产生冲突记录，由用户按钉钉实际权限
-   编辑或清空；不要假设记录可以删除。
-4. **配置搬运不经过聊天。** `$WORK/config.json` 含组织私有值，搬到新设备靠拷文件或重跑
-   `configure.py`；**不得**把这些值粘贴进 AI 会话、聊天或 issue。
-
-`--login`（扫码）与 `--login-url`（打印链接）**两条都可用，按设备条件选**：
-
-- 设备能看到 `output/shots/login.png` → 扫码更省事，且不产生可复制的秘密；
-- 无图形界面 / 远程机器 → 用 `--login-url`，由用户本人在该机交互终端隐藏输入。
-
-**唯一硬规矩：不要把同一条 auth 链接在设备之间转发。** 它 48h 内等效登录凭证，转发会让它
-留在剪贴板、shell history 和传输通道里；换设备就重新获取一条。
+- 登录态不跨设备复制：`~/.config/dtwr/state.json` 是活凭证，每台设备各自登录。
+- 只在一台设备落草稿；其他设备最多跑到预览，避免撞同周唯一性判定。
+- `$WORK/config.json` 含组织私有值，只能拷文件或重跑向导，不得粘贴到聊天或 issue。
+- 能看截图时用 `--login` 扫码；远程机器由用户本人运行 `--login-url` 并隐藏输入。
+- auth 链接不得跨设备转发；换设备就重新获取。多端登录和迁移细节见 `USER_GUIDE.md`。
 
 ## 出错处理
 
@@ -200,4 +158,6 @@ git 操作（若 $WORK 配了仓库）必须 `git -C $WORK`。每用户差异（
   检查私有字段配置与通用 DOM 约束；确认表单结构确已变化后再修 `scripts/fill_form.py`
   选择器（技能包持有者改后应跑维护仓的仿真回归）。
 - 表单结构疑变：`.venv/bin/python "$SKILL/scripts/fill_form.py" --dump` 拿新 DOM。
-- 环境损坏：按「首次安装」第 2 步用 uv 重建。
+- 环境损坏：按 `USER_GUIDE.md` 用对应平台的 bootstrap 强制重建 venv
+  （Linux/macOS/WSL：`bash "$SKILL/bootstrap.sh" --force-venv`；
+  Windows：`powershell -File "$SKILL/bootstrap.ps1" -ForceVenv`）。

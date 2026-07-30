@@ -248,7 +248,8 @@ push 后必须不带这两个开发覆盖变量重新运行。
 
 ### 踩坑 5：`npx skills` 确认不写 `~/.codex/skills`
 
-README「复制给 AI」那段的第 2 步（补链）曾被怀疑多余。在隔离 HOME 里逐条执行验证：
+`USER_GUIDE.md` 2.2「只给仓库 URL：复制给 AI」的第 2 步（补链）曾被怀疑多余。
+在隔离 HOME 里逐条执行验证：
 `--agent codex` 装完后 `~/.codex/skills/dingtalk-weekly-report` **不存在**，只写了
 `~/.claude` 与 `~/.agents`。**该步骤必须保留**，不是历史包袱。
 
@@ -299,9 +300,9 @@ ROOT="$(git rev-parse --show-toplevel)"
 git config --local user.email "<GitHub 数字 ID>+<用户名>@users.noreply.github.com"
 ```
 
-### README「复制给 AI」粘贴块验收（PASS）
+### `USER_GUIDE.md`「复制给 AI」粘贴块验收（PASS）
 
-在隔离 HOME 里逐条执行 README 那段自然语言指令（这是脚本化验收覆盖不到的部分——它验的是
+在隔离 HOME 里逐条执行 `USER_GUIDE.md` 2.2 的自然语言指令（这是脚本化验收覆盖不到的部分——它验的是
 **指令本身是否完整可执行**）：
 
 | 步骤 | 结果 |

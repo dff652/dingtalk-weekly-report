@@ -1,7 +1,9 @@
 # 用户指南：安装与使用
 
 随 skill 分发（`npx skills` / zip / `install.sh` 安装后本文件在技能目录内）。  
-仓库短入口（含「复制给 AI」整段）：仓库根 [README.md](https://github.com/dff652/dingtalk-weekly-report#readme)。  
+仓库价值、边界与最短安装入口：根
+[README.md](https://github.com/dff652/dingtalk-weekly-report#readme)。本文件保留完整安装、
+「复制给 AI」、验证与每周操作说明。
 Agent 流程见同目录 `SKILL.md`；字段见 `references/FIELDS.md`。
 
 ## 1. 你需要什么
@@ -50,7 +52,7 @@ bash ~/.claude/skills/dingtalk-weekly-report/bootstrap.sh
 2) 若无 ~/.codex/skills/dingtalk-weekly-report：ln -sfn ~/.claude/skills/dingtalk-weekly-report ~/.codex/skills/dingtalk-weekly-report（先 mkdir -p ~/.codex/skills）
 3) bash ~/.claude/skills/dingtalk-weekly-report/bootstrap.sh
 4) 通过 configure.py 引导填写本人有权使用的表单 URL、字段 ID、按钮文本、枚举与项目并完成钉钉登录；Claude 用 /dingtalk-weekly-report、Codex 用 $dingtalk-weekly-report（或 /skills 选择）做周报；只 --draft --confirmed；脚本无提交能力；内容人审；不得猜测组织字段，不得保存或接收 entry/auth 链接。
-5) 按 README Verify 自检并汇报。
+5) 按本指南 2.5 Verify 自检并汇报。
 ```
 
 AI **不能**代替：项目下拉原文、扫码、人审、钉钉提交。

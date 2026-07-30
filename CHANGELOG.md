@@ -22,6 +22,17 @@
 
 ### 文档
 
+- **完成 GitHub README visual refresh**：基于固定的
+  `oil-oil/beautify-github-readme@55bdb1c05414cd7a0cf911d02e55ece79777206e`，
+  新增纯静态 SVG Hero 与工作流图，并按「价值与边界 → 工作流 → 快速开始 → 完整操作」
+  重排内容；保留安装、登录、隐私、历史重写与维护入口。明确不使用真实氚云截图、GIF、
+  ImageGen 或未经审查的动态素材。`MAINTAINER.md` 记录实施/验收门禁，以及需独立处理的
+  About、Topics、Social preview、Releases，避免把 README 美化误当成完整 GitHub 项目页优化。
+- **实施 README / SKILL / docs 分层并确定双 Hub 策略**：根 README 从 245 行收短为
+  101 行，只做 GitHub 落地页；`SKILL.md` 从 203 行收短为 163 行，保留 Agent 运行闭包，
+  详细操作下沉到随包 `USER_GUIDE.md` / `references/`，维护证据进入根 `docs/`。禁止把安装
+  必需信息移出 Skill 目录。分发继续以 GitHub + skills.sh + Releases 为主；skills-hub.ai
+  在多文件安装、元数据兼容和隔离 smoke 通过前不公开发布。
 - **统一同周旧草稿契约**：Skill 流程、用户指南、输入输出契约、人工验收和回滚说明全部改为
   「默认只编辑状态=草稿且开始日期=目标周周一的既有记录，找不到才新建；不需要先删草稿」。
   同周已有非草稿记录或多条记录时必须停止人工确认，不得用 `--new-record` 绕过唯一性判定；
@@ -58,6 +69,9 @@
 
 ### 修复
 
+- **正式包版本门禁**：`pack-skill.sh` 现在除检查版本 tag 与工作区外，还要求
+  `HEAD == v<VERSION>^{}`；避免旧 tag 仍存在时，较新的干净 HEAD 被错误命名成无 `-dev`
+  的正式包。新增临时 Git 仓库回归测试，真实复现「tag 后继续提交」场景。
 - `bootstrap.sh` 打印的 keepalive cron 模板把日志路径改为**绝对路径**，并加 15:30 冗余时段。
   相对路径在 cron 里跟着 cwd 走，cwd 一错重定向就失败，而 cron 的 stderr 无人看
   → 保活每天静默失败（本项目已踩，见 TESTING 踩坑 18）。

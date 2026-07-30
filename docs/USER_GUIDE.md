@@ -4,4 +4,4 @@
 
 → **[../skills/dingtalk-weekly-report/USER_GUIDE.md](../skills/dingtalk-weekly-report/USER_GUIDE.md)**
 
-仓库短入口与「只给 URL 时复制给 AI」：→ [../README.md](../README.md)
+仓库价值、边界与最短安装入口：→ [../README.md](../README.md)

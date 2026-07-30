@@ -63,8 +63,9 @@ frontmatter，并加测试守住两处一致。）
 必须与之一致**——改了版本号就得写变更记录，否则「发了新行为却没人知道变了什么」。
 
 git tag 一致性不在单测里断言（开发期先改 VERSION、发布时才打 tag，中间必然不一致），改由
-`pack-skill.sh` 在发版时门禁：**未打 `v<VERSION>` tag 或工作区不干净，产物自动命名为
-`-dev.<sha>`，不会冒充发行版**。
+`pack-skill.sh` 在发版时门禁：**未打 `v<VERSION>` tag、当前 HEAD 不等于该 tag，或工作区
+不干净时，产物自动命名为 `-dev.<sha>`，不会冒充发行版**。2026-07-30 曾发现原门禁只检查
+“tag 存在”，导致 tag 之后的干净 HEAD 仍可产出无 `-dev` 文件名；现有回归测试覆盖该场景。
 
 发版顺序：
 
@@ -73,6 +74,10 @@ git tag 一致性不在单测里断言（开发期先改 VERSION、发布时才�
 3. `git tag -a vx.y.z -m "..." && git push origin vx.y.z`；
 4. `bash pack-skill.sh` —— 产物名不带 `-dev.` 才算发行物；
 5. 按下节「发布门禁」复验。
+
+`v0.3.0` GitHub Release 于 2026-07-30 补建。上传包不是使用上述误标的本地旧产物，而是直接
+从 `v0.3.0` tag 导出并逐文件对账的 23 文件归档；SHA-256：
+`8f76b377bedc042df4ecfe792d81d51cea7928bff63ad3788b9db4f9c74672e8`。
 
 ## skills.sh 发布方式
 
@@ -91,6 +96,44 @@ npx skills add dff652/dingtalk-weekly-report \
   --agent claude-code --agent codex \
   --global --yes --copy
 ```
+
+## 双 Hub 分发决定（2026-07-30）
+
+> **决定：GitHub + skills.sh + GitHub Releases 是主分发链；暂不把当前多文件 Skill 直接发布到
+> skills-hub.ai。** 后者不是 skills.sh 的镜像，也不会自动收录任意 GitHub 社区仓库。
+
+| 对比 | skills.sh | skills-hub.ai |
+|---|---|---|
+| 运营 / CLI | Vercel Labs；`npx skills` | Team Bearie LLC；`npx @skills-hub-ai/cli` |
+| 收录 | GitHub Skill 被 CLI 安装后按匿名遥测自动建立索引 | 账号登录后显式 publish/import，再经平台审核 |
+| 源与版本 | GitHub 仓库 / Skill 目录是事实源 | 独立注册中心，带版本、评分、签名、组织和 lockfile |
+| 本项目现状 | 已收录，整目录安装与隔离 smoke 已验证 | 未发布；搜索不到是预期，不是 skills.sh 发布失败 |
+
+截图中 skills-hub.ai 的 `Certified only` 也是额外过滤条件；即使未来发布为普通社区 Skill，
+保留该筛选仍可能看不到。
+
+当前兼容性阻断比“是否注册账号”更前置：skills-hub.ai
+[Getting Started](https://skills-hub.ai/docs/getting-started) 与
+[Codex 安装页](https://skills-hub.ai/codex-skills)描述的常规安装结果是把 `SKILL.md` 写入
+目标目录；没有给出会连同 `scripts/`、`bootstrap`、`references/`、模板和锁文件完整安装的
+明确契约。本项目不是单 Markdown Skill，丢任一执行资源都会出现“页面可搜、安装成功、实际不能
+运行”。因此不能按单文件 Skill 直接双发，也不为上架而把运行代码内联进 `SKILL.md`。
+
+重估 / PoC 门禁：
+
+1. 在隔离 HOME 中验证该 Hub 能完整安装 Skill 目录，而不是只得到 `SKILL.md`；
+2. 安装副本通过 `bootstrap --help`、配置校验、脚本 import 和 mock 草稿 smoke；
+3. 版本、license、category、platforms 等注册元数据有外置方式，或确认加入 frontmatter
+   不会破坏现有 Claude/Codex/skills.sh loader；
+4. 明确更新、回滚、下架和上游 GitHub 同步语义；
+5. 满足以上条件后，再单独授权创建账号、发布或提交审核。
+
+用户规模没有公开可比的独立用户数。2026-07-30 的 npm 页面快照只能作为方向性代理：
+[`skills`](https://www.npmjs.com/package/skills) 约 954 万周下载，
+[`@skills-hub-ai/cli`](https://www.npmjs.com/package/%40skills-hub-ai%2Fcli) 约 324 周下载。
+下载量包含 CI、缓存和重复执行，不等于真实用户；但数量级支持“现阶段 skills.sh 覆盖面显著
+更大”的渠道优先级判断。skills.sh 页面的 installs 同样不是外部采用人数，本仓发行验收会
+执行真实安装并计入统计，禁止把它写成用户增长。
 
 ## 历史泄露处置（已发生）
 

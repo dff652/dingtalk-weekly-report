@@ -2,8 +2,8 @@
 
 面向克隆本仓库的维护者。用户安装与每周使用见 [../skills/dingtalk-weekly-report/USER_GUIDE.md](../skills/dingtalk-weekly-report/USER_GUIDE.md) 与根 [README.md](../README.md)。
 
-文档分层：用户看根 [README.md](../README.md)（Install / 给 AI / Verify / Use）；细节在技能包
-`USER_GUIDE.md`；本文件仅维护者。
+文档分层：用户先看根 [README.md](../README.md)（价值 / 边界 / 工作流 / 快速开始）；
+完整安装与操作在技能包 `USER_GUIDE.md`；本文件仅维护者。
 
 ## 仓库角色
 
@@ -141,6 +141,114 @@ bash tests/run_full_acceptance.sh
       （`IsSubmit` 把存草稿与提交做成同一参数）；调研结论与**重估触发条件**见下节，
       触发前不要重开此话题
 - [x] P4 配置自动发现（阶段 0/A/B/C/D 全部落地，真机 8/10 自动定位、零错误）（把"手抄十个字段 id + 三组枚举"降为"确认十几个候选"）
+- [x] README visual refresh —— 静态 Hero、工作流图与内容重排已在本地落地并通过宽/窄屏预览
+- [~] GitHub 项目页元数据 —— About、Topics、skills.sh Homepage 与 v0.3.0 Release 已完成；
+      Social preview 待导出 1280×640 位图并在 GitHub Settings 上传
+
+### GitHub 项目页 / README 优化决定（2026-07-30）
+
+> **决定：可行，采用；先做本地预览，不直接发布。** 使用
+> [`oil-oil/beautify-github-readme`](https://github.com/oil-oil/beautify-github-readme)
+> 的整份 README 模式做 **visual refresh**，不做全量品牌重构。本次评估基于上游
+> `main@55bdb1c05414cd7a0cf911d02e55ece79777206e`；实施时先复核并固定实际使用的 commit，
+> 不经审查地跟随移动的 `main`。
+
+**实施状态（2026-07-30）：** 已按该固定 commit 的规则完成 `assets/readme/hero.svg`、
+`assets/readme/workflow.svg` 和 README 阅读顺序重排。本地 Chromium 预览覆盖 900px 与
+360px 内容宽度；窄屏流程图同时由紧邻的纯文本序列兜底。用户已另行授权本地提交，
+尚未授权推送；此前另行授权后已更新 GitHub About、Topics、skills.sh Homepage，并补建
+v0.3.0 Release。验收结果：上游 README audit、公开树 4 项、历史扫描、Skill 校验、
+102 项单测及完整 smoke（含隔离安装与 mock 草稿 e2e）全部通过。
+
+#### 为什么值得做
+
+当前 README 的事实、安装路径和安全说明已经完整，但首屏从维护者信息表很快进入 Node、uv、
+bootstrap、补链和验证命令。新访客尚未建立「它解决什么问题、为什么安全、第一次成功是什么」
+的认识，就先承担了实现细节。优化的目标是**调整阅读顺序并增加两张有沟通任务的静态图**，
+不是把 README 装饰成不可搜索、不可复制的长图。
+
+采用后的建议顺序：
+
+1. 项目原生 SVG Hero：一句话价值 + 「只落草稿、内容人审、用户最终提交」；
+2. 一张工作流图：工作日志 → JSON 人审锚点 → XLSX → 氚云草稿 → 人工提交；
+3. 三个核心差异：无提交能力、私有 `$WORK` 隔离、失败必须有正向证据；
+4. 最短安装与第一次调用；
+5. CI / mock e2e / release acceptance 等真实验证证据；
+6. 确定性安装、配置、Verify、维护者入口和完整文档索引。
+
+#### 视觉与内容边界
+
+- 采用**纯静态 SVG**，计划只做一张 Hero 和一张工作流图；不做 GIF、ImageGen、人物或电影化素材。
+- 不使用真实氚云截图：截图可能包含租户、字段 ID、姓名、周报内容和登录上下文。
+- 不引入远程字体、脚本、`foreignObject` 或依赖第三方动态徽章服务的关键证据；正文、命令、
+  链接和限制继续留在可搜索、可复制的 Markdown。
+- 不编造采用量、兼容性、性能或跨租户稳定性。当前「仅一个租户真机验证」「Windows 尚未实机」
+  等边界不得被视觉文案弱化。
+- 保留安装、隐私、安全、回滚和完整文档入口；允许折叠或后移，不允许为了首屏简洁删除。
+- 上游 `audit_readme.py` 只检查本地图片引用、SVG 基础兼容和 alt text，不能替代内容正确性、
+  脱敏和真实安装验收。
+
+#### README / SKILL / docs 信息分层决定（2026-07-30）
+
+> **决定：需要继续拆分，但按分发边界拆，不按文件长度机械拆。** 根 README 是 GitHub
+> 落地页；skills.sh 页面主体和 Agent 运行上下文来自 `SKILL.md`；只有
+> `skills/dingtalk-weekly-report/` 会随 Skill 安装。把运行必需信息只移到根 `docs/`
+> 会让安装副本丢失依赖，禁止这样做。
+
+| 层 | 主要读者 / 作用 | 是否随 Skill 安装 | 应保留什么 |
+|---|---|---:|---|
+| 根 `README.md` | GitHub 新访客 | 否 | 价值、证据、安全边界、流程、最短安装、限制、文档入口 |
+| `skills/.../SKILL.md` | Agent；skills.sh 详情页 | 是 | 触发条件、`$SKILL/$WORK`、三条铁律、运行步骤、失败停止条件 |
+| `skills/.../USER_GUIDE.md` | 安装和操作用户 | 是 | 完整安装矩阵、配置、登录、CLI、自检、升级、多设备、FAQ |
+| `skills/.../references/` | Agent 按需读取 / 维护者 | 是 | 输入输出契约、字段与 DOM 约束 |
+| 根 `docs/` | 维护者、验收人、贡献者 | 否 | 测试证据、发布、评审、历史事件和长期决策 |
+
+安全拆分原则：
+
+- 精简根 README **不影响** `npx skills add`；它不是安装输入。
+- 只精简根 README **不会改变** skills.sh 截图里的长正文；该页面展示的是 `SKILL.md`。
+- `SKILL.md` 首屏可移除逐文件“包内清单”，改为一句“自包含、多文件 Skill”并链接同目录
+  `USER_GUIDE.md`；但运行步骤和安全闸不得只留链接。
+- 需要复制、搜索、翻译或频繁更新的命令与说明继续用 Markdown，不塞进 SVG。
+- 移动前后必须保证安装目录仍自包含；不得新增对根 `docs/`、根 README 或仓库 checkout 的
+  运行时依赖。
+
+本轮实施结果：
+
+- [x] 根 README 从 245 行 / 668 词收短为 101 行 / 262 词；完整安装、配置、CLI 和维护者说明
+      改由随包 `USER_GUIDE.md` 与根 `docs/` 承担；
+- [x] `SKILL.md` 从 203 行 / 644 词收短为 163 行 / 487 词；首屏逐文件清单和重复升级说明已移除，
+      三条铁律、`$WORK` 属主检查、内容人审、登录凭证、同周草稿和完整周流程仍在正文；
+- [x] 900px / 360px 本地预览、README audit、Skill validate、102 项单测、公开树、历史扫描
+      和完整 smoke 全部通过；隔离安装仍包含 scripts、bootstrap、references 与用户指南；
+- [x] 本轮 README / SKILL / docs 改动已完成本地提交；尚未推送；
+- [ ] 远端刷新后制作并上传 Social preview；
+- [ ] skills-hub.ai 仅做多文件安装 PoC，未通过前不公开发布。
+
+#### GitHub 页面元数据是另一项工作
+
+`beautify-github-readme` 优化的是 README，不会自动补齐 GitHub 仓库设置。实施时另行处理：
+
+- [x] About description：一句话说明「工作日志 → 人审 → 氚云草稿 → 人工提交」；
+- [x] Topics：`dingtalk`、`h3yun`、`agent-skill`、`claude-code`、`codex-skill`、
+  `weekly-report`；
+- [ ] Social preview：从已验收的静态视觉系统导出，不含真实业务数据；
+- [x] Releases：`v0.3.0` 已挂从 tag 直接导出并逐文件对账的版本化 zip。
+
+这些是 GitHub 外部状态变更；README 预览获批不等于授权修改设置、创建 Release 或推送。
+
+#### 实施与验收门禁
+
+1. 先只读审查 README，再产本地 SVG、渲染预览和 README diff；
+2. 预览同时检查 GitHub 宽屏、窄屏、明暗背景、SVG 文字裁切和 alt text；
+3. 用户批准视觉方案与阅读顺序后才嵌入 README；提交、推送、Release 和仓库设置分别授权；
+4. 合入前至少运行：
+   - `python3 <beautify-skill>/scripts/audit_readme.py README.md`
+   - `.venv/bin/python tests/test_public_tree.py`
+   - `.venv/bin/python tests/scan_history.py`
+   - `.venv/bin/python -m unittest discover -s tests -p 'test_*.py'`
+5. 验收标准：首屏无需内部背景即可理解用途与安全边界；最短安装命令仍可复制；图片失效时标题、
+   alt text、命令和链接仍能独立表达；仓库中不存在真实组织或个人数据。
 
 ### P3 决定：暂不采用氚云 OpenApi（2026-07-28）
 
