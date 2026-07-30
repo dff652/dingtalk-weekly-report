@@ -158,6 +158,52 @@ Social preview 目前必须在 GitHub 网页
 
 任一项不满足时保持“不发布”，不要为了可搜索而把运行代码内联进 `SKILL.md`。
 
+## GitHub Issue 中的 `@AI` 自动触发
+
+Issue 或评论中的 `@claude` 只是文本提及，不会连接到维护者本机已经打开的 Claude Code、
+Codex 或 IDE 会话。自动执行需要仓库另行安装服务端集成。
+
+本仓于 2026-07-30 核查时只有 `.github/workflows/ci.yml`，监听 `push`、`pull_request` 和
+`workflow_dispatch`；没有监听 `issue_comment` 的 Claude workflow，仓库 Actions Secret /
+Variable 也为空。因此 Issue #1 中的 `@claude` 没有产生 workflow run，也不会自动改代码。
+
+按 [Claude Code GitHub Actions 官方文档](https://code.claude.com/docs/en/github-actions)，
+启用至少需要：
+
+1. 仓库管理员安装 Claude GitHub App；
+2. 将 `ANTHROPIC_API_KEY` 放入 GitHub Actions Secret，禁止写进仓库；
+3. 在默认分支加入监听 `issue_comment: created` 的 workflow，并调用
+   `anthropics/claude-code-action@v1`；
+4. 授予所需的 Contents、Issues、Pull requests 权限；
+5. 用真实 `@claude` 评论验证 workflow、回复、分支、PR 和 CI。
+
+这是独立外部状态变更：会增加 GitHub App 写权限、Actions/API 成本和第三方 Issue 的
+prompt-injection 面，必须单独授权。公开仓推荐只允许维护者触发，或先由维护者添加
+`ai-approved` 标签；AI 只能提交 PR，禁止自动合并。外部用户的单独 `@claude` 不应直接取得
+仓库写入和付费调用能力。
+
+### 本项目决策：回复与修改分离
+
+本项目不允许外部用户通过 Issue、评论或 `@AI` 直接触发代码修改。若以后启用 AI Issue
+辅助，只采用两阶段门控：
+
+1. 新 Issue 只收到固定回执，不调用 AI。维护者添加 `ai-triage` 标签后，AI 才以
+   `contents: read`、`issues: write` 的最小权限读取默认分支并回复问题复述、分析、建议方案
+   与验收标准；不得编辑文件、创建分支或 PR，也不得自动关闭 Issue。
+2. 回复中可附“建议固化内容”，但不能直接写入仓库。维护者确认后，由本地工具更新文档；
+   如以后改用自动化，则必须通过独立 `docs-approved` 门控创建仅含文档的 PR，并由人工审核，
+   禁止自动合并。
+
+“写项目文档”仍属于仓库内容变更，不能与“完全不修改仓库”同时成立。默认安全路径是：
+外部用户提交 Issue → 维护者审核并触发分析 → AI 只在 Issue 回复 → 维护者批准后本地固化文档。
+触发方式统一使用标签，不使用可能提及真实 GitHub 用户的 `@AI` 文本。第一阶段不安装权限
+较宽的 Claude GitHub App，而用仓库短期 `GITHUB_TOKEN` 发布回复；模型 API 只返回文本，
+没有 GitHub 工具或文件写能力。
+
+未来如确需由 AI 实施代码，必须另设 `ai-implement`，且只能由仓库所有者或具有写权限的
+维护者触发。该流程只能创建受保护分支上的待审 PR；不得直接 push `main`、自动合并或在 PR
+合并前关闭 Issue。`ai-implement` 不属于第一阶段交付。
+
 ## 提交、发布后验证与回滚
 
 1. 提交前检查 `git diff --check`、完整 diff 和工作区范围，只暂存本任务文件。

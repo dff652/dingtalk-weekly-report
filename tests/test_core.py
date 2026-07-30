@@ -18,7 +18,7 @@ SCRIPTS = SKILL / "scripts"
 sys.path.insert(0, str(SCRIPTS))
 
 from dtwr_common import resolve_progress_report, require_owned, workdir
-from configure import FIELD_SPECS, apply_assignments
+from configure import FIELD_SPECS, apply_assignments, configuration_plan
 from dtwr_fields import FORM_FIELD_KEYS, FORM_TEXT_KEYS
 from dtwr_validation import (
     ValidationError,
@@ -151,6 +151,139 @@ class CoreTests(unittest.TestCase):
         value["form_texts"]["save_draft"] = "提 交"
         with self.assertRaisesRegex(ValidationError, "不得指向提交按钮"):
             validate_config(value)
+
+    def test_incomplete_config_allows_onboarding_but_not_final_check(self):
+        value = json.loads(
+            (SKILL / "assets/config.example.json").read_text(encoding="utf-8"))
+        validate_config(value, allow_incomplete=True)
+        with self.assertRaisesRegex(ValidationError, "config.json 未就绪"):
+            validate_config(value)
+
+    def test_incomplete_config_still_rejects_unsafe_nonempty_values(self):
+        value = json.loads(
+            (SKILL / "assets/config.example.json").read_text(encoding="utf-8"))
+        value["form_url"] = "https://www.h3yun.com/entry/auth?token=secret"
+        value["form_texts"]["save_draft"] = "提交"
+        with self.assertRaisesRegex(ValidationError, "entry/auth"):
+            validate_config(value, allow_incomplete=True)
+        value["form_url"] = ""
+        with self.assertRaisesRegex(ValidationError, "不得指向提交按钮"):
+            validate_config(value, allow_incomplete=True)
+
+    def test_configuration_plan_separates_user_input_from_form_discovery(self):
+        value = json.loads(
+            (SKILL / "assets/config.example.json").read_text(encoding="utf-8"))
+        plan = configuration_plan(value)
+        self.assertEqual(
+            [item["path"] for item in plan["needs_user"]],
+            ["name", "form_url", "form_project", "attach_project"],
+        )
+        form_paths = {item["path"] for item in plan["needs_form"]}
+        self.assertIn("form_fields.subgrid_id", form_paths)
+        self.assertIn("vocabulary.project_types", form_paths)
+        self.assertNotIn("form_fields.attach", form_paths)
+        self.assertNotIn("progress_report", form_paths)
+        self.assertFalse(plan["ready"])
+
+    def test_configure_guided_can_save_partial_answers(self):
+        with tempfile.TemporaryDirectory() as directory:
+            work = Path(directory)
+            config_path = work / "config.json"
+            config_path.write_text(
+                (SKILL / "assets/config.example.json").read_text(encoding="utf-8"),
+                encoding="utf-8",
+            )
+            result = subprocess.run(
+                [
+                    sys.executable, str(SCRIPTS / "configure.py"),
+                    "--guided",
+                    "--set", "name=引导验收人员",
+                    "--set", "form_project=产品研发",
+                    "--yes",
+                ],
+                env={**os.environ, "DTWR_HOME": str(work)},
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            updated = json.loads(config_path.read_text(encoding="utf-8"))
+            self.assertEqual(updated["name"], "引导验收人员")
+            self.assertEqual(updated["form_project"], "产品研发")
+            self.assertIn("仍需用户提供", result.stdout)
+            self.assertTrue((work / "config.json.bak").exists())
+            strict = subprocess.run(
+                [sys.executable, str(SCRIPTS / "configure.py"), "--check"],
+                env={**os.environ, "DTWR_HOME": str(work)},
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            self.assertNotEqual(strict.returncode, 0)
+
+    def test_discovery_can_save_fields_before_full_config_is_ready(self):
+        with tempfile.TemporaryDirectory() as directory:
+            work = Path(directory)
+            config_path = work / "config.json"
+            config_path.write_text(
+                (SKILL / "assets/config.example.json").read_text(encoding="utf-8"),
+                encoding="utf-8",
+            )
+            proposal = work / "proposal.json"
+            proposal.write_text(json.dumps({
+                "proposal": {
+                    "subgrid_id": {
+                        "id": "subgrid-safe-id",
+                        "confidence": "high",
+                        "why": "测试候选",
+                    },
+                },
+                "observed": {},
+                "ambiguous": {},
+            }, ensure_ascii=False), encoding="utf-8")
+            result = subprocess.run(
+                [
+                    sys.executable, str(SCRIPTS / "configure.py"),
+                    "--from-discovery", str(proposal), "--yes",
+                ],
+                env={**os.environ, "DTWR_HOME": str(work)},
+                input="y\n",
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            updated = json.loads(config_path.read_text(encoding="utf-8"))
+            self.assertEqual(
+                updated["form_fields"]["subgrid_id"], "subgrid-safe-id")
+            self.assertIn("仍需用户提供", result.stdout)
+
+    def test_configure_missing_json_never_prints_current_values(self):
+        with tempfile.TemporaryDirectory() as directory:
+            work = Path(directory)
+            config_path = work / "config.json"
+            value = json.loads(
+                (SKILL / "assets/config.example.json").read_text(encoding="utf-8"))
+            value["name"] = "不应出现在计划中的姓名"
+            config_path.write_text(
+                json.dumps(value, ensure_ascii=False, indent=2) + "\n",
+                encoding="utf-8",
+            )
+            result = subprocess.run(
+                [
+                    sys.executable, str(SCRIPTS / "configure.py"),
+                    "--missing", "--json",
+                ],
+                env={**os.environ, "DTWR_HOME": str(work)},
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            plan = json.loads(result.stdout)
+            self.assertNotIn("不应出现在计划中的姓名", result.stdout)
+            self.assertNotIn(
+                "name", [item["path"] for item in plan["needs_user"]])
 
     def test_configure_marks_legacy_config_as_version_two(self):
         value = copy.deepcopy(self.config)

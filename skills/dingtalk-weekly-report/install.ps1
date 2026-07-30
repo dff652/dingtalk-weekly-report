@@ -108,5 +108,5 @@ if ($DoAgents) {
 Write-Host ""
 Write-Host "下一步:"
 Write-Host "  1) .\bootstrap.ps1"
-Write-Host "  2) 配置: & `$WORK\.venv\Scripts\python.exe .\scripts\configure.py"
+Write-Host "  2) 配置: AI 首次调用会主动询问；本机可运行 & `$WORK\.venv\Scripts\python.exe .\scripts\configure.py --guided"
 Write-Host "  3) Claude 运行 /dingtalk-weekly-report；Codex 运行 `$dingtalk-weekly-report 或从 /skills 选择"

@@ -82,11 +82,13 @@
 
 ## 获取配置（推荐：自动发现）
 
-1. 填 `form_url`、姓名、项目原文、按钮与标题文字；`form_fields` 十个 id **全部留空**。
+1. 运行 `configure.py --missing`；用 `configure.py --guided` 先填 `form_url`、姓名和项目原文。
+   `--guided` 允许分阶段保存，`form_fields` 十个 id **此时全部留空**。
 2. `fill_form.py --login`（或 `--login-url`）建立登录态。
 3. `fill_form.py --dump-record 2` —— 打开第 2 条历史记录（避开可能是草稿的第 1 条），
    自动推断字段并把候选写到 `$WORK/output/field-proposal.json`。只读，不保存。
-4. `configure.py --from-discovery` —— 逐项确认后写入，**绝不自动落盘**。
+4. `configure.py --from-discovery` —— 逐项确认后写入，**绝不自动采纳候选**；即使其他配置
+   尚未补齐，已确认字段也能安全分阶段保存。
 5. `configure.py --check` 直到通过。
 
 自动发现靠三重信号叠加：主表看控件类型类名（`control-adapter-Form*`）、子表看取值形状
@@ -100,7 +102,8 @@
 
 ## 获取配置（手动兜底）
 
-1. **先填能直接看到的**：`form_url`、姓名、项目原文、按钮与标题文字、下拉枚举。
+1. 运行 `configure.py --guided`，**先填能直接回答的** `form_url`、姓名和项目原文；按钮文字、
+   下拉枚举随后由真实表单或管理员确认。
    `form_fields` 里的十个字段 id **此时可以全部留空**。
 2. `fill_form.py --login`（或 `--login-url`）建立登录态。
 3. `fill_form.py --dump` → 产出 `$WORK/output/shots/dump.html` 与 `dump.png`。

@@ -96,19 +96,24 @@ fi
 
 ### 2.6 首次配置
 
-1. 运行配置向导，填写 `name`、`form_project`、`attach_project`、`progress_report`（可空）、
-   `form_url`，以及本人或管理员确认的 `vocabulary`、`form_fields`、`form_texts`：
+1. 先查看缺项。AI 调用 Skill 时会读取同一份清单并主动询问；不会要求你自己寻找并编辑
+   `config.json`：
 
 ```bash
 cd ~/weekly-report-data
-.venv/bin/python ~/.claude/skills/dingtalk-weekly-report/scripts/configure.py
+.venv/bin/python ~/.claude/skills/dingtalk-weekly-report/scripts/configure.py --missing
 ```
 
-   `progress_report` 可填工作日志文件，或含 `docs/report/PROGRESS_REPORT.md` 的项目目录；
-   工具不会扫描项目或读取 git log。向导在完整校验通过后才写入，并把旧配置备份为
-   `$WORK/config.json.bak`；一次性 entry/auth 登录链接会被拒绝，不得保存为 `form_url`。
-   字段含义与获取方式见 `references/FIELDS.md`。Skill 和 `$WORK` 必须分离，不要把 `$WORK`
-   放进 Skill 或源码仓库。
+   用户本人在本机交互填写缺少的姓名、表单 URL、表单项目和附件项目：
+
+```bash
+.venv/bin/python ~/.claude/skills/dingtalk-weekly-report/scripts/configure.py --guided
+```
+
+   `--guided` 允许先安全保存基础信息，字段 ID 尚未发现并不阻断保存；但最终填表仍必须通过
+   完整 `--check`。每次保存都会备份旧配置为 `$WORK/config.json.bak`。一次性 entry/auth
+   登录链接会被拒绝，不得保存为 `form_url`。
+
 2. 登录首选扫码：会话里跟 Agent，或在终端运行：
 
 ```bash
@@ -124,7 +129,21 @@ cd ~/weekly-report-data
 
 不要把 auth 链接发给 Agent，也不要放进命令参数、聊天、文件或 git。
 
-3. 可选保活：cron / 计划任务跑 `fill_form.py --keepalive`。  
+3. 按 `references/FIELDS.md` 用 `--dump-record N` 自动发现字段候选，再逐项确认写入：
+
+```bash
+.venv/bin/python ~/.claude/skills/dingtalk-weekly-report/scripts/fill_form.py --dump-record 2
+.venv/bin/python ~/.claude/skills/dingtalk-weekly-report/scripts/configure.py --from-discovery
+.venv/bin/python ~/.claude/skills/dingtalk-weekly-report/scripts/configure.py
+.venv/bin/python ~/.claude/skills/dingtalk-weekly-report/scripts/configure.py --check
+```
+
+   `progress_report` 可填工作日志文件，或含 `docs/report/PROGRESS_REPORT.md` 的项目目录；
+   工具不会扫描项目或读取 git log。第三条命令用于补齐尚未发现的枚举和按钮文字；已有值直接
+   回车保留。字段、枚举和按钮文字必须来自本人或管理员确认。
+   Skill 和 `$WORK` 必须分离，不要把 `$WORK` 放进 Skill 或源码仓库。
+
+4. 可选保活：cron / 计划任务跑 `fill_form.py --keepalive`。
 登录态：`~/.config/dtwr/state.json`（0600）。
 
 ### 2.7 后续查看与重新配置
@@ -135,10 +154,14 @@ cd ~/weekly-report-data
 ```bash
 # 查看 / 校验，不修改
 .venv/bin/python ~/.claude/skills/dingtalk-weekly-report/scripts/configure.py --show
+.venv/bin/python ~/.claude/skills/dingtalk-weekly-report/scripts/configure.py --missing
 .venv/bin/python ~/.claude/skills/dingtalk-weekly-report/scripts/configure.py --check
 
 # 交互更新；回车保留，- 清空可选项
 .venv/bin/python ~/.claude/skills/dingtalk-weekly-report/scripts/configure.py
+
+# 首次配置只询问当前缺少的用户必填项
+.venv/bin/python ~/.claude/skills/dingtalk-weekly-report/scripts/configure.py --guided
 ```
 
 Windows 将 `.venv/bin/python` 换成 `.venv\Scripts\python.exe`，技能路径使用实际安装目录。

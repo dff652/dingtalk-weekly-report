@@ -140,7 +140,9 @@ bash tests/run_full_acceptance.sh
 - [~] P3 氚云 OpenApi —— **暂不采用，不排期（决定于 2026-07-28）**。技术可行但收益不抵风险
       （`IsSubmit` 把存草稿与提交做成同一参数）；调研结论与**重估触发条件**见下节，
       触发前不要重开此话题
-- [x] P4 配置自动发现（阶段 0/A/B/C/D 全部落地，真机 8/10 自动定位、零错误）（把"手抄十个字段 id + 三组枚举"降为"确认十几个候选"）
+- [x] P4 配置引导与自动发现（首次缺项由 Agent 主动询问并可分阶段安全保存；真实 DOM
+      8/10 自动定位、零错误）（把“自己改空模板 + 手抄十个字段 id”降为“回答基础问题 +
+      确认十几个候选”）
 - [x] README visual refresh —— 静态 Hero、工作流图与内容重排已在本地落地并通过宽/窄屏预览
 - [~] GitHub 项目页元数据 —— About、Topics、skills.sh Homepage 与 v0.3.0 Release 已完成；
       Social preview 首版已上传，跨平台字体修正版待替换
@@ -161,7 +163,7 @@ bash tests/run_full_acceptance.sh
 `assets/readme/workflow.svg` 和 README 阅读顺序重排。本地 Chromium 预览覆盖 900px 与
 360px 内容宽度；窄屏流程图同时由紧邻的纯文本序列兜底。用户已授权提交并推送；
 此前另行授权后已更新 GitHub About、Topics、skills.sh Homepage，并补建 v0.3.0 Release。
-验收结果：上游 README audit、公开树 4 项、历史扫描、Skill 校验、106 项单测及完整 smoke
+验收结果：上游 README audit、公开树 4 项、历史扫描、Skill 校验、113 项单测及完整 smoke
 （含隔离安装与 mock 草稿 e2e）全部通过。
 
 #### 为什么值得做
@@ -244,7 +246,7 @@ bootstrap、补链和验证命令。新访客尚未建立「它解决什么问�
       改由随包 `USER_GUIDE.md` 与根 `docs/` 承担；
 - [x] `SKILL.md` 从 203 行 / 644 词收短为 163 行 / 487 词；首屏逐文件清单和重复升级说明已移除，
       三条铁律、`$WORK` 属主检查、内容人审、登录凭证、同周草稿和完整周流程仍在正文；
-- [x] 900px / 360px 本地预览、README audit、Skill validate、106 项单测、公开树、历史扫描
+- [x] 900px / 360px 本地预览、README audit、Skill validate、113 项单测、公开树、历史扫描
       和完整 smoke 全部通过；隔离安装仍包含 scripts、bootstrap、references 与用户指南；
 - [x] 本轮 README / SKILL / docs 改动已完成提交并推送；
 - [x] 远端刷新后制作 1280×640 Social preview PNG；

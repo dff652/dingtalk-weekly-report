@@ -21,6 +21,12 @@ class ValidationError(ValueError):
     pass
 
 
+CONFIG_PLACEHOLDERS = (
+    "你的姓名", "XXXXX", "项目全名", "项目下拉完整原文",
+    "附件关联项目或活动", "测试用户",
+)
+
+
 def _text(value) -> str:
     return value.strip() if isinstance(value, str) else ""
 
@@ -40,7 +46,17 @@ def _hours_ok_upto(value, limit=168) -> bool:
             and 0 < value <= limit)
 
 
-def _string_list(value, label: str, errors: list[str]) -> tuple[str, ...]:
+def _choice_invalid(value, choices, allow_incomplete: bool) -> bool:
+    if allow_incomplete:
+        return bool(value and choices and value not in choices)
+    return value not in choices
+
+
+def _string_list(
+        value, label: str, errors: list[str],
+        allow_empty: bool = False) -> tuple[str, ...]:
+    if allow_empty and value in (None, "", []):
+        return ()
     if not isinstance(value, list) or not value:
         errors.append(f"{label} 必须是非空字符串列表")
         return ()
@@ -52,10 +68,13 @@ def _string_list(value, label: str, errors: list[str]) -> tuple[str, ...]:
     return result
 
 
-def _validate_vocabulary(container: dict, errors: list[str]) -> dict:
+def _validate_vocabulary(
+        container: dict, errors: list[str],
+        allow_incomplete: bool = False) -> dict:
     value = container.get("vocabulary")
     if not isinstance(value, dict):
-        errors.append("vocabulary 必须是对象")
+        if not allow_incomplete or value not in (None, ""):
+            errors.append("vocabulary 必须是对象")
         return {
             "project_types": (),
             "statuses": (),
@@ -65,23 +84,28 @@ def _validate_vocabulary(container: dict, errors: list[str]) -> dict:
         }
 
     lists = {
-        key: _string_list(value.get(key), f"vocabulary.{key}", errors)
+        key: _string_list(
+            value.get(key), f"vocabulary.{key}", errors,
+            allow_empty=allow_incomplete)
         for key in VOCABULARY_LIST_KEYS
     }
     scalars = {}
     for key in VOCABULARY_VALUE_KEYS:
         scalars[key] = _text(value.get(key))
-        if not scalars[key]:
+        if not scalars[key] and not allow_incomplete:
             errors.append(f"vocabulary.{key} 不能为空")
 
     if (scalars["operations_project_type"]
+            and lists["project_types"]
             and scalars["operations_project_type"] not in lists["project_types"]):
         errors.append(
             "vocabulary.operations_project_type 必须属于 project_types")
-    if scalars["leave_status"] and scalars["leave_status"] not in lists["statuses"]:
+    if (scalars["leave_status"] and lists["statuses"]
+            and scalars["leave_status"] not in lists["statuses"]):
         errors.append("vocabulary.leave_status 必须属于 statuses")
     invalid_attachment = (
-        set(lists["attachment_task_types"]) - set(lists["project_types"]))
+        set(lists["attachment_task_types"]) - set(lists["project_types"])
+        if lists["project_types"] else set())
     if invalid_attachment:
         errors.append(
             "vocabulary.attachment_task_types 必须是 project_types 子集: "
@@ -89,16 +113,20 @@ def _validate_vocabulary(container: dict, errors: list[str]) -> dict:
     return {**lists, **scalars}
 
 
-def _validate_form_metadata(config: dict, errors: list[str]) -> None:
+def _validate_form_metadata(
+        config: dict, errors: list[str],
+        allow_incomplete: bool = False) -> None:
     fields = config.get("form_fields")
     if not isinstance(fields, dict):
-        errors.append("form_fields 必须是对象")
+        if not allow_incomplete or fields not in (None, ""):
+            errors.append("form_fields 必须是对象")
     else:
         for key in FORM_FIELD_KEYS:
             value = _text(fields.get(key))
             if not value:
                 # 可选键留空 = 本表单无该字段；其余键缺失即配置未就绪。
-                if key not in OPTIONAL_FORM_FIELD_KEYS:
+                if (not allow_incomplete
+                        and key not in OPTIONAL_FORM_FIELD_KEYS):
                     errors.append(f"form_fields.{key} 不能为空")
             elif not re.fullmatch(r"[A-Za-z0-9_-]+", value):
                 errors.append(
@@ -106,22 +134,27 @@ def _validate_form_metadata(config: dict, errors: list[str]) -> None:
 
     texts = config.get("form_texts")
     if not isinstance(texts, dict):
-        errors.append("form_texts 必须是对象")
+        if not allow_incomplete or texts not in (None, ""):
+            errors.append("form_texts 必须是对象")
     else:
         for key in FORM_TEXT_KEYS:
-            if not _text(texts.get(key)):
+            if not _text(texts.get(key)) and not allow_incomplete:
                 errors.append(f"form_texts.{key} 不能为空")
         save_draft = re.sub(r"\s+", "", _text(texts.get("save_draft")))
         if "提交" in save_draft or "submit" in save_draft.casefold():
             errors.append("form_texts.save_draft 不得指向提交按钮")
         success = texts.get("success_messages")
-        _string_list(success, "form_texts.success_messages", errors)
+        _string_list(
+            success, "form_texts.success_messages", errors,
+            allow_empty=allow_incomplete)
 
 
-def _validate_form_url(value, errors: list[str]) -> None:
+def _validate_form_url(
+        value, errors: list[str], allow_incomplete: bool = False) -> None:
     form_url = _text(value)
     if not form_url:
-        errors.append("form_url 不能为空")
+        if not allow_incomplete:
+            errors.append("form_url 不能为空")
         return
     parsed = urlparse(form_url)
     if (parsed.scheme != "https"
@@ -156,7 +189,7 @@ def _validate_calendar(config: dict, errors: list[str]) -> None:
             + ", ".join(str(d) for d in sorted(overlap)))
 
 
-def validate_config(config: dict) -> None:
+def validate_config(config: dict, allow_incomplete: bool = False) -> None:
     errors = []
     if not isinstance(config, dict):
         raise ValidationError("config.json 顶层必须是对象")
@@ -168,54 +201,66 @@ def validate_config(config: dict) -> None:
         "form_fields", "form_texts",
     )
     for key in required:
-        if key not in config:
+        if key not in config and not allow_incomplete:
             errors.append(f"缺少配置项 {key}")
-    if config.get("config_version") != 2:
+    if (config.get("config_version") != 2
+            and (not allow_incomplete
+                 or config.get("config_version") is not None)):
         errors.append("config_version 必须为 2；旧配置请按升级说明迁移")
 
-    placeholders = (
-        "你的姓名", "XXXXX", "项目全名", "项目下拉完整原文",
-        "附件关联项目或活动", "测试用户",
-    )
     for key in ("name", "form_project", "attach_project"):
         value = _text(config.get(key))
         if not value:
-            errors.append(f"{key} 不能为空")
-        elif any(mark in value for mark in placeholders):
+            if not allow_incomplete:
+                errors.append(f"{key} 不能为空")
+        elif (not allow_incomplete
+              and any(mark in value for mark in CONFIG_PLACEHOLDERS)):
             errors.append(f"{key} 仍是模板占位值")
 
-    _validate_form_url(config.get("form_url"), errors)
+    _validate_form_url(
+        config.get("form_url"), errors, allow_incomplete=allow_incomplete)
     _validate_calendar(config, errors)
     for key in HOURS_POLICY_KEYS:
         value = config.get(key)
         if value not in (None, "") and not _hours_ok_upto(value):
             errors.append(f"{key} 必须是 0~168 的数字（留空表示不限制）")
-    _validate_form_metadata(config, errors)
-    vocabulary = _validate_vocabulary(config, errors)
-    if config.get("project_type") not in vocabulary["project_types"]:
+    _validate_form_metadata(
+        config, errors, allow_incomplete=allow_incomplete)
+    vocabulary = _validate_vocabulary(
+        config, errors, allow_incomplete=allow_incomplete)
+    if _choice_invalid(
+            config.get("project_type"), vocabulary["project_types"],
+            allow_incomplete):
         errors.append(f"project_type 非法: {config.get('project_type')!r}")
-    if config.get("status") not in vocabulary["statuses"]:
+    if _choice_invalid(
+            config.get("status"), vocabulary["statuses"], allow_incomplete):
         errors.append(f"status 非法: {config.get('status')!r}")
     for key in ("hours", "leave_hours"):
-        if not _hours_ok(config.get(key)):
+        if ((not allow_incomplete or config.get(key) not in (None, ""))
+                and not _hours_ok(config.get(key))):
             errors.append(f"{key} 必须是 0~24 的数字")
 
     for key in ("standup", "monday_meeting"):
         value = config.get(key)
         if not isinstance(value, dict):
-            errors.append(f"{key} 必须是对象")
+            if not allow_incomplete or value not in (None, ""):
+                errors.append(f"{key} 必须是对象")
             continue
         for subkey in ("content", "hours", "status"):
-            if subkey not in value:
+            if subkey not in value and not allow_incomplete:
                 errors.append(f"{key}.{subkey} 缺失")
-        if not _text(value.get("content")):
+        if not _text(value.get("content")) and not allow_incomplete:
             errors.append(f"{key}.content 不能为空")
-        if not _hours_ok(value.get("hours")):
+        if ((not allow_incomplete or value.get("hours") not in (None, ""))
+                and not _hours_ok(value.get("hours"))):
             errors.append(f"{key}.hours 必须是 0~24 的数字")
-        if value.get("status") not in vocabulary["statuses"]:
+        if _choice_invalid(
+                value.get("status"), vocabulary["statuses"],
+                allow_incomplete):
             errors.append(f"{key}.status 非法: {value.get('status')!r}")
         project_type = value.get("project_type", config.get("project_type"))
-        if project_type not in vocabulary["project_types"]:
+        if _choice_invalid(
+                project_type, vocabulary["project_types"], allow_incomplete):
             errors.append(f"{key}.project_type 非法")
 
     if errors:

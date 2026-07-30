@@ -61,7 +61,7 @@ chmod 700 "$WORK" 2>/dev/null || true
 # config
 if [ ! -f "$WORK/config.json" ]; then
   cp "$SKILL/assets/config.example.json" "$WORK/config.json"
-  echo "✅ 已写入 $WORK/config.json（请运行配置向导）"
+  echo "✅ 已写入 $WORK/config.json（AI 首次调用会主动引导；本机可运行 --guided）"
 else
   echo "ℹ 保留已有 config.json"
 fi
@@ -103,7 +103,8 @@ echo "✅ 已写 $DTWR_DIR/root → $WORK"
 
 echo ""
 echo "bootstrap 完成。"
-echo "  配置:   $PY \"$SKILL/scripts/configure.py\""
+echo "  缺项:   $PY \"$SKILL/scripts/configure.py\" --missing"
+echo "  配置:   $PY \"$SKILL/scripts/configure.py\" --guided"
 echo "  登录:   $PY \"$SKILL/scripts/fill_form.py\" --login"
 echo "  URL兜底: 用户本人在交互终端运行 $PY \"$SKILL/scripts/fill_form.py\" --login-url（隐藏输入）"
 echo "  AI: Claude 用 /dingtalk-weekly-report；Codex 用 \$dingtalk-weekly-report 或 /skills 选择"

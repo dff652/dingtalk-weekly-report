@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
+import contextlib
+import io
 import json
 import os
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import patch
@@ -100,6 +103,25 @@ class FakeFileInput:
 
 
 class FillFormLogicTests(unittest.TestCase):
+    def test_status_tells_agent_which_user_information_to_request(self):
+        config = json.loads(
+            (SKILL / "assets/config.example.json").read_text(encoding="utf-8"))
+        with tempfile.TemporaryDirectory() as directory:
+            work = Path(directory)
+            (work / "weeks").mkdir()
+            (work / "output").mkdir()
+            output = io.StringIO()
+            with patch.object(fill_form, "WORK", work), \
+                    patch.object(fill_form, "CONFIG", config), \
+                    patch.object(fill_form, "STATE", work / "state.json"), \
+                    contextlib.redirect_stdout(output):
+                fill_form.do_status()
+        text = output.getvalue()
+        self.assertIn("需要用户提供", text)
+        self.assertIn("姓名", text)
+        self.assertIn("表单项目完整原文", text)
+        self.assertIn("Agent 主动逐项询问", text)
+
     def test_form_closed_without_success_is_rejected(self):
         with self.assertRaisesRegex(RuntimeError, "未检测到可见"):
             verify_draft_saved(None, FakePage(), mock=False)

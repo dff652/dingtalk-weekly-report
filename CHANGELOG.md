@@ -11,6 +11,11 @@
 
 ### 新增
 
+- **首次配置主动引导（Issue #1）**：`configure.py --missing [--json]` 将缺项分成“需要用户
+  提供”和“需要真实表单发现”，且结构化输出不包含当前私有值；`--guided` 只询问缺失的姓名、
+  表单 URL 与项目等基础信息，并允许在字段 ID 尚未发现时分阶段原子保存。
+  `fill_form.py --status` 复用同一计划，明确要求 Agent 主动提问；`--from-discovery` 也可先保存
+  已由用户确认的候选。完整 `--check` 与正式填表仍严格拒绝不完整配置。
 - **`--status` 自检**：秒出、不联网，读当前真实状态回答「我现在该做什么」——配置是否就绪、
   登录态与保活日志的新鲜度、目标周 json 是否存在／有无 TODO、附件是否已生成，最后给出
   编号的下一步清单。**比再写一份文档有用**：文档会漂，自检读的是实际状态。
@@ -22,6 +27,11 @@
 
 ### 文档
 
+- **记录 `@claude` 未触发原因与安全启用门槛**：本仓只有 CI workflow，未配置
+  `issue_comment` 触发器、Claude Action 或 `ANTHROPIC_API_KEY`，文字提及不会连接到本机 AI
+  会话。项目页 SOP 补充 GitHub App、Secret、workflow、权限和验证要求；公开仓建议仅维护者或
+  `ai-approved` 门控触发。本项目进一步确定“回复与修改分离”：AI 至多在维护者门控后回复
+  Issue，不直接修改代码；文档建议经第二次人工批准后由本地固化或创建仅含文档的待审 PR。
 - **固化 GitHub 项目页与 README 维护 SOP**：新增端到端流程，覆盖 README / SKILL / docs
   信息分层、SVG 与 Social preview 生产验收、About/Topics/Homepage/Release 的独立授权边界、
   skills.sh 与其他 Hub 的发现/安装核验，以及提交后 CI annotations、外部状态和回滚检查。

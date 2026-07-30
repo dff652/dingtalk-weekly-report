@@ -188,6 +188,7 @@ mock e2e 挂上 Actions，与 `PUBLISHING.md` 的发布门禁对齐。
 | ㉔ | **`--login-sms` 打印「已请求发送验证码」，实际什么都没发** | 点「发送验证码」会弹阿里云滑块拼图（实测 `VerifyCode: F001` 未通过），短信根本不会送达；而代码只做了点击、**没做正向确认**，于是用户一直等一条永远不来的短信。与 ㉑㉒㉓ 同一类毛病，在我**当天新写的代码里**又犯一次 | ✅ 已修：点击后检测验证码弹层，命中即 fail-loud 提示改用扫码。**不绕过验证码**——那是反滥用控制，绕它既不合适也不稳定 |
 | ㉕ | **三条铁律之一建立在不成立的前提上** | 铁律 3 写「落草稿前**删除**同一周的旧草稿」，但实测该租户**记录根本删不掉**，只能清空内容——于是「新增」路径永远会撞唯一性判定，这周的报工用工具根本走不通 | ✅ 已修：`do_fill` 默认改既有草稿（带两道护栏），铁律 3 改写为「不需要先删」，另留 `--new-record` 逃生口 |
 | ㉖ | **keepalive cron 每天静默失败** | crontab 条目 `cd` 进**源码仓**而非 `$WORK`，且 `>> output/keepalive.log` 相对 cwd——源码仓没有 `output/`，**重定向失败、命令根本没执行**；cron 的 stderr 无人看，于是「没有日志」被误读成「没到点」。会话因此过期，耽误大半天 | ✅ 已修：全绝对路径 + cwd 指向 `$WORK` + 加 15:30 冗余时段；实跑验证 `keepalive OK` |
+| ㉗ | **首次配置写了“Agent 访谈”，机制却把用户留在空模板前**（[Issue #1](https://github.com/dff652/dingtalk-weekly-report/issues/1)） | `--status` 只说“跑 configure.py”；旧向导一次询问约 40 项，并且只有完整配置全绿才保存。文档要求“基础信息先存、字段 ID 后发现”，代码却不允许分阶段保存，用户只能自己改 `config.json` | ✅ 已修：`configuration_plan` 把缺项分成 `needs_user` / `needs_form`；`--missing [--json]` 给 Agent 无私有值计划，`--guided` 只问缺失用户项并安全部分保存，`--from-discovery` 可保存已确认候选；`--check` 与填表仍保持完整严格校验 |
 | ⑬ | **开发流程未成文** | 公开仓无 `CONTRIBUTING.md`，而选 Apache-2.0 的首要理由正是"会收到陌生人 PR" | ✅ 已修（B）：[CONTRIBUTING.md](../CONTRIBUTING.md) + [SOP.md](SOP.md) |
 
 ⑩ 的后果很具体：`npx skills update` 的用户不知道更新到了什么、变了什么；出问题说不清哪版引入；

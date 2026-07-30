@@ -54,6 +54,13 @@ git 操作（若 $WORK 配了仓库）必须 `git -C $WORK`。每用户差异（
 读真实状态给出下一步：配置、登录态与保活日志新鲜度、本周 json 与附件。
 遇到任何"不知道该做什么"或用户报错时，**先跑它再判断**，不要凭猜测执行后续步骤。
 
+若输出「需要用户提供」，Agent 必须主动逐项询问列出的姓名、表单 URL、项目等信息，
+不得只让用户自行编辑 `config.json`。也可先运行
+`python3 "$SKILL/scripts/configure.py" --missing --json` 取得不含当前私有值的结构化清单；
+用户明确回答后，用重复的 `--set KEY=VALUE` 配合 `--guided --yes` 分阶段保存。用户不愿在聊天
+提供时，引导其本人在本机终端运行 `configure.py --guided`。字段 ID、枚举和按钮文字走真实表单
+发现与逐项确认，不向用户索要猜测值；一次性 entry/auth 链接始终不得询问或接收。
+
 ### 1) 确定目标周
 
 - 用户带参数（周一日期）→ 用参数；无参数：今天是周一 → 上一周；否则 → 当前周。
@@ -135,13 +142,15 @@ git 操作（若 $WORK 配了仓库）必须 `git -C $WORK`。每用户差异（
    - Windows: `powershell -File "$SKILL/bootstrap.ps1"`
    会建 `$WORK`、`.venv`、playwright+Chromium、`config.json` 模板、`~/.config/dtwr/root`。
    失败时展示原始错误并查 `USER_GUIDE.md`，不得自行拼一套简化环境。
-2. 访谈取得姓名、form_project（表单下拉**完整原文**）、attach_project、
-   progress_report（没有则留空走访谈式）、会议/工时默认值，以及用户或表单管理员确认的
-   `vocabulary`、`form_fields`、`form_texts`；不得从公开仓库猜测任何组织字段。再运行
-   `python3 "$SKILL/scripts/configure.py"` 交互填写；Agent 已取得明确值时可使用重复的
-   `--set KEY=VALUE --yes`。脚本在完整校验通过后才原子写入，并将旧配置保存为
-   `$WORK/config.json.bak`；一次性 entry/auth 登录链接不得作为 `form_url`。
-3. 登录：走第 5 步「会话已失效」分支；一次性 auth 链接只能由用户本人在交互终端隐藏输入；
+2. 运行 `configure.py --missing --json`。对 `needs_user` 主动访谈，至少取得姓名、form_url、
+   form_project（表单下拉**完整原文**）与 attach_project；已取得明确值时用
+   `configure.py --guided --set KEY=VALUE ... --yes` 分阶段原子保存，旧配置备份为
+   `$WORK/config.json.bak`。用户希望本地私密输入时改由其运行 `configure.py --guided`。
+3. 登录后按 `references/FIELDS.md` 运行 `--dump-record N`，再用
+   `configure.py --from-discovery` 逐项确认字段候选；枚举与按钮文字也必须来自本人或管理员
+   确认，不得从公开仓库猜；Agent 可继续用 `configure.py --guided --set KEY=VALUE ... --yes`
+   分阶段保存这些已确认值。最后运行 `configure.py --check`，完整校验通过前不得生成或填写周报。
+4. 登录：走第 5 步「会话已失效」分支；一次性 auth 链接只能由用户本人在交互终端隐藏输入；
    保活、升级、环境重建和重新配置命令见 `USER_GUIDE.md`，不要在未核对私有路径时凭记忆拼命令。
 
 ## 多设备 / 多人

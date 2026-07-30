@@ -29,7 +29,7 @@ $Config = Join-Path $Work "config.json"
 $Example = Join-Path $Skill "assets\config.example.json"
 if (-not (Test-Path $Config)) {
   Copy-Item $Example $Config
-  Write-Host "✅ 已写入 $Config（请运行配置向导）"
+  Write-Host "✅ 已写入 $Config（AI 首次调用会主动引导；本机可运行 --guided）"
 } else {
   Write-Host "ℹ 保留已有 config.json"
 }
@@ -67,7 +67,8 @@ Write-Host "✅ 已写 $RootFile → $Work"
 
 Write-Host ""
 Write-Host "bootstrap 完成。"
-Write-Host "  配置:   & `"$Py`" `"$Skill\scripts\configure.py`""
+Write-Host "  缺项:   & `"$Py`" `"$Skill\scripts\configure.py`" --missing"
+Write-Host "  配置:   & `"$Py`" `"$Skill\scripts\configure.py`" --guided"
 Write-Host "  登录:   & `"$Py`" `"$Skill\scripts\fill_form.py`" --login"
 Write-Host "  URL兜底: 用户本人在交互终端运行 fill_form.py --login-url（隐藏输入）"
 Write-Host "  AI: Claude 用 /dingtalk-weekly-report；Codex 用 `$dingtalk-weekly-report 或从 /skills 选择"

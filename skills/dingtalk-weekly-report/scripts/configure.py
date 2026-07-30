@@ -12,7 +12,18 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from dtwr_common import resolve_progress_report, workdir
-from dtwr_validation import ValidationError, validate_config
+from dtwr_fields import (
+    FORM_FIELD_KEYS,
+    FORM_TEXT_KEYS,
+    OPTIONAL_FORM_FIELD_KEYS,
+    VOCABULARY_LIST_KEYS,
+    VOCABULARY_VALUE_KEYS,
+)
+from dtwr_validation import (
+    CONFIG_PLACEHOLDERS,
+    ValidationError,
+    validate_config,
+)
 
 
 FIELD_SPECS = (
@@ -60,6 +71,25 @@ FIELD_SPECS = (
     ("form_texts.success_messages", "成功提示（逗号分隔）", "list"),
 )
 FIELD_MAP = {path: (label, kind) for path, label, kind in FIELD_SPECS}
+
+USER_INPUT_PATHS = (
+    "name",
+    "form_url",
+    "form_project",
+    "attach_project",
+)
+FORM_INPUT_PATHS = (
+    *(f"vocabulary.{key}" for key in VOCABULARY_LIST_KEYS),
+    *(f"vocabulary.{key}" for key in VOCABULARY_VALUE_KEYS),
+    "project_type",
+    "status",
+    "standup.status",
+    "monday_meeting.status",
+    *(f"form_fields.{key}" for key in FORM_FIELD_KEYS
+      if key not in OPTIONAL_FORM_FIELD_KEYS),
+    *(f"form_texts.{key}" for key in FORM_TEXT_KEYS),
+    "form_texts.success_messages",
+)
 
 
 def nested_get(config: dict, path: str):
@@ -122,8 +152,9 @@ def apply_assignments(config: dict, assignments: list[str]) -> tuple[dict, list[
     return candidate, changed
 
 
-def validate_candidate(config: dict) -> None:
-    validate_config(config)
+def validate_candidate(
+        config: dict, allow_incomplete: bool = False) -> None:
+    validate_config(config, allow_incomplete=allow_incomplete)
     resolve_progress_report(config.get("progress_report", ""))
 
 
@@ -174,6 +205,75 @@ def interactive_assignments(config: dict) -> list[str]:
     return assignments
 
 
+def _missing(config: dict, path: str) -> bool:
+    value = nested_get(config, path)
+    if isinstance(value, list):
+        return not value
+    text = value.strip() if isinstance(value, str) else ""
+    if not text:
+        return True
+    return path in USER_INPUT_PATHS and any(
+        marker in text for marker in CONFIG_PLACEHOLDERS)
+
+
+def _plan_items(config: dict, paths: tuple[str, ...]) -> list[dict[str, str]]:
+    return [
+        {"path": path, "label": FIELD_MAP[path][0]}
+        for path in paths
+        if _missing(config, path)
+    ]
+
+
+def configuration_plan(config: dict) -> dict:
+    """返回不含当前私有值的首次配置计划，供 CLI 与 Agent 共用。"""
+    needs_user = _plan_items(config, USER_INPUT_PATHS)
+    needs_form = _plan_items(config, FORM_INPUT_PATHS)
+    ready = False
+    if not needs_user and not needs_form:
+        try:
+            validate_candidate(config)
+            ready = True
+        except (ValidationError, ValueError):
+            pass
+    return {
+        "ready": ready,
+        "needs_user": needs_user,
+        "needs_form": needs_form,
+        "needs_review": not ready and not needs_user and not needs_form,
+    }
+
+
+def print_configuration_plan(plan: dict) -> None:
+    if plan["ready"]:
+        print("配置已就绪。")
+        return
+    if plan["needs_user"]:
+        print("仍需用户提供：")
+        for item in plan["needs_user"]:
+            print(f"- {item['label']} ({item['path']})")
+    if plan["needs_form"]:
+        print("仍需从真实表单发现或由用户/管理员确认：")
+        for item in plan["needs_form"]:
+            print(f"- {item['label']} ({item['path']})")
+    if plan["needs_review"]:
+        print("配置没有空缺项，但仍有非法或不一致值；运行 configure.py --check 查看本机详情。")
+
+
+def guided_assignments(config: dict) -> list[str]:
+    """只问用户本人能直接回答且当前缺失的必填项。"""
+    plan = configuration_plan(config)
+    if not plan["needs_user"]:
+        return []
+    print("只询问当前缺失的用户信息；敏感时可由用户本人在本机终端输入。")
+    print("不要输入或保存一次性 entry/auth 登录链接。")
+    assignments = []
+    for item in plan["needs_user"]:
+        raw = input(f"{item['label']}: ")
+        if raw.strip():
+            assignments.append(f"{item['path']}={raw}")
+    return assignments
+
+
 
 def assignments_from_discovery(config: dict, path: Path) -> list[str]:
     """把 `--dump-record` 产出的候选逐项交给用户确认。
@@ -216,11 +316,16 @@ def assignments_from_discovery(config: dict, path: Path) -> list[str]:
     return assignments
 
 
-def print_changes(before: dict, after: dict, changed: list[str]) -> None:
+def print_changes(
+        before: dict, after: dict, changed: list[str],
+        reveal_values: bool = True) -> None:
     print("待保存变更：")
     for path in changed:
-        print(f"- {path}: {nested_get(before, path)!r} -> "
-              f"{nested_get(after, path)!r}")
+        if reveal_values:
+            print(f"- {path}: {nested_get(before, path)!r} -> "
+                  f"{nested_get(after, path)!r}")
+        else:
+            print(f"- {path}")
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -228,6 +333,15 @@ def build_parser() -> argparse.ArgumentParser:
         description="查看、校验或交互更新 dingtalk-weekly-report 的 config.json")
     parser.add_argument("--show", action="store_true", help="显示当前配置，不修改")
     parser.add_argument("--check", action="store_true", help="校验当前配置，不修改")
+    parser.add_argument(
+        "--missing", action="store_true",
+        help="只列出当前缺项并按用户输入/表单发现分类，不修改")
+    parser.add_argument(
+        "--json", action="store_true", dest="as_json",
+        help="与 --missing 同用，输出不含当前私有值的 JSON")
+    parser.add_argument(
+        "--guided", action="store_true",
+        help="首次配置：只询问缺失的用户必填项，并允许安全保存未完成配置")
     parser.add_argument(
         "--set", action="append", default=[], metavar="KEY=VALUE",
         help="更新指定配置项；可重复使用，嵌套项使用 standup.hours 形式")
@@ -240,10 +354,17 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main() -> int:
     args = build_parser().parse_args()
-    if (args.show or args.check) and args.set:
-        raise SystemExit("--show/--check 不能与 --set 同时使用")
-    if args.show and args.check:
-        raise SystemExit("--show 与 --check 不能同时使用")
+    if args.as_json and not args.missing:
+        raise SystemExit("--json 只能与 --missing 同时使用")
+    read_modes = sum(bool(value) for value in (
+        args.show, args.check, args.missing))
+    if read_modes > 1:
+        raise SystemExit("--show、--check、--missing 只能选一个")
+    if read_modes and (args.set or args.guided
+                       or args.from_discovery is not None):
+        raise SystemExit("查看/校验模式不能与写入模式同时使用")
+    if args.guided and args.from_discovery is not None:
+        raise SystemExit("--guided 不能与 --from-discovery 同时使用")
 
     work = workdir()
     path = work / "config.json"
@@ -255,25 +376,38 @@ def main() -> int:
     if args.show:
         print(json.dumps(config, ensure_ascii=False, indent=2))
         return 0
+    if args.missing:
+        plan = configuration_plan(config)
+        if args.as_json:
+            print(json.dumps(plan, ensure_ascii=False))
+        else:
+            print_configuration_plan(plan)
+        return 0
     try:
         if args.check:
             validate_candidate(config)
             print(f"配置有效: {path}")
             return 0
 
+        partial_mode = args.guided or args.from_discovery is not None
         if args.from_discovery is not None:
             source = Path(args.from_discovery) if args.from_discovery else (
                 work / "output" / "field-proposal.json")
             assignments = assignments_from_discovery(config, source)
+        elif args.guided:
+            assignments = args.set or guided_assignments(config)
         else:
             assignments = args.set or interactive_assignments(config)
         candidate, changed = apply_assignments(config, assignments)
         if not changed:
-            validate_candidate(candidate)
+            validate_candidate(candidate, allow_incomplete=partial_mode)
             print("配置未变化。")
+            if partial_mode:
+                print_configuration_plan(configuration_plan(candidate))
             return 0
-        validate_candidate(candidate)
-        print_changes(config, candidate, changed)
+        validate_candidate(candidate, allow_incomplete=partial_mode)
+        print_changes(
+            config, candidate, changed, reveal_values=not partial_mode)
         if not args.yes:
             answer = input("确认保存？[y/N]: ").strip().lower()
             if answer not in ("y", "yes"):
@@ -282,6 +416,8 @@ def main() -> int:
         backup = save_config(path, candidate)
         print(f"配置已保存: {path}")
         print(f"旧配置备份: {backup}")
+        if partial_mode:
+            print_configuration_plan(configuration_plan(candidate))
         return 0
     except (ValidationError, ValueError) as exc:
         raise SystemExit(str(exc)) from exc

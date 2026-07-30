@@ -147,7 +147,7 @@ fi
 echo ""
 echo "下一步:"
 echo "  1) 建运行环境: bash \"$SRC/bootstrap.sh\"   # Windows: .\\bootstrap.ps1"
-echo "  2) 配置: \$WORK/.venv/bin/python \"$SRC/scripts/configure.py\""
+echo "  2) 配置: AI 首次调用会主动询问；本机可运行 \$WORK/.venv/bin/python \"$SRC/scripts/configure.py\" --guided"
 echo "  3) 新会话: Claude 用 /dingtalk-weekly-report；Codex 用 \$dingtalk-weekly-report 或 /skills 选择"
 echo "     首次登录首选 --login 扫码"
 echo "     URL 兜底由用户本人在交互终端运行 --login-url（隐藏输入，勿发给 Agent）"

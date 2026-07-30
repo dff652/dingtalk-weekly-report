@@ -31,6 +31,7 @@ from playwright.sync_api import (
 )
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+from configure import configuration_plan
 from dtwr_common import dtwr_config_dir, require_owned, workdir
 from dtwr_discover import analyse, propose_fields
 from dtwr_validation import (
@@ -851,12 +852,29 @@ def do_status():
     ok, warn, bad, todo = "✅", "⚠️ ", "❌", []
     print(f"工作目录: {WORK}")
 
+    plan = configuration_plan(CONFIG)
     try:
         validate_config(CONFIG)
         print(f"{ok} 配置校验通过")
     except ValidationError as exc:
-        print(f"{bad} 配置未就绪:\n{exc}")
-        todo.append("先跑 configure.py 补齐配置（字段 id 可用 --dump-record N 自动发现）")
+        print(f"{bad} 配置未就绪")
+        if plan["needs_user"]:
+            print("需要用户提供：")
+            for item in plan["needs_user"]:
+                print(f"- {item['label']} ({item['path']})")
+            todo.append(
+                "Agent 主动逐项询问以上信息；用户不愿在聊天提供时，"
+                "引导其本人运行 configure.py --guided")
+        if plan["needs_form"]:
+            print("需要从真实表单发现或由用户/管理员确认：")
+            for item in plan["needs_form"]:
+                print(f"- {item['label']} ({item['path']})")
+            todo.append(
+                "基础信息保存后登录，运行 --dump-record N，"
+                "再用 configure.py --from-discovery 逐项确认")
+        if plan["needs_review"]:
+            print(exc)
+            todo.append("运行 configure.py --check 修正非法或不一致配置")
 
     if STATE.exists():
         age = (time.time() - STATE.stat().st_mtime) / 86400

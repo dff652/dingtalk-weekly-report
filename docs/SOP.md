@@ -33,6 +33,7 @@
 | 打包 / 发布链路 | `run_smoke.sh` + `pack-skill.sh` + push 后 `run_release_acceptance.sh` |
 | 版本号 / CHANGELOG | 单元测试（`test_version.py` 守一致性） |
 | README / SVG / Social preview | `tests/test_readme_assets.py` + README audit + 900px / 360px 浏览器预览；完整流程见 [GITHUB_PROJECT_PAGE_SOP.md](GITHUB_PROJECT_PAGE_SOP.md) |
+| GitHub Issue / `@AI` 自动化 | 外部 `@AI` 不触发代码修改；如启用辅助，仅由维护者门控后在 Issue 回复，文档固化另行批准。权限与两阶段流程见 [GITHUB_PROJECT_PAGE_SOP.md](GITHUB_PROJECT_PAGE_SOP.md#github-issue-中的-ai-自动触发) |
 | **点击 / 端点 / 配置键**（碰到"这个动作能不能做"的边界） | `tests/test_invariants.py` 守「无提交能力」。它红了别急着改测试——**先确认承诺是不是真的被削弱了** |
 | 文档 | pre-push（脱敏）；判断 [docs/README.md](README.md) 索引是否要更新 |
 
