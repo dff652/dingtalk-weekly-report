@@ -9,6 +9,7 @@
 | 测试 | 本地钩子拦 → 提交 → CI 三 job → 人工验收 | [TESTING.md](TESTING.md) |
 | 发版 | 改 VERSION + CHANGELOG → CI 绿 → 打 tag → 打包 | [PUBLISHING.md](PUBLISHING.md#版本与发版) |
 | 部署 | 用户装 skill → bootstrap → configure → 登录 → keepalive | [../README.md](../README.md)、技能包 `USER_GUIDE.md` |
+| GitHub 项目页 | README 分层 → SVG 验收 → 元数据发布 → Hub 核验 | [GITHUB_PROJECT_PAGE_SOP.md](GITHUB_PROJECT_PAGE_SOP.md) |
 
 ## 开发
 
@@ -31,6 +32,7 @@
 | 安装 / bootstrap 脚本 | `bash tests/run_full_acceptance.sh`（隔离 HOME） |
 | 打包 / 发布链路 | `run_smoke.sh` + `pack-skill.sh` + push 后 `run_release_acceptance.sh` |
 | 版本号 / CHANGELOG | 单元测试（`test_version.py` 守一致性） |
+| README / SVG / Social preview | `tests/test_readme_assets.py` + README audit + 900px / 360px 浏览器预览；完整流程见 [GITHUB_PROJECT_PAGE_SOP.md](GITHUB_PROJECT_PAGE_SOP.md) |
 | **点击 / 端点 / 配置键**（碰到"这个动作能不能做"的边界） | `tests/test_invariants.py` 守「无提交能力」。它红了别急着改测试——**先确认承诺是不是真的被削弱了** |
 | 文档 | pre-push（脱敏）；判断 [docs/README.md](README.md) 索引是否要更新 |
 

@@ -147,6 +147,10 @@ bash tests/run_full_acceptance.sh
 
 ### GitHub 项目页 / README 优化决定（2026-07-30）
 
+长期执行流程已固化到
+[GitHub 项目页与 README 维护 SOP](GITHUB_PROJECT_PAGE_SOP.md)；本节只保留本项目的决定、
+视觉事实源与实施状态。
+
 > **决定：可行，采用；先做本地预览，不直接发布。** 使用
 > [`oil-oil/beautify-github-readme`](https://github.com/oil-oil/beautify-github-readme)
 > 的整份 README 模式做 **visual refresh**，不做全量品牌重构。本次评估基于上游

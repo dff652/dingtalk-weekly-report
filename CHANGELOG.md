@@ -22,6 +22,10 @@
 
 ### 文档
 
+- **固化 GitHub 项目页与 README 维护 SOP**：新增端到端流程，覆盖 README / SKILL / docs
+  信息分层、SVG 与 Social preview 生产验收、About/Topics/Homepage/Release 的独立授权边界、
+  skills.sh 与其他 Hub 的发现/安装核验，以及提交后 CI annotations、外部状态和回滚检查。
+  `docs/SOP.md` 与文档索引补入口，避免长期规则继续散落在会话记录中。
 - **统一 README 视觉资产规范与回归门禁**：三张 SVG 显式使用跨平台中文/英文/等宽字体栈，
   字重只保留真实存在的 400/700；收深蓝色与 muted 灰，使关键文本对比度不低于 4.5:1。
   新增 `tests/test_readme_assets.py` 固定画布、ARIA、安全特性、许可色板、字体、对比度及
