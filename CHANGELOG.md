@@ -9,16 +9,17 @@
 
 ## [Unreleased]
 
-### 改进
-
-- **Skill 升级不再被误解为重装运行环境**：安装提示和用户指南明确区分 Skill 代码更新与
-  `$WORK/.venv`；正常升级无需重跑 bootstrap。bootstrap 新增 `--diagnose` / `-Diagnose`
-  无安装体检，健康环境直接复用现有 venv 与 Chromium，只有依赖版本不符、浏览器缓存缺失或
-  显式 `--force-venv` 时才进入同步/重建。阶段、耗时、失败阶段及安装器原始输出统一追加到
-  私有 `$WORK/output/bootstrap.log`，方便判断慢在 Python 包还是 Chromium。
+## [0.4.1] - 2026-08-03
 
 ### 修复
 
+- **修复子表超过 10 行时填表失败**：氚云子表默认每页 10 行，第 11 行一点「新增」就翻到
+  第 2 页，可见行数反而变少，被误判成「新增没生效」而中止（真机 12 行周报踩中：
+  5 工作日 × 会议/开发 2 行 + 周末加班 2 行）。现在填行前先把子表每页条数调大到能装下
+  本周所有行（编辑既有草稿时以分页「共N条」为准），无分页控件的表单保持 no-op；
+  调整不生效或行数超过最大每页选项时 fail-loud。mock 表单同步仿真分页与每页条数切换
+  （新增后跳到最后一页，复刻真机行为），`run_mock_test.sh` 改用 12 行 fixture 常态回归
+  （5 行 fixture 仍由 test_core/smoke 使用）；负例已复现与真机一致的报错后修复转绿。
 - **修复 `--login-web` 扫码成功后仍停在“等待扫码”（Issue #3）**：首次引导现在会先询问
   `form_texts.report_title`，缺少正向标识时在打开二维码前 fail-loud，不再无效等待 300 秒；
   扫码页与独立目标页共用同一 Playwright context，后者主动访问 `form_url`，即使 OAuth
@@ -26,6 +27,14 @@
   不使用 URL 或 Cookie 变化猜测成功。`127.0.0.1` 状态页仍只展示二维码和状态，不接收凭证。
   2026-07-30 已完成真实扫码验收：页面显示成功、`state.json` 以 `0600` 保存，随后
   `--keepalive` 返回会话有效。
+
+### 改进
+
+- **Skill 升级不再被误解为重装运行环境**：安装提示和用户指南明确区分 Skill 代码更新与
+  `$WORK/.venv`；正常升级无需重跑 bootstrap。bootstrap 新增 `--diagnose` / `-Diagnose`
+  无安装体检，健康环境直接复用现有 venv 与 Chromium，只有依赖版本不符、浏览器缓存缺失或
+  显式 `--force-venv` 时才进入同步/重建。阶段、耗时、失败阶段及安装器原始输出统一追加到
+  私有 `$WORK/output/bootstrap.log`，方便判断慢在 Python 包还是 Chromium。
 
 ## [0.4.0] - 2026-07-30
 
