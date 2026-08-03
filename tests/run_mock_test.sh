@@ -9,7 +9,10 @@ cleanup() { rm -rf "$TMP"; }
 trap cleanup EXIT
 mkdir -p "$TMP/work/weeks"
 cp tests/fixtures/config.json "$TMP/work/config.json"
-cp tests/fixtures/week_report_20260713.json "$TMP/work/weeks/"
+# 用 12 行分页 fixture（>10 行触发子表分页）：覆盖面是 5 行 fixture 的超集，
+# 额外回归「第 11 行新增即翻页」的真机坑；5 行 fixture 仍由 test_core/smoke 使用。
+cp tests/fixtures/week_report_20260713_paged.json \
+  "$TMP/work/weeks/week_report_20260713.json"
 
 PY="${DTWR_PYTHON:-$ROOT/.venv/bin/python}"
 SKILL="${DTWR_SKILL:-$ROOT/skills/dingtalk-weekly-report}"

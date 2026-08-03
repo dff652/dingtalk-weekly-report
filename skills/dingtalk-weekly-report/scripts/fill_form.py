@@ -596,6 +596,49 @@ def pick_dropdown(fr, page, scope, value):
     raise RuntimeError(f"下拉无可见选项「{value}」")
 
 
+def fit_subgrid_page_size(fr, page, need):
+    """子表默认每页 10 行，超出会分页——行计数与 nth 定位都只看得到当前页
+    （真机踩坑：第 11 行一点「新增」就翻到第 2 页，可见行数反而变少，
+    误判成「新增没生效」）。填行前把每页条数调到能装下所有行；
+    mock / 无分页控件的旧表单则 no-op。"""
+    changer = fr.locator(f"{SUB} .ant-pagination-options-size-changer")
+    if not changer.count() or not changer.first.is_visible():
+        return
+    total_el = fr.locator(f"{SUB} .ant-pagination-total-text")
+    if total_el.count():  # 编辑既有草稿时行数以「共N条」为准，别只按本周应报行数
+        m = re.search(r"\d+", total_el.first.inner_text())
+        if m:
+            need = max(need, int(m.group(0)))
+    m = re.search(r"\d+", changer.first.inner_text())
+    if m and int(m.group(0)) >= need:
+        return
+    changer.first.click()
+    page.wait_for_timeout(800)
+    sizes = []
+    opts = fr.locator("li.ant-select-dropdown-menu-item")
+    for k in range(opts.count()):
+        el = opts.nth(k)
+        if not el.is_visible():
+            continue
+        m = re.search(r"\d+", el.inner_text())
+        if m:
+            sizes.append((int(m.group(0)), el))
+    fits = [s for s in sizes if s[0] >= need]
+    if not fits:
+        page.keyboard.press("Escape")
+        top = max((s[0] for s in sizes), default=10)
+        raise RuntimeError(f"需要 {need} 行，超过子表每页条数最大选项 {top}，无法一页装下")
+    size, el = min(fits, key=lambda s: s[0])
+    el.click()
+    page.wait_for_timeout(800)
+    got = re.search(r"\d+", changer.first.inner_text())
+    if not got or int(got.group(0)) < need:
+        raise RuntimeError(
+            f"子表每页条数未能调整到 {size}"
+            f"（当前显示 {changer.first.inner_text().strip()!r}）")
+    log(f"子表每页条数已调到 {size}（需 {need} 行同屏）")
+
+
 # ---------------- 填表 ----------------
 
 def attach_path(monday_str):
@@ -764,6 +807,7 @@ def do_fill(report_path, url, save_draft, new_record=False):
             log(f"工作详情 {len(report['days'])} 行")
             # 只取外层行：行内滚动容器与行同名 .subgrid-sheet__row，直匹配会翻倍并覆盖上一行
             rows = fr.locator(f"{SUB} .ant-spin-container > .subgrid-sheet__row")
+            fit_subgrid_page_size(fr, page, len(report["days"]))
             if editing and rows.count() > len(report["days"]):
                 shot(page, "99-error")
                 sys.exit(

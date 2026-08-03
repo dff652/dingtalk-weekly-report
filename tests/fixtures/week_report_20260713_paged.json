@@ -1,0 +1,126 @@
+{
+  "schema_version": 2,
+  "name": "验收人员",
+  "form_project": "TEST-PROJECT 测试项目",
+  "attach_project": "TEST-ACTIVITY 测试活动",
+  "dept_goal": "测试目标",
+  "vocabulary": {
+    "project_types": ["项目工作", "组织活动"],
+    "statuses": ["进行中", "会议", "请假"],
+    "attachment_task_types": ["项目工作"],
+    "operations_project_type": "组织活动",
+    "leave_status": "请假"
+  },
+  "week": {"start": "2026-07-13", "end": "2026-07-19"},
+  "days": [
+    {
+      "date": "2026-07-13",
+      "project_type": "组织活动",
+      "project": "",
+      "status": "会议",
+      "hours": 0.5,
+      "content": "周例会及部门协作事项"
+    },
+    {
+      "date": "2026-07-13",
+      "project_type": "项目工作",
+      "project": "TEST-PROJECT 测试项目",
+      "status": "进行中",
+      "hours": 7.5,
+      "content": "完成周一开发任务"
+    },
+    {
+      "date": "2026-07-14",
+      "project_type": "项目工作",
+      "project": "TEST-PROJECT 测试项目",
+      "status": "会议",
+      "hours": 0.5,
+      "content": "每日站会"
+    },
+    {
+      "date": "2026-07-14",
+      "project_type": "项目工作",
+      "project": "TEST-PROJECT 测试项目",
+      "status": "进行中",
+      "hours": 7.5,
+      "content": "完成输入校验与错误分支测试"
+    },
+    {
+      "date": "2026-07-15",
+      "project_type": "项目工作",
+      "project": "TEST-PROJECT 测试项目",
+      "status": "会议",
+      "hours": 0.5,
+      "content": "每日站会跟进"
+    },
+    {
+      "date": "2026-07-15",
+      "project_type": "项目工作",
+      "project": "TEST-PROJECT 测试项目",
+      "status": "进行中",
+      "hours": 7.5,
+      "content": "完成附件生成与结构检查"
+    },
+    {
+      "date": "2026-07-16",
+      "project_type": "项目工作",
+      "project": "TEST-PROJECT 测试项目",
+      "status": "会议",
+      "hours": 0.5,
+      "content": "站会与联调对齐"
+    },
+    {
+      "date": "2026-07-16",
+      "project_type": "项目工作",
+      "project": "TEST-PROJECT 测试项目",
+      "status": "进行中",
+      "hours": 7.5,
+      "content": "完成表单字段仿真回填"
+    },
+    {
+      "date": "2026-07-17",
+      "project_type": "项目工作",
+      "project": "TEST-PROJECT 测试项目",
+      "status": "会议",
+      "hours": 0.5,
+      "content": "周总结会议"
+    },
+    {
+      "date": "2026-07-17",
+      "project_type": "项目工作",
+      "project": "TEST-PROJECT 测试项目",
+      "status": "进行中",
+      "hours": 7.5,
+      "content": "完成安装到使用的验收测试"
+    },
+    {
+      "date": "2026-07-18",
+      "project_type": "项目工作",
+      "project": "TEST-PROJECT 测试项目",
+      "status": "进行中",
+      "hours": 7,
+      "content": "周六加班：完成回归修复验证"
+    },
+    {
+      "date": "2026-07-19",
+      "project_type": "项目工作",
+      "project": "TEST-PROJECT 测试项目",
+      "status": "进行中",
+      "hours": 5,
+      "content": "周日加班：完成发布前检查"
+    }
+  ],
+  "special_note": "本周周六加班 7 小时、周日加班 5 小时。",
+  "summary": {
+    "tasks": "周报工具安全与测试完善",
+    "task_type": "项目工作",
+    "deliverables": "输入输出契约、校验器和自动测试",
+    "done": "全部计划检查项已通过自动测试",
+    "remark": ""
+  },
+  "next_week": {
+    "tasks": "真实环境人工验收",
+    "task_type": "项目工作",
+    "deliverables": "草稿截图与人工验收记录"
+  }
+}

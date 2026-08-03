@@ -25,6 +25,14 @@
 <div id="mock-subgrid" class="subgrid-control-adapter">
   <button type="button" onclick="addRow()">新增</button>
   <div class="subgrid-sheet__body"><div class="ant-spin-container"></div></div>
+  <!-- 复刻真机的坑：子表分页，每页默认 10 行，新增后跳到最后一页 -->
+  <ul class="ant-pagination">
+    <li class="ant-pagination-total-text">共0条</li>
+    <li class="ant-pagination-options">
+      <div class="ant-select ant-pagination-options-size-changer" onclick="openSizeMenu(event)"><span>10</span></div>
+    </li>
+  </ul>
+  <ul id="size-menu" style="display:none; position:fixed; bottom:40px; right:10px; background:#fff; border:1px solid #666; z-index:9; list-style:none; padding:2px; margin:0;"></ul>
 </div>
 
 <button type="button" onclick="save('draft')">暂 存</button>
@@ -78,6 +86,38 @@ function makeDropdown(fid) {
   return div;
 }
 
+// 分页仿真：行全集在 allRows，容器只挂当前页（detach 不丢 input 值）——
+// 复刻真机「第 11 行一新增就翻页、可见行数变少」的行为。
+let allRows = [], pageSize = 10, curPage = 1;
+const PAGE_SIZES = [10, 20, 50, 100];
+
+function renderRows() {
+  const c = document.querySelector(".subgrid-sheet__body .ant-spin-container");
+  while (c.firstChild) c.removeChild(c.firstChild);
+  const start = (curPage - 1) * pageSize;
+  for (const r of allRows.slice(start, start + pageSize)) c.appendChild(r);
+  document.querySelector(".ant-pagination-total-text").textContent = "共" + allRows.length + "条";
+  document.querySelector(".ant-pagination-options-size-changer span").textContent = pageSize;
+}
+
+function openSizeMenu(e) {
+  e.stopPropagation();
+  document.getElementById("size-menu").style.display = "block";
+}
+for (const n of PAGE_SIZES) {
+  const li = document.createElement("li");
+  li.className = "ant-select-dropdown-menu-item";
+  li.textContent = n;
+  li.style.padding = "2px 10px"; li.style.cursor = "pointer";
+  li.onclick = (ev) => {
+    ev.stopPropagation();
+    pageSize = n; curPage = 1;
+    document.getElementById("size-menu").style.display = "none";
+    renderRows();
+  };
+  document.getElementById("size-menu").appendChild(li);
+}
+
 function addRow() {
   const row = document.createElement("div");
   row.className = "subgrid-sheet__row";
@@ -96,13 +136,15 @@ function addRow() {
   const hi = document.createElement("input"); hb.appendChild(hi); row.appendChild(hb);
   const cb = document.createElement("div"); cb.id = "mock-row-content";
   const ta = document.createElement("textarea"); cb.appendChild(ta); row.appendChild(cb);
-  document.querySelector(".subgrid-sheet__body .ant-spin-container").appendChild(row);
+  allRows.push(row);
+  curPage = Math.ceil(allRows.length / pageSize); // 真机行为：新增后跳到最后一页
+  renderRows();
 }
 addRow(); // 表单自带首行
 
 function save(kind) {
   const rows = [];
-  for (const r of document.querySelectorAll(".ant-spin-container > .subgrid-sheet__row")) {
+  for (const r of allRows) {  // 收全集（等价服务端），不只当前分页可见行
     rows.push([
       r.querySelector("#mock-row-date input").value,
       r.querySelector('[data-fid="mock-row-type"]').textContent,
