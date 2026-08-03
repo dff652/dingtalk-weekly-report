@@ -81,6 +81,11 @@ npx skills add dff652/dingtalk-weekly-report -s dingtalk-weekly-report -a claude
 - `--dump` → dump.html / dump.png
 - 登录态：`~/.config/dtwr/state.json`（0600，勿入 git）
 - 一次性 auth 链接：Agent 不得接收；不得进入 argv、聊天、文件或 git
+- 症状「点『新增』N 次后子表仍只有 M 行」：先看 99-error.png 子表右下角分页
+  （「共N条 / 每页条数」）。v0.4.1 起 `fit_subgrid_page_size` 已在填行前自动调大每页条数；
+  若再现，优先怀疑分页控件 DOM 变化（`.ant-pagination-options-size-changer` /
+  `li.ant-select-dropdown-menu-item`），不是「新增」按钮失效。缺陷全记录见
+  [REVIEW.md ⑩](REVIEW.md)。
 
 ### 独立核对「某周到底提交了没」
 
@@ -101,7 +106,9 @@ npx skills add dff652/dingtalk-weekly-report -s dingtalk-weekly-report -a claude
 - 工具只落草稿，不提交；
 - `form_texts.save_draft` 不得指向提交按钮；
 - 截止提醒、休假状态/工时、枚举和字段 ID 均来自私有配置；
-- 附件命名 `YYYYMMDD-YYYYMMDD本周工作总结与下周计划.xlsx`；content ≤200 字。
+- 附件命名 `YYYYMMDD-YYYYMMDD本周工作总结与下周计划.xlsx`；content ≤200 字；
+- 子表每页默认 10 行会分页，行计数/`nth` 定位只看当前页——填行前必须先把每页条数
+  调到能装下所有行（`fit_subgrid_page_size`，编辑既有草稿时以分页「共N条」对齐）。
 
 ## 测试覆盖
 
@@ -152,6 +159,38 @@ bash tests/run_full_acceptance.sh
 - [x] README visual refresh —— 静态 Hero、工作流图与内容重排已在本地落地并通过宽/窄屏预览
 - [~] GitHub 项目页元数据 —— About、Topics、skills.sh Homepage 与 v0.3.0 Release 已完成；
       Social preview 首版已上传，跨平台字体修正版待替换
+
+### 2026-08-03 实战复盘：SOP 结论与产品化清单
+
+首次 12 行加班周真机实战（发现并修复子表分页缺陷 ⑩，发 v0.4.1）沉淀的结论。
+踩坑与排查全记录见 [REVIEW.md ⑩](REVIEW.md) 与 [TESTING.md 2026-08-03 节](TESTING.md)。
+
+**SOP 结论（已验证可复制，后续遵守）：**
+
+1. **真机 bug 修复三步走**：mock 复现负例（红）→ 修复（绿）→ 真机复跑验证。本次分页
+   bug 全程按此执行，负例报错与真机逐字一致才算「mock 复现成立」。
+2. **新测试场景开专用 fixture**（如 `week_report_20260713_paged.json`），不改共享
+   fixture 的语义——`test_core` 从共享 fixture 派生用例，改行数/工时会连坏无关用例。
+3. **发行链固定序列**：修码 → 全量回归 → bump VERSION + CHANGELOG → 分两 commit
+   （fix + `chore: prepare vX.Y.Z release`）→ 打 tag → `pack-skill.sh`（工作区必须干净，
+   否则只出 dev 构建）→ zip 解压 `install.sh --force` → md5 对账安装态与仓库态。
+4. **加班周操作口径**：周末行直接加进 `days`（用正常工作状态，日期落在周末即体现加班）；
+   `hours_policy.weekly_hours_cap` 改**报告内快照**、不动全局 config（校验以随报快照为准，
+   下周自动回到默认上限）；`special_note` 写明加班天数与时长。生成前必须先问用户
+   「本周有没有加班」（SKILL.md 既有要求，本次验证了完整路径）。
+5. **内容源缺日先补齐再生成**：progress_report 未覆盖目标周时，按天问用户或由用户授权
+   从提交记录补写工作日志（人审后回填），不得由 skill 静默扫仓库编内容。
+
+**产品化候选（未排期，做前先评估收益）：**
+
+- [ ] P6 错误自诊断：新增行失败时读分页「共N条」，报错文案区分「分页翻页」与
+      「按钮真失效」（`fit_subgrid_page_size` 已根治主因，此为防 DOM 变化回归的诊断兜底）
+- [ ] P7 `--status` 报内容源覆盖率：列出目标周内 progress_report 无记录的工作日，
+      把「缺日」提前到 extract 之前暴露
+- [ ] P8 测试残留净化：`tests/fixtures/output/`（fill_form 测试日志落点）进 `.gitignore`
+      或测试收尾清理——残留会让 `pack-skill.sh` 判工作区脏、退化 dev 构建
+- [ ] P9 维护者辅助脚本：按天提取 git log 草拟 PROGRESS_REPORT 日详情骨架（独立于
+      skill 主流程；skill 本体仍禁扫仓库，产出必须人审后回填）
 
 ### GitHub 项目页 / README 优化决定（2026-07-30）
 

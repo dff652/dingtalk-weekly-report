@@ -133,3 +133,7 @@
 - 点「暂存」后 FormAdapter frame 会 **detach**，遍历 `page.frames` 查询它会抛错——需跳过。
 - 列表页是自有网格：行 `.tg-row`、单元格 `.tg-cell.tg-c-<N>`（列序编号，与表头一一对应）、
   记录标题 `span.tg-link`。标题**不是 `<a href>`**，打开记录只能点击，无法用 URL 直取。
+- 子表**分页**：每页默认 10 行（`ul.ant-pagination`，含「共N条」与每页条数切换器
+  `.ant-pagination-options-size-changer`，选项在 `li.ant-select-dropdown-menu-item`）。
+  行计数与 nth 定位只看当前页；「新增」超出当前页容量会自动跳到最后一页。>10 行填表
+  必须先把每页条数调大到同屏（`fit_subgrid_page_size` 已内置处理）。
