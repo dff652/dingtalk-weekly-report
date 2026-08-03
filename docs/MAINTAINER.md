@@ -187,8 +187,8 @@ bash tests/run_full_acceptance.sh
       「按钮真失效」（`fit_subgrid_page_size` 已根治主因，此为防 DOM 变化回归的诊断兜底）
 - [ ] P7 `--status` 报内容源覆盖率：列出目标周内 progress_report 无记录的工作日，
       把「缺日」提前到 extract 之前暴露
-- [ ] P8 测试残留净化：`tests/fixtures/output/`（fill_form 测试日志落点）进 `.gitignore`
-      或测试收尾清理——残留会让 `pack-skill.sh` 判工作区脏、退化 dev 构建
+- [x] P8 测试残留净化：`tests/fixtures/output/` 已进 `.gitignore`（2026-08-03）——
+      此前残留会让 `pack-skill.sh` 判工作区脏、退化 dev 构建
 - [ ] P9 维护者辅助脚本：按天提取 git log 草拟 PROGRESS_REPORT 日详情骨架（独立于
       skill 主流程；skill 本体仍禁扫仓库，产出必须人审后回填）
 

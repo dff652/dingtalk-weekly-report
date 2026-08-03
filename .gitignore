@@ -3,6 +3,9 @@
 /config.json.bak
 /weeks/
 /output/
+# 测试以 tests/fixtures 为 DTWR_HOME 时的日志/截图落点；残留会让 pack-skill.sh
+# 判工作区脏、退化 dev 构建（MAINTAINER.md 实战复盘 P8）
+/tests/fixtures/output/
 __pycache__/
 *.pyc
 /dist/
