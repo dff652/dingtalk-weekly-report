@@ -629,6 +629,13 @@ def open_new_form(page, url, mock):
     """打开列表页→点新增→返回表单所在 frame（真机=FormAdapter iframe；mock=主 frame）。"""
     page.goto(url, wait_until="domcontentloaded" if mock else "networkidle")
     if mock:
+        # 仿真页本身就是表单（没有列表页可点「新增」）。仍走一次变体探测，
+        # 好让**新版结构的仿真页真的跑到新版代码路径**上——否则 mock 永远只回归旧版。
+        global UI
+        fr = detect_ui(page)
+        if fr is not None:
+            return fr
+        UI = UI_LEGACY
         return page.main_frame
     if "login" in page.url.lower():
         shot(page, "state-expired")
@@ -955,7 +962,7 @@ def click_save_draft(fr, page):
 
 def upload_attachment(fr, page, attach, mock):
     """上传附件。旧版能拿到原生 file input；新版是受控上传，只能走 file chooser。"""
-    if UI == UI_LEGACY or mock:
+    if UI == UI_LEGACY:
         file_input = attachment_locator(fr)
         file_input.set_input_files(str(attach))
         verify_attachment_uploaded(fr, page, file_input, attach.name, mock)
@@ -1063,7 +1070,7 @@ def verify_attachment_uploaded(fr, page, file_input, filename, mock,
     证据——与人工在 `20-filled-review.png` 上核对「附件已挂」同一判据。
     仿真表单是同步的，没有异步上传完成信号可等，故检查文件控件确实持有文件。
     """
-    if mock:
+    if mock and file_input is not None:
         held = file_input.evaluate("el => el.files.length")
         if held != 1:
             raise RuntimeError(f"附件未进入文件控件（files.length={held}）: {filename}")
@@ -1173,6 +1180,9 @@ def do_fill(report_path, url, save_draft, new_record=False):
             editing = fr is not False
             if not editing:
                 fr = open_new_form(page, url, mock)
+            # 把探测到的 UI 形态打出来：既是排障线索，也让仿真回归能断言
+            # 「新版仿真页确实跑的是新版路径」——否则它悄悄回落到旧版分支也会绿。
+            log(f"表单形态: {UI}")
             log("编辑既有草稿" if editing else "新建记录")
             shot(page, "00-form-open")
 

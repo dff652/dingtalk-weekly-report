@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<title>测试周报-新增（氚云新版 nx 结构仿真）</title>
+<style>
+  body { font-family: sans-serif; margin: 20px; }
+  .h3-control-adapter { margin: 10px 0; }
+  .fixed-table__row { border: 1px solid #ccc; margin: 4px 0; padding: 4px; display: flex; gap: 8px; }
+  .ant-select { display: inline-block; border: 1px solid #999; padding: 2px 16px 2px 6px;
+                min-width: 110px; min-height: 1.2em; background: #fafafa; cursor: pointer; }
+  .ant-picker { display: inline-block; border: 1px solid #999; background: #fafafa; }
+  .ant-picker-dropdown, .ant-select-dropdown, .ant-dropdown {
+    position: fixed; background: #fff; border: 1px solid #666; padding: 4px; z-index: 50; }
+  .ant-select-item-option, .ant-radio-wrapper { display: block; padding: 3px 10px; cursor: pointer; }
+  td { cursor: pointer; padding: 2px 5px; }
+  /* 复刻真机：新手引导是**全屏遮罩**，不关掉时每一次 click 都被它吃掉 */
+  .guide-wrapper { position: fixed; inset: 0; background: rgba(0,0,0,.35); z-index: 9999; }
+  .guide-content { position: absolute; top: 30%; left: 35%; background: #fff; padding: 12px; }
+  #result { margin-top: 14px; white-space: pre-wrap; background: #f5f5f5; padding: 8px; }
+</style>
+</head>
+<body>
+<h3>测试周报-新增（仿真：主 frame / data-test-key / fixed-table / ant-picker / 关联 radio）</h3>
+
+<!-- 新手引导：两步，逐步关掉才消失（回归 dismiss_guide 的循环） -->
+<div class="guide-wrapper operation-function-guide">
+  <div class="guide-content">
+    <button type="button" class="guide-close" title="关闭引导">×</button>
+    <div class="guide-heading"><span>1/2</span></div>
+    <div class="guide-actions"><span class="guide-skip">跳过</span></div>
+  </div>
+</div>
+
+<div class="h3-control-adapter control-editable" data-test-key="mock-start-date">
+  <div class="control-title"><span class="control-name">开始日期</span></div>
+  <div class="control-content"><div class="form-date-time"><div class="ant-picker">
+    <div class="ant-picker-input"><input readonly placeholder="年-月-日"></div>
+  </div></div></div>
+</div>
+
+<div class="h3-control-adapter control-editable" data-test-key="mock-attach">
+  <div class="control-title"><span class="control-name">工作计划及完成情况</span></div>
+  <div class="control-content"><div class="form-attachment">
+    <div class="upload-trigger">
+      <!-- 复刻真机：点击处理器挂在里面这个 svg 上，点外层 div 什么都不会发生 -->
+      <div class="upload-trigger-click"><svg class="h3-icon" width="16" height="16"></svg></div>
+      <div class="upload-trigger-drag"><span>直接拖拽到这里</span></div>
+    </div>
+    <input type="file" hidden>
+    <div class="upload-list"></div>
+  </div></div>
+</div>
+
+<div class="h3-control-adapter control-editable" data-test-key="mock-note">
+  <div class="control-content"><div class="form-text-area">
+    <textarea placeholder="请输入"></textarea>
+  </div></div>
+</div>
+
+<div class="form-grid-view" data-test-key="mock-subgrid">
+  <div class="grid-view-wrapper">
+    <div class="grid-view-title"><div class="title-main"><span class="display-name">工作详情</span></div></div>
+    <div class="sub-grid-wrapper">
+      <div class="sub-grid-toolbar"><div class="toolbar-actions">
+        <button type="button" class="ant-btn action-button" onclick="addRow()"><span>新增</span></button>
+        <button type="button" class="ant-btn action-button"><span>导入</span></button>
+      </div></div>
+      <div class="sub-grid-sheet"><div class="fixed-table">
+        <div class="fixed-table__body"></div>
+      </div></div>
+    </div>
+  </div>
+</div>
+
+<!-- 新版按钮文字没有旧版 antd 双字按钮的空格：`暂 存` → `暂存` -->
+<button type="button" onclick="save('draft')">暂存</button>
+<button type="button" onclick="save('submit')">提交</button>
+
+<div class="ant-picker-dropdown" id="cal" style="display:none">
+  <div class="ant-picker-header">
+    <button type="button" class="ant-picker-header-prev-btn" onclick="navMonth(-1)">&lt;</button>
+    <div class="ant-picker-header-view">
+      <button type="button" class="ant-picker-year-btn"></button>
+      <button type="button" class="ant-picker-month-btn"></button>
+    </div>
+    <button type="button" class="ant-picker-header-next-btn" onclick="navMonth(1)">&gt;</button>
+  </div>
+  <div class="ant-picker-body"><table class="ant-picker-content"><tbody id="cal-body"></tbody></table></div>
+</div>
+
+<!-- 复刻真机：浮层用完不销毁，页面上会留下隐藏的旧菜单（visible_nth 必须挑可见的那个） -->
+<div class="ant-select-dropdown" style="display:none">
+  <div class="ant-select-item-option">陈旧残留项</div>
+</div>
+<div class="ant-select-dropdown" id="sel-dd" style="display:none"></div>
+<div class="ant-dropdown" id="rel-dd" style="display:none">
+  <div class="ant-dropdown-content"><div class="h3-dropdown-content">
+    <div class="h3-dropdown-content__search"><div class="search-input">
+      <input type="text" placeholder="请输入" oninput="renderRelevance(this.value)">
+    </div></div>
+    <div class="ant-spin-container"><div class="h3-radio-group" id="rel-list">
+      <div class="no-data-placeholder">无数据</div>
+    </div></div>
+  </div></div>
+</div>
+
+<div id="result"></div>
+
+<script>
+const OPTIONS = {
+  "mock-row-type": ["项目工作", "组织活动"],
+  "mock-row-status": ["进行中", "会议", "请假"],
+};
+const PROJECTS = ["TEST-PROJECT 测试项目", "TEST-PROJECT-OTHER 其它测试项目"];
+
+// ---- 新手引导：点一次进第 2 步，再点才消失 ----
+let guideStep = 1;
+document.body.addEventListener("click", (e) => {
+  if (!e.target.closest(".guide-skip, .guide-close")) return;
+  guideStep += 1;
+  if (guideStep > 2) document.querySelector(".guide-wrapper").remove();
+  else document.querySelector(".guide-heading span").textContent = "2/2";
+}, true);
+
+// ---- 日期面板 ----
+// 刻意固定在 2026-05 打开：目标月总是不同，强制走表头翻页那条路径。
+let calTarget = null, calY = 2026, calM = 5;
+function pad(n) { return String(n).padStart(2, "0"); }
+function renderCal() {
+  document.querySelector(".ant-picker-year-btn").textContent = calY + "年";
+  document.querySelector(".ant-picker-month-btn").textContent = calM + "月";
+  const body = document.getElementById("cal-body");
+  while (body.firstChild) body.removeChild(body.firstChild);
+  const days = new Date(calY, calM, 0).getDate();
+  let tr = document.createElement("tr");
+  for (let d = 1; d <= days; d++) {
+    const iso = calY + "-" + pad(calM) + "-" + pad(d);
+    const td = document.createElement("td");
+    td.className = "ant-picker-cell ant-picker-cell-in-view";
+    td.title = iso;
+    const inner = document.createElement("div");
+    inner.className = "ant-picker-cell-inner"; inner.textContent = d;
+    td.appendChild(inner);
+    td.onclick = () => {
+      if (calTarget) calTarget.value = iso;
+      document.getElementById("cal").style.display = "none";
+      calTarget = null;
+    };
+    tr.appendChild(td);
+    if (d % 7 === 0) { body.appendChild(tr); tr = document.createElement("tr"); }
+  }
+  body.appendChild(tr);
+}
+function navMonth(delta) {
+  calM += delta;
+  if (calM > 12) { calM = 1; calY += 1; }
+  if (calM < 1) { calM = 12; calY -= 1; }
+  renderCal();
+}
+document.body.addEventListener("click", (e) => {
+  const inp = e.target.closest(".ant-picker input");
+  if (!inp) return;
+  calTarget = inp; calY = 2026; calM = 5; renderCal();
+  document.getElementById("cal").style.display = "block";
+});
+
+// ---- 枚举下拉 ----
+let selTarget = null;
+function openSelect(host, field) {
+  selTarget = host;
+  const dd = document.getElementById("sel-dd");
+  while (dd.firstChild) dd.removeChild(dd.firstChild);
+  for (const v of OPTIONS[field]) {
+    const item = document.createElement("div");
+    item.className = "ant-select-item-option";
+    item.textContent = v;
+    item.onclick = () => {
+      host.dataset.value = v; host.textContent = v;
+      dd.style.display = "none"; selTarget = null;
+    };
+    dd.appendChild(item);
+  }
+  dd.style.display = "block";
+}
+
+// ---- 关联选择（带搜索的 radio 列表；未搜索时无数据） ----
+let relTarget = null;
+function openRelevance(host) {
+  relTarget = host;
+  const dd = document.getElementById("rel-dd");
+  dd.querySelector("input").value = "";
+  renderRelevance("");
+  dd.style.display = "block";
+}
+function renderRelevance(term) {
+  const list = document.getElementById("rel-list");
+  while (list.firstChild) list.removeChild(list.firstChild);
+  const hits = term ? PROJECTS.filter((p) => p.includes(term)) : [];
+  if (!hits.length) {
+    const empty = document.createElement("div");
+    empty.className = "no-data-placeholder"; empty.textContent = "无数据";
+    list.appendChild(empty);
+    return;
+  }
+  for (const p of hits) {
+    const label = document.createElement("label");
+    label.className = "ant-radio-wrapper";
+    const content = document.createElement("span");
+    content.className = "content";
+    content.title = p;                       // 精确原文只在 title 上
+    // 复刻真机：命中词被包进 highlight，innerText 因此不等于原文
+    const hi = document.createElement("span");
+    hi.className = "highlight"; hi.textContent = term;
+    content.appendChild(hi);
+    content.appendChild(document.createTextNode(p.slice(term.length)));
+    label.appendChild(content);
+    label.onclick = () => {
+      relTarget.dataset.value = p; relTarget.textContent = p;
+      document.getElementById("rel-dd").style.display = "none"; relTarget = null;
+    };
+    list.appendChild(label);
+  }
+}
+
+// ---- 附件：点 svg 才打开文件选择器 ----
+const fileInput = document.querySelector('[data-test-key="mock-attach"] input[type=file]');
+document.querySelector('[data-test-key="mock-attach"] .upload-trigger-click svg')
+  .addEventListener("click", () => fileInput.click());
+fileInput.addEventListener("change", () => {
+  const list = document.querySelector('[data-test-key="mock-attach"] .upload-list');
+  while (list.firstChild) list.removeChild(list.firstChild);
+  if (!fileInput.files[0]) return;
+  const item = document.createElement("div");
+  item.className = "h3-upload-list__item is-success";
+  const name = document.createElement("span");
+  name.className = "h3-upload-list__item-name";
+  name.title = fileInput.files[0].name;
+  name.textContent = fileInput.files[0].name;
+  item.appendChild(name);
+  list.appendChild(item);
+});
+
+// ---- 子表 ----
+function cell(row, field) {
+  const c = document.createElement("div");
+  c.className = "fixed-table__cell";
+  c.setAttribute("field", field);
+  row.appendChild(c);
+  return c;
+}
+function addRow() {
+  const body = document.querySelector(".fixed-table__body");
+  const row = document.createElement("div");
+  row.className = "fixed-table__row";
+  row.setAttribute("data-row-index", body.children.length + 1);
+
+  const d = cell(row, "mock-row-date");
+  d.innerHTML = '<div class="form-date-time"><div class="ant-picker">' +
+                '<div class="ant-picker-input"><input readonly placeholder="年-月-日"></div>' +
+                "</div></div>";
+
+  for (const field of ["mock-row-type", "mock-row-status"]) {
+    const c = cell(row, field);
+    const wrap = document.createElement("div");
+    wrap.className = "form-dropdown-list";
+    const sel = document.createElement("div");
+    sel.className = "ant-select";
+    sel.textContent = "请选择";
+    sel.onclick = () => openSelect(sel, field);
+    wrap.appendChild(sel); c.appendChild(wrap);
+  }
+
+  const pc = cell(row, "mock-row-project");
+  const pw = document.createElement("div");
+  pw.className = "form-query";
+  const psel = document.createElement("div");
+  psel.className = "ant-select";
+  psel.textContent = "请选择";
+  psel.onclick = () => openRelevance(psel);
+  pw.appendChild(psel); pc.appendChild(pw);
+
+  const hc = cell(row, "mock-row-hours");
+  hc.innerHTML = '<div class="form-number"><input class="ant-input" placeholder="请输入"></div>';
+  const cc = cell(row, "mock-row-content");
+  cc.innerHTML = '<div class="form-text-box"><input class="ant-input" maxlength="200" placeholder="请输入"></div>';
+
+  body.appendChild(row);
+  // 真机行序号从 1 起，且新增后编号连续
+  Array.from(body.children).forEach((r, i) => r.setAttribute("data-row-index", i + 1));
+}
+addRow();  // 表单自带首行
+
+function save(kind) {
+  const rows = [];
+  for (const r of document.querySelectorAll(".fixed-table__body .fixed-table__row")) {
+    const get = (f, sel) => r.querySelector('[field="' + f + '"] ' + sel);
+    rows.push([
+      get("mock-row-date", "input").value,
+      get("mock-row-type", ".ant-select").dataset.value || "",
+      get("mock-row-project", ".ant-select").dataset.value || "",
+      get("mock-row-status", ".ant-select").dataset.value || "",
+      get("mock-row-hours", "input").value,
+      get("mock-row-content", "input").value.slice(0, 24),
+    ].join("|"));
+  }
+  const f = fileInput.files[0];
+  document.getElementById("result").textContent = JSON.stringify({
+    kind: kind,
+    start: document.querySelector('[data-test-key="mock-start-date"] input').value,
+    attach: f ? f.name : "",
+    note: document.querySelector('[data-test-key="mock-note"] textarea').value,
+    rows: rows,
+  });
+}
+</script>
+</body>
+</html>
