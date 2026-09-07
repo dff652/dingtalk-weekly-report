@@ -508,14 +508,18 @@ def do_login(url, qr_entry=1):
 # ---------------- 表单定位 ----------------
 
 def wait_for_list(page, timeout_ms=30000):
-    """等列表网格真正渲染出来。
+    """等列表网格画出来（表头即可，行数可以是 0）。渲染成功返回 True，超时返回 False。
 
-    新版首屏比旧版慢：固定 sleep 3s 时 `.tg-row` 还是 0，会把「有草稿」误判成「没有」，
+    新版首屏比旧版慢：固定 sleep 3s 时网格还是空的，会把「有草稿」误判成「没有」，
     进而多建一条记录撞周报唯一性判定。所以按元素轮询，不按时长赌。
+
+    **刻意不在这里 fail-loud**：超时可能是「渲染慢」也可能是「掉登录」，两者要给完全
+    不同的诊断；而且新用户一条记录都没有时网格本来就没有行。所以只回报事实，
+    由调用方结合登录断言与结论方向去裁决。
     """
     deadline = time.time() + timeout_ms / 1000
     while time.time() < deadline:
-        if page.locator(".tg-row").count() or page.locator(LIST_ROW_LINK).count():
+        if page.locator(LIST_READY_SELECTOR).count():
             page.wait_for_timeout(800)
             return True
         page.wait_for_timeout(500)
@@ -599,20 +603,37 @@ def find_editable_draft(page, monday):
             log(f"命中目标周草稿：第 {i + 1} 行（{want} / {status}）")
             return i
         shown = status or "未能识别（新版列表的状态是色块，页脚图例里没有对应颜色）"
-        log(f"目标周已有记录但状态是「{shown}」，不可编辑——本工具只改草稿")
-        return None
+        # 这里**必须抛错而不是返回 None**：返回 None 会被调用方当成「本周没有记录」，
+        # 于是转头新建第二条——那正是铁律「防重复」要挡的事（真机复现过：记录已提交成
+        # 「进行中」，脚本打完这行日志紧接着就去新建并填满了整张表）。
+        raise RuntimeError(
+            f"目标周已有记录但状态是「{shown}」，本工具只改草稿，不碰已提交/已生效的数据。"
+            "请先在钉钉里确认这条记录的真实状态；确实要另建一条再显式加 --new-record"
+            "（会撞周报唯一性判定，后果自负）")
     return None
 
 
 def open_existing_draft(page, url, monday):
-    """打开目标周的既有草稿；没有可编辑草稿时返回 False，由调用方走新增。"""
+    """打开目标周的既有草稿；本周确实没有记录时返回 False，由调用方走新增。
+
+    本周已有记录但不是可编辑草稿时**抛错**，不返回 False——那会被调用方当成
+    「没有记录」而去新建第二条，正撞周报唯一性判定（见 `find_editable_draft`）。
+    """
     page.goto(url, wait_until="networkidle")
     page.wait_for_timeout(3000)
+    # 顺序要紧：先等网格，再断言登录。反过来的话，新版首屏没画完就断言，会把好端端的
+    # 会话报成「登录态过期」，把用户支去重新扫码（真机复现过）。
+    rendered = wait_for_list(page)
     assert_logged_in(page, "open-draft")
-    wait_for_list(page)
     dismiss_guide(page)
     index = find_editable_draft(page, monday)
     if index is None:
+        # 登录是好的，网格却始终没画出来——此时「没找到草稿」不是结论而是没看见。
+        # 据此去新建就会多落一条，所以宁可停在这里。
+        if not rendered:
+            raise RuntimeError(
+                "列表网格 30s 内没渲染出来（登录态是好的），不能据此断定「本周没有草稿」——"
+                "就此中止，避免多建一条撞周报唯一性判定；重跑一次通常即可")
         return False
     page.locator(LIST_ROW_LINK).nth(index).click()
     for _ in range(30):
@@ -996,6 +1017,37 @@ def upload_attachment(fr, page, attach, mock):
     verify_attachment_uploaded(fr, page, None, attach.name, mock)
 
 
+def remove_existing_attachments(fr, page, tries=5):
+    """移除草稿里已挂的旧附件，避免新旧并存。
+
+    以**附件项数量**为判据，不以「点了几次」为判据：移除按钮选择器若没命中，
+    原来的写法会一次都没点就 break，然后照样打印「已移除草稿中的旧附件」——
+    日志说了谎，草稿最后落成双附件（真机确认旧版的 `.anticon-close` 在新版 0 命中）。
+    """
+    field = sel_top("attach")
+    items = fr.locator(f"{field} {ATTACH_ITEM_SELECTOR}")
+    before = items.count()
+    if not before:
+        log("草稿里没有已挂的旧附件，跳过移除")
+        return
+    removers = fr.locator(f"{field} {ATTACH_REMOVE_SELECTOR}")
+    for _ in range(tries):
+        if not items.count() or not removers.count():
+            break
+        try:
+            removers.first.click()
+        except PWError:
+            break
+        page.wait_for_timeout(1200)
+    after = items.count()
+    if after:
+        raise RuntimeError(
+            f"草稿原有 {before} 个附件，移除后仍剩 {after} 个——"
+            f"移除按钮没命中（当前选择器 {ATTACH_REMOVE_SELECTOR}）。"
+            "就此中止，不落新旧附件并存的草稿")
+    log(f"已移除草稿中的旧附件 {before} 个")
+
+
 def fit_subgrid_page_size(fr, page, need):
     """子表默认每页 10 行，超出会分页——行计数与 nth 定位都只看得到当前页
     （真机踩坑：第 11 行一点「新增」就翻到第 2 页，可见行数反而变少，
@@ -1080,9 +1132,12 @@ def verify_attachment_uploaded(fr, page, file_input, filename, mock,
     else:
         field = (NX_TOP.format(code=CODES["attach"])
                  if CODES.get("attach") else "")
+    prefix = f"{field} " if field else ""
+    # 两套形态的「上传成功」证据：旧版 `.h3-upload-list__item.is-success`；
+    # 新版 `li.file-list-item` 里的 `.title-item`（title 属性带完整文件名）。
     completed_selector = (
-        f"{field} " if field else "") + (
-        ".h3-upload-list__item.is-success .h3-upload-list__item-name")
+        f"{prefix}.h3-upload-list__item.is-success .h3-upload-list__item-name, "
+        f"{prefix}li.file-list-item .title-item")
     deadline = time.time() + timeout_ms / 1000
     while True:
         completed = fr.locator(completed_selector)
@@ -1191,14 +1246,7 @@ def do_fill(report_path, url, save_draft, new_record=False):
 
             if attach_required:
                 if editing:
-                    removers = fr.locator(
-                        f'{sel_top("attach")} {ATTACH_REMOVE_SELECTOR}')
-                    for _ in range(5):          # 逐个移除已挂附件，避免新旧并存
-                        if not removers.count():
-                            break
-                        removers.first.click()
-                        page.wait_for_timeout(1200)
-                    log("已移除草稿中的旧附件")
+                    remove_existing_attachments(fr, page)
                 log(f"上传附件 {attach.name}")
                 upload_attachment(fr, page, attach, mock)
             else:
@@ -1495,8 +1543,16 @@ CAPTCHA_MARKERS = ("请完成安全验证", "拖动滑块", "aliyunCaptcha")
 # 列表页是列优先渲染的自有网格：每列一个容器、内含各行单元格，所以按「行」切分取不到值。
 LIST_STATUS_CELL = ".cell-status"
 LIST_DRAFT_STATUS = "草稿"
-# 附件控件里已挂文件的移除图标。先移除再上传，避免赌"重复上传是替换还是追加"。
-ATTACH_REMOVE_SELECTOR = ".h3-icon-close, .anticon-close"
+# 附件控件里已挂的文件项，以及它的移除图标。先移除再上传，避免赌"重复上传是替换还是追加"。
+# 新旧两套形态并列：旧版 `.h3-upload-list__item` + `.anticon-close`；
+# 新版 `li.file-list-item` + `svg.action-item.delete-action`（真机确认旧版那两个类名
+# 在新版是 0 命中——只写旧版的话，移除会静默什么都不做然后再传一份，落成双附件）。
+ATTACH_ITEM_SELECTOR = ".h3-upload-list__item, li.file-list-item"
+ATTACH_REMOVE_SELECTOR = (".h3-icon-close, .anticon-close, "
+                          ".file-actions .delete-action")
+# 列表网格「已经画出来了」的判据：表头即可，**行数允许是 0**（新用户一条记录都没有也是
+# 合法状态）。用它区分「网格还没渲染」和「网格渲染了但本周确实没记录」——两者结论相反。
+LIST_READY_SELECTOR = ".tg-column-header, .tg-row, span.tg-link"
 
 
 def _visible_option_texts(fr):

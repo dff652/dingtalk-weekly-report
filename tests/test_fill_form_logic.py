@@ -7,6 +7,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from datetime import date
 from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -18,6 +19,8 @@ import fill_form
 from fill_form import (
     _css_background,
     attachment_enabled,
+    find_editable_draft,
+    remove_existing_attachments,
     click_save_draft,
     read_row_statuses,
     sel_cell,
@@ -335,24 +338,42 @@ class FillFormLogicTests(unittest.TestCase):
             verify_attachment_uploaded(
                 FakeFrame(), FakePage(), FakeFileInput(0), "周报附件", mock=True)
 
+    # 两套 UI 的「上传完成」证据形态不同，选择器是并列的一条串。
+    UPLOAD_EVIDENCE_SELECTOR = (
+        'attach-field .h3-upload-list__item.is-success '
+        '.h3-upload-list__item-name, '
+        'attach-field li.file-list-item .title-item')
+
     def test_real_controlled_input_may_clear_after_consuming_file(self):
         """真实受控组件会清空 input；可见附件名才是上传完成证据。"""
-        selector = (
-            'attach-field .h3-upload-list__item.is-success '
-            '.h3-upload-list__item-name')
         frame = FakeFrame(selectors={
-            selector: [FakeItem(attrs={"title": "周报附件.xlsx"})]})
+            self.UPLOAD_EVIDENCE_SELECTOR: [
+                FakeItem(attrs={"title": "周报附件.xlsx"})]})
         with patch.object(fill_form, "F", {"attach": "attach-field"}):
             verify_attachment_uploaded(
                 frame, FakePage(), FakeFileInput(0), "周报附件.xlsx",
                 mock=False)
 
+    def test_upload_evidence_covers_new_ui_shape(self):
+        """新版的完成证据是 `li.file-list-item .title-item`，必须也在选择器里。
+
+        只写旧版形态时，新版会退回「文件名出现在页面任意位置」这种弱判据——
+        toast、别的控件里出现同名文本都会被当成上传成功。
+        """
+        self.assertIn("li.file-list-item .title-item",
+                      self.UPLOAD_EVIDENCE_SELECTOR)
+        with patch.object(fill_form, "F", {"attach": "attach-field"}), \
+                patch.object(fill_form, "UI", fill_form.UI_LEGACY):
+            frame = FakeFrame(selectors={
+                self.UPLOAD_EVIDENCE_SELECTOR: [
+                    FakeItem(attrs={"title": "周报附件.xlsx"})]})
+            verify_attachment_uploaded(
+                frame, FakePage(), None, "周报附件.xlsx", mock=False)
+
     def test_real_upload_title_must_match_expected_file(self):
-        selector = (
-            'attach-field .h3-upload-list__item.is-success '
-            '.h3-upload-list__item-name')
         frame = FakeFrame(selectors={
-            selector: [FakeItem(attrs={"title": "旧周报附件.xlsx"})]})
+            self.UPLOAD_EVIDENCE_SELECTOR: [
+                FakeItem(attrs={"title": "旧周报附件.xlsx"})]})
         with patch.object(fill_form, "F", {"attach": "attach-field"}):
             with self.assertRaisesRegex(RuntimeError, "无法确认上传完成"):
                 verify_attachment_uploaded(
@@ -570,6 +591,121 @@ class SaveButtonTests(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, "暂 存"):
                 click_save_draft(frame, FakePage())
         self.assertEqual(sink, [])
+
+
+
+
+class DraftGuardTests(unittest.TestCase):
+    """同周记录的两道硬护栏：状态必须是草稿、日期必须等于目标周周一。"""
+
+    class Page:
+        def __init__(self, selectors):
+            self.selectors = selectors
+
+        def locator(self, selector):
+            return FakeLocator(self.selectors.get(selector, ()))
+
+    def _page(self, dates, statuses):
+        return self.Page({
+            ".tg-cell.tg-c-6": [FakeItem(d) for d in dates],
+            fill_form.LIST_STATUS_CELL: [FakeItem(s) for s in statuses],
+        })
+
+    def test_draft_of_target_week_is_returned(self):
+        page = self._page(["2026-08-31", "2026-08-24"], ["草稿", "草稿"])
+        self.assertEqual(find_editable_draft(page, date(2026, 8, 31)), 0)
+
+    def test_week_without_record_returns_none(self):
+        """本周确实没有记录 → None，调用方据此去新建，这是正常路径。"""
+        page = self._page(["2026-08-24"], ["草稿"])
+        self.assertIsNone(find_editable_draft(page, date(2026, 8, 31)))
+
+    def test_non_draft_same_week_raises_instead_of_returning_none(self):
+        """已提交/已生效的同周记录必须抛错，**不能**返回 None。
+
+        返回 None 会被调用方当成「本周没有记录」而转头新建第二条——真机复现过：
+        记录已是「进行中」，脚本打完「不可编辑」的日志紧接着就去新建并填满了整张表。
+        """
+        for status in ("进行中", "已生效", "已取消"):
+            with self.subTest(status=status):
+                page = self._page(["2026-08-31"], [status])
+                with self.assertRaisesRegex(RuntimeError, status):
+                    find_editable_draft(page, date(2026, 8, 31))
+
+    def test_unrecognised_status_also_raises(self):
+        """认不出状态时同样不放行——宁可停下，也不拿不确定的判断去改真实申报。"""
+        page = self.Page({
+            ".tg-cell.tg-c-6": [FakeItem("2026-08-31")],
+            fill_form.NX_LEGEND_ITEM: [],
+            fill_form.NX_LIST_STATUS: [
+                FakeItem(attrs={"style": "background: rgb(1, 2, 3);"})],
+        })
+        with self.assertRaisesRegex(RuntimeError, "未能识别"):
+            find_editable_draft(page, date(2026, 8, 31))
+
+
+class AttachmentRemovalTests(unittest.TestCase):
+    """移除旧附件：以**附件项数量**为判据，不以「点了几次」为判据。"""
+
+    class Items:
+        def __init__(self, n):
+            self.n = n
+
+        def count(self):
+            return self.n
+
+    class Removers:
+        def __init__(self, items, matches):
+            self.items, self.matches = items, matches
+
+        def count(self):
+            return 1 if (self.matches and self.items.n) else 0
+
+        @property
+        def first(self):
+            return self
+
+        def click(self):
+            self.items.n -= 1
+
+    class Frame:
+        def __init__(self, items, removers):
+            self.items, self.removers = items, removers
+
+        def locator(self, selector):
+            if fill_form.ATTACH_ITEM_SELECTOR in selector:
+                return self.items
+            return self.removers
+
+    def _frame(self, count, remover_matches):
+        items = self.Items(count)
+        return self.Frame(items, self.Removers(items, remover_matches)), items
+
+    def _run(self, frame):
+        with patch.object(fill_form, "UI", fill_form.UI_LEGACY), \
+                patch.object(fill_form, "F", {"attach": "attach-field"}):
+            remove_existing_attachments(frame, FakePage())
+
+    def test_removes_all_existing_items(self):
+        frame, items = self._frame(2, remover_matches=True)
+        self._run(frame)
+        self.assertEqual(items.count(), 0)
+
+    def test_no_attachment_is_not_an_error(self):
+        frame, items = self._frame(0, remover_matches=True)
+        self._run(frame)
+        self.assertEqual(items.count(), 0)
+
+    def test_remover_selector_miss_fails_loud(self):
+        """选择器没命中时必须报错。
+
+        原来的写法一次都没点就 break，却照样打印「已移除草稿中的旧附件」——日志说谎，
+        草稿最后落成新旧附件并存。真机确认旧版的 `.anticon-close` 在新版是 0 命中。
+        """
+        frame, items = self._frame(1, remover_matches=False)
+        with self.assertRaisesRegex(RuntimeError, "仍剩 1 个"):
+            self._run(frame)
+        self.assertEqual(items.count(), 1)
 
 
 if __name__ == "__main__":

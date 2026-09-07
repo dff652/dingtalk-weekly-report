@@ -159,6 +159,8 @@
 | 附件 | `input[type=file]` | 无原生 input，走 file chooser |
 | 暂存按钮 | `暂 存`（antd 双字按钮插空格） | `暂存` |
 | 行状态（列表页） | `.cell-status` 文字 | `span.sort-num-status` **色块**，文字只在页脚图例 `.grid-footer .status-info .status-item` |
+| 已挂附件项 | `.h3-upload-list__item` | `li.file-list-item`（容器 `.preview-file.file-card.has-file`，文件名在 `.title-item` 的 `title`） |
+| 移除附件按钮 | `.anticon-close` | `svg.action-item.delete-action`（同排还有 `.desc-action` / `.download-action`，别点错） |
 
 新版特有的坑（每条都真机踩过）：
 
@@ -177,3 +179,8 @@
 - **列表首屏比旧版慢**：固定 `sleep 3s` 时 `.tg-row` 仍是 0，会把「有草稿」误判成「没有」
   进而多建一条撞周报唯一性判定。必须按元素轮询等渲染。
 - `span.tg-link` / `.tg-cell.tg-c-<N>` 这套列表网格两版**通用**，不用改。
+- **点列表行标题打开的可能是只读详情**（附件控件带 `control-readonly`、只有下载动作）。
+  判断能不能改要看控件本身的 class，不要因为"页面打开了"就假定是编辑态。
+- **旧版的附件移除类名在新版是 0 命中**。只写旧版形态时，移除会一次都没点就结束，
+  然后照常上传新文件——草稿落成新旧附件并存，而日志还说"已移除"。所以移除必须以
+  **附件项数量**为判据并在移不掉时 fail-loud，不能以"点了几次"为判据。
