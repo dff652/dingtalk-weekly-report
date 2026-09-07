@@ -598,7 +598,8 @@ def find_editable_draft(page, monday):
         if status == LIST_DRAFT_STATUS:
             log(f"命中目标周草稿：第 {i + 1} 行（{want} / {status}）")
             return i
-        log(f"目标周已有记录但状态是「{status}」，不可编辑——本工具只改草稿")
+        shown = status or "未能识别（新版列表的状态是色块，页脚图例里没有对应颜色）"
+        log(f"目标周已有记录但状态是「{shown}」，不可编辑——本工具只改草稿")
         return None
     return None
 
