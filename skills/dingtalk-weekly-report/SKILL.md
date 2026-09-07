@@ -173,6 +173,10 @@ git 操作（若 $WORK 配了仓库）必须 `git -C $WORK`。每用户差异（
   检查私有字段配置与通用 DOM 约束；确认表单结构确已变化后再修 `scripts/fill_form.py`
   选择器（技能包持有者改后应跑维护仓的仿真回归）。
 - 表单结构疑变：`.venv/bin/python "$SKILL/scripts/fill_form.py" --dump` 拿新 DOM。
+- 报「30s 内表单未渲染」但截图里表单明明画出来了 = 厂商换了前端形态，不是选择器写错。
+  氚云已有旧版（`FormAdapter` iframe）与新版（URL 前缀 `/nx/`，主 frame）两套，工具会自动
+  探测；两套的对照表与新版特有的坑见 `$SKILL/references/FIELDS.md`「新版（nx）DOM 差异」。
+  **字段编码两套通用，遇到这类失败不要去改 `config.json` 的字段 id。**
 - Skill 升级不重装 `$WORK/.venv`。先用 bootstrap 无安装体检（只追加私有日志，不改配置/登录态）
   （Linux/macOS/WSL：`bash "$SKILL/bootstrap.sh" --diagnose`；
   Windows：`powershell -File "$SKILL/bootstrap.ps1" -Diagnose`），并查看私有

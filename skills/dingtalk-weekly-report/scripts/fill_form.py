@@ -48,7 +48,31 @@ STATE = dtwr_config_dir() / "state.json"
 SHOTS = None
 SUB = None
 F = {}
+CODES = {}
 RUN_LOG = None
+
+# ---------------- 氚云 UI 变体 ----------------
+# 2026-09 起氚云把表单迁到新版（URL 前缀 /nx/）：表单不再在 FormAdapter iframe 里，
+# 控件身份从 `id` 换成 `data-test-key`（顶层）/ `field`（子表列），子表换成虚拟滚动的
+# fixed-table，并多了一层新手引导遮罩会拦截所有点击。
+# **字段编码本身没变**，所以用户 config 不用动；变的只是「用哪个属性去找它」。
+# 旧版仍在（本技能是公开包，别的租户可能还没被切过去），故两套并存、运行时探测。
+UI_LEGACY = "legacy"
+UI_NX = "nx"
+UI = UI_LEGACY
+
+NX_TOP = '.h3-control-adapter[data-test-key="{code}"]'
+NX_GRID = '.form-grid-view[data-test-key="{code}"]'
+NX_ROWS = ".fixed-table__body .fixed-table__row"
+NX_CELL = '[field="{code}"]'
+# 新手引导：`.guide-wrapper` 是全屏遮罩，不关掉的话每一次 click 都会被它吃掉
+# （症状是 Playwright 报 "intercepts pointer events" 而不是找不到元素）。
+NX_GUIDE = ".guide-wrapper"
+NX_GUIDE_DISMISS = ".guide-skip, .guide-close"
+# 新版列表行的状态不是文本而是色块，颜色含义由页脚图例给出——运行时读图例建色→状态映射，
+# 不硬编码 RGB（换主题就失效，且「猜颜色」正是会误编辑他人记录的那类风险）。
+NX_LIST_STATUS = "span.sort-num-status"
+NX_LEGEND_ITEM = ".grid-footer .status-info .status-item"
 
 _URL_RE = re.compile(r"https?://([^\s/]+)\S*")
 
@@ -81,7 +105,7 @@ def shot(page, name):
 
 
 def init_runtime():
-    global WORK, CONFIG, SHOTS, SUB, F, RUN_LOG
+    global WORK, CONFIG, SHOTS, SUB, F, CODES, RUN_LOG
     WORK = workdir()
     CONFIG = json.loads((WORK / "config.json").read_text(encoding="utf-8"))
     SHOTS = WORK / "output" / "shots"
@@ -93,6 +117,10 @@ def init_runtime():
         RUN_LOG = None
     fields = CONFIG.get("form_fields", {})
     SUB = f'[id="{fields.get("subgrid_id", "")}"]'
+    CODES = {k: str(fields.get(k, "")) for k in (
+        "subgrid_id", "start_date", "attach", "note", "row_date", "row_type",
+        "row_project", "row_status", "row_hours", "row_content",
+    )}
     F = {
         key: f'[id="{fields.get(key, "")}"]'
         for key in (
@@ -479,6 +507,74 @@ def do_login(url, qr_entry=1):
 
 # ---------------- 表单定位 ----------------
 
+def wait_for_list(page, timeout_ms=30000):
+    """等列表网格真正渲染出来。
+
+    新版首屏比旧版慢：固定 sleep 3s 时 `.tg-row` 还是 0，会把「有草稿」误判成「没有」，
+    进而多建一条记录撞周报唯一性判定。所以按元素轮询，不按时长赌。
+    """
+    deadline = time.time() + timeout_ms / 1000
+    while time.time() < deadline:
+        if page.locator(".tg-row").count() or page.locator(LIST_ROW_LINK).count():
+            page.wait_for_timeout(800)
+            return True
+        page.wait_for_timeout(500)
+    return False
+
+
+def read_row_statuses(page):
+    """按行序读列表的状态文本。
+
+    旧版每行有 `.cell-status` 直接写着「草稿」；新版把状态画成了色块
+    （`span.sort-num-status` 的 inline background），文字只出现在页脚图例里。
+    所以新版先从图例建「颜色 → 状态」映射再翻译，**不硬编码 RGB**——主题一换就失效，
+    而「猜颜色」恰恰是会误编辑他人已生效记录的那类风险。认不出的颜色一律返回空串，
+    交由调用方按「不是草稿」处理。
+    """
+    legacy = page.locator(LIST_STATUS_CELL)
+    if legacy.count():
+        out = []
+        for i in range(legacy.count()):
+            try:
+                out.append(legacy.nth(i).inner_text().strip())
+            except PWError:
+                out.append("")
+        return out
+
+    legend = {}
+    items = page.locator(NX_LEGEND_ITEM)
+    for i in range(items.count()):
+        item = items.nth(i)
+        icon = item.locator(".icon")
+        text = item.locator(".text")
+        if not icon.count() or not text.count():
+            continue
+        color = _css_background(icon.first.get_attribute("style") or "")
+        if color:
+            legend[color] = text.first.inner_text().strip()
+
+    swatches = page.locator(NX_LIST_STATUS)
+    out = []
+    for i in range(swatches.count()):
+        try:
+            color = _css_background(swatches.nth(i).get_attribute("style") or "")
+        except PWError:
+            color = ""
+        out.append(legend.get(color, ""))
+    return out
+
+
+def _css_background(style):
+    """从 inline style 里取 background 颜色，归一成无空格小写便于比对。"""
+    m = re.search(r"background\s*:\s*([^;]+)", style, re.I)
+    if not m:
+        return ""
+    value = m.group(1).strip().lower()
+    if value in ("none", "transparent", ""):
+        return ""
+    return re.sub(r"\s+", "", value)
+
+
 def find_editable_draft(page, monday):
     """在列表里找出**目标周的草稿**，返回其行序号（0 基）；找不到返回 None。
 
@@ -490,13 +586,13 @@ def find_editable_draft(page, monday):
     列表是列优先渲染，同一列的单元格按行序排列，故按下标对齐取值。
     """
     dates = page.locator('.tg-cell.tg-c-6')
-    statuses = page.locator(LIST_STATUS_CELL)
+    statuses = read_row_statuses(page)
     want = str(monday)
-    for i in range(min(dates.count(), statuses.count())):
+    for i in range(min(dates.count(), len(statuses))):
         try:
             if dates.nth(i).inner_text().strip() != want:
                 continue
-            status = statuses.nth(i).inner_text().strip()
+            status = statuses[i]
         except Exception:
             continue
         if status == LIST_DRAFT_STATUS:
@@ -512,14 +608,16 @@ def open_existing_draft(page, url, monday):
     page.goto(url, wait_until="networkidle")
     page.wait_for_timeout(3000)
     assert_logged_in(page, "open-draft")
+    wait_for_list(page)
+    dismiss_guide(page)
     index = find_editable_draft(page, monday)
     if index is None:
         return False
     page.locator(LIST_ROW_LINK).nth(index).click()
     for _ in range(30):
         page.wait_for_timeout(1000)
-        fr = next((f for f in page.frames if "FormAdapter" in f.url), None)
-        if fr and fr.get_by_text(CONFIG["form_texts"]["start_date_label"]).count():
+        fr = detect_ui(page)
+        if fr is not None:
             page.wait_for_timeout(1500)
             return fr
     shot(page, "draft-not-rendered")
@@ -534,16 +632,216 @@ def open_new_form(page, url, mock):
     if "login" in page.url.lower():
         shot(page, "state-expired")
         sys.exit("登录态过期，重跑 --login / --login-url")
+    wait_for_list(page)
+    dismiss_guide(page)
     page.get_by_text(CONFIG["form_texts"]["add_row"], exact=False).first.click()
     for _ in range(30):
         page.wait_for_timeout(1000)
-        fr = next((f for f in page.frames if "FormAdapter" in f.url), None)
-        if fr and fr.get_by_text(
-                CONFIG["form_texts"]["start_date_label"]).count():
+        fr = detect_ui(page)
+        if fr is not None:
             page.wait_for_timeout(1500)
             return fr
     shot(page, "form-not-rendered")
-    sys.exit("30s 内表单未渲染（FormAdapter frame 无字段）；看 form-not-rendered.png")
+    sys.exit("30s 内表单未渲染（旧版 FormAdapter frame 与新版主 frame 都没有字段）；"
+             "看 form-not-rendered.png")
+
+
+def visible_nth(loc):
+    """返回第一个**可见**的匹配元素；没有则 None。
+
+    氚云的浮层（ant-select 菜单 / ant-picker 面板 / h3-dropdown）用完不销毁，
+    页面上常同时存在多个同类节点，直接 `.first` 会拿到上一次留下的隐藏壳。
+    """
+    for i in range(loc.count()):
+        try:
+            if loc.nth(i).is_visible():
+                return loc.nth(i)
+        except PWError:
+            continue
+    return None
+
+
+def dismiss_guide(page, tries=4):
+    """关掉新版的新手引导遮罩。
+
+    `.guide-wrapper` 是全屏层，不关掉时**每一次 click 都会被它吃掉**——报错是
+    "intercepts pointer events"，而不是「找不到元素」，很容易误判成选择器写错。
+    引导是分步的（1/2、2/2），所以循环点「跳过 / 关闭」直到它消失。
+    """
+    for _ in range(tries):
+        guide = page.locator(NX_GUIDE)
+        if not guide.count() or not guide.first.is_visible():
+            return
+        btn = visible_nth(page.locator(NX_GUIDE_DISMISS))
+        if btn is None:
+            return
+        try:
+            btn.click()
+        except PWError:
+            return
+        page.wait_for_timeout(600)
+
+
+def detect_ui(page):
+    """探测当前是旧版（FormAdapter iframe）还是新版（主 frame）；返回表单所在 frame。
+
+    以「哪里能找到开始日期这个标签」为准，不靠 URL 猜——同一租户灰度期间两套可能并存。
+    """
+    global UI
+    fr = next((f for f in page.frames if "FormAdapter" in f.url), None)
+    if fr is not None and fr.get_by_text(
+            CONFIG["form_texts"]["start_date_label"]).count():
+        UI = UI_LEGACY
+        return fr
+    main = page.main_frame
+    if main.locator(NX_TOP.format(code=CODES["start_date"])).count():
+        UI = UI_NX
+        dismiss_guide(page)
+        return main
+    return None
+
+
+def sel_top(key):
+    """顶层控件选择器（开始日期 / 附件 / 特殊说明）。"""
+    return F[key] if UI == UI_LEGACY else NX_TOP.format(code=CODES[key])
+
+
+def sel_grid():
+    return SUB if UI == UI_LEGACY else NX_GRID.format(code=CODES["subgrid_id"])
+
+
+def sel_cell(key):
+    """子表行内某一列的选择器（相对于行）。"""
+    return F[key] if UI == UI_LEGACY else NX_CELL.format(code=CODES[key])
+
+
+def grid_rows(fr):
+    if UI == UI_LEGACY:
+        # 只取外层行：行内滚动容器与行同名 .subgrid-sheet__row，直匹配会翻倍并覆盖上一行
+        return fr.locator(f"{sel_grid()} .ant-spin-container > .subgrid-sheet__row")
+    return fr.locator(f"{sel_grid()} {NX_ROWS}")
+
+
+def nx_pick_date(page, scope, value):
+    """新版 ant-picker：输入框是 readonly，只能点开面板按 `td[title=...]` 选。
+
+    面板默认停在当前月，目标月不同就按表头翻页——**不猜**「相邻月的格子也在面板里」
+    （那只对月初月末成立）。
+    """
+    target = scope.locator("input").first
+    if target.input_value() == value:
+        return
+    year, month, _ = value.split("-")
+    want = (int(year), int(month))
+    for _ in range(3):
+        dismiss_guide(page)
+        target.click()
+        page.wait_for_timeout(600)
+        panel = visible_nth(page.locator(".ant-picker-dropdown"))
+        if panel is None:
+            page.wait_for_timeout(600)
+            continue
+        for _ in range(24):
+            head = panel.locator(".ant-picker-header-view").first.inner_text()
+            got_y = re.search(r"(\d{4})", head)
+            got_m = re.search(r"(\d{1,2})\s*月", head)
+            if not got_y or not got_m:
+                break
+            cur = (int(got_y.group(1)), int(got_m.group(1)))
+            if cur == want:
+                break
+            btn = (".ant-picker-header-next-btn" if cur < want
+                   else ".ant-picker-header-prev-btn")
+            panel.locator(btn).first.click()
+            page.wait_for_timeout(350)
+        cell = panel.locator(f'td[title="{value}"]')
+        if cell.count():
+            cell.first.click()
+            page.wait_for_timeout(500)
+            if target.input_value() == value:
+                return
+    raise RuntimeError(
+        f"日期写入后未生效：期望 {value}，实际 {target.input_value() or '(空)'}")
+
+
+def nx_pick_select(page, scope, value):
+    """新版枚举下拉（项目类型 / 工作状态）：点开控件 → 在浮层里按选项文本精确点选。"""
+    dismiss_guide(page)
+    scope.locator(".ant-select").first.click()
+    page.wait_for_timeout(900)
+    menu = None
+    for _ in range(8):
+        menu = visible_nth(page.locator(".ant-select-dropdown"))
+        if menu is not None:
+            break
+        page.wait_for_timeout(400)
+    if menu is None:
+        raise RuntimeError(f"下拉浮层未弹出，选不了「{value}」")
+    opts = menu.locator(".ant-select-item-option")
+    for i in range(opts.count()):
+        el = opts.nth(i)
+        try:
+            if el.inner_text().strip() != value:
+                continue
+        except PWError:
+            continue
+        el.click()
+        page.wait_for_timeout(500)
+        return
+    seen = [opts.nth(i).inner_text().strip() for i in range(min(opts.count(), 20))]
+    raise RuntimeError(f"下拉无选项「{value}」；浮层里可见的是 {seen}")
+
+
+def nx_pick_relevance(page, scope, value):
+    """新版关联选择（项目/产品名称）：浮层是带搜索框的 radio 列表。
+
+    按 `.content` 的 `title` **精确**匹配，不用 inner_text——命中词会被包进
+    `<span class="highlight">`，且原文里的连续空格在 `white-space: pre` 下不可靠。
+    """
+    dismiss_guide(page)
+    scope.locator(".ant-select").first.click()
+    page.wait_for_timeout(1200)
+    menu = None
+    for _ in range(10):
+        menu = visible_nth(page.locator(".ant-dropdown"))
+        if menu is not None and menu.locator(
+                ".h3-dropdown-content__search input").count():
+            break
+        menu = None
+        page.wait_for_timeout(400)
+    if menu is None:
+        raise RuntimeError(f"关联选择浮层未弹出，选不了「{value}」")
+    box = menu.locator(".h3-dropdown-content__search input").first
+    # 项目名里含连续空格，整串搜常常搜不到；先用首个 token（如编号），再退回整串。
+    terms = [t for t in (value.split()[0] if value.split() else "",
+                         " ".join(value.split()), value, "") if t is not None]
+    for term in dict.fromkeys(terms):
+        box.fill(term)
+        page.wait_for_timeout(2000)
+        items = menu.locator("label.ant-radio-wrapper")
+        for i in range(items.count()):
+            el = items.nth(i)
+            content = el.locator(".content").first
+            if not content.count():
+                continue
+            if (content.get_attribute("title") or "").strip() == value.strip():
+                el.click()
+                page.wait_for_timeout(700)
+                return
+    raise RuntimeError(f"关联选择里找不到「{value}」（已试搜索词 {list(dict.fromkeys(terms))}）")
+
+
+def close_overlays(page, fr):
+    """收起残留浮层。**不要按 Escape**——真机实测 Escape 会连整个新增弹窗一起关掉。"""
+    if UI != UI_NX:
+        return
+    title = fr.locator(f"{sel_grid()} .grid-view-title .display-name")
+    if title.count():
+        try:
+            title.first.click()
+            page.wait_for_timeout(400)
+        except PWError:
+            pass
 
 
 def fill_ant_date(fr, page, scope, value):
@@ -596,15 +894,109 @@ def pick_dropdown(fr, page, scope, value):
     raise RuntimeError(f"下拉无可见选项「{value}」")
 
 
+def fill_date_field(fr, page, scope, value):
+    if UI == UI_LEGACY:
+        return fill_ant_date(fr, page, scope, value)
+    return nx_pick_date(page, scope, value)
+
+
+def pick_enum(fr, page, scope, value):
+    """枚举下拉（项目类型 / 工作状态）。"""
+    if UI == UI_LEGACY:
+        return pick_dropdown(fr, page, scope, value)
+    return nx_pick_select(page, scope, value)
+
+
+def pick_project(fr, page, scope, value):
+    """项目/产品名称。旧版是同一种下拉；新版是带搜索的关联选择，控件形态不同。"""
+    if UI == UI_LEGACY:
+        return pick_dropdown(fr, page, scope, value)
+    return nx_pick_relevance(page, scope, value)
+
+
+def add_grid_row(fr, page):
+    if UI == UI_LEGACY:
+        fr.locator(sel_grid()).get_by_text(
+            CONFIG["form_texts"]["add_row"], exact=False).first.click()
+        return
+    dismiss_guide(page)
+    btn = fr.locator(f"{sel_grid()} .sub-grid-toolbar button").filter(
+        has_text=CONFIG["form_texts"]["add_row"])
+    if not btn.count():
+        raise RuntimeError("子表工具栏没有「新增」按钮")
+    btn.first.click()
+
+
+def click_save_draft(fr, page):
+    """点「暂存」。
+
+    新版按钮文字没有旧版 antd 双字按钮自动插入的空格（`暂 存` → `暂存`），
+    所以先按 config 原文精确找，找不到再按**去空白后相等**兜底——
+    只做归一化比较，不做包含匹配：`提交` 就在隔壁，模糊匹配会把草稿直接提交出去。
+    """
+    want = CONFIG["form_texts"]["save_draft"]
+    el = visible_nth(fr.get_by_text(want, exact=True))
+    if el is not None:
+        el.click()
+        return
+    norm = re.sub(r"\s+", "", want)
+    btns = fr.locator("button")
+    for i in range(btns.count()):
+        b = btns.nth(i)
+        try:
+            if b.is_visible() and re.sub(r"\s+", "", b.inner_text()) == norm:
+                b.click()
+                return
+        except PWError:
+            continue
+    raise RuntimeError(f"找不到「{want}」按钮（新旧两种文字形态都没匹配上）")
+
+
+def upload_attachment(fr, page, attach, mock):
+    """上传附件。旧版能拿到原生 file input；新版是受控上传，只能走 file chooser。"""
+    if UI == UI_LEGACY or mock:
+        file_input = attachment_locator(fr)
+        file_input.set_input_files(str(attach))
+        verify_attachment_uploaded(fr, page, file_input, attach.name, mock)
+        return
+    dismiss_guide(page)
+    field = sel_top("attach")
+    # 点击处理器实际挂在 `.upload-trigger-click` **里面那个 svg 图标**上：点外层 div
+    # 什么都不会发生（不报错、也不弹选择器），所以按由内到外的顺序逐个试，
+    # 命中即止；全试完还没弹才算真失败。
+    candidates = [
+        f"{field} .upload-trigger-click svg",
+        f"{field} .upload-trigger-click",
+        f"{field} .upload-trigger",
+    ]
+    chosen = None
+    for selector in candidates:
+        target = fr.locator(selector)
+        if not target.count():
+            continue
+        try:
+            with page.expect_file_chooser(timeout=5000) as chooser:
+                target.first.click()
+        except PWError:
+            continue
+        chooser.value.set_files(str(attach))
+        chosen = selector
+        break
+    if chosen is None:
+        raise RuntimeError(
+            f"点了 {len(candidates)} 个候选上传入口都没弹出文件选择器：{candidates}")
+    verify_attachment_uploaded(fr, page, None, attach.name, mock)
+
+
 def fit_subgrid_page_size(fr, page, need):
     """子表默认每页 10 行，超出会分页——行计数与 nth 定位都只看得到当前页
     （真机踩坑：第 11 行一点「新增」就翻到第 2 页，可见行数反而变少，
     误判成「新增没生效」）。填行前把每页条数调到能装下所有行；
     mock / 无分页控件的旧表单则 no-op。"""
-    changer = fr.locator(f"{SUB} .ant-pagination-options-size-changer")
+    changer = fr.locator(f"{sel_grid()} .ant-pagination-options-size-changer")
     if not changer.count() or not changer.first.is_visible():
         return
-    total_el = fr.locator(f"{SUB} .ant-pagination-total-text")
+    total_el = fr.locator(f"{sel_grid()} .ant-pagination-total-text")
     if total_el.count():  # 编辑既有草稿时行数以「共N条」为准，别只按本周应报行数
         m = re.search(r"\d+", total_el.first.inner_text())
         if m:
@@ -670,12 +1062,16 @@ def verify_attachment_uploaded(fr, page, file_input, filename, mock,
     证据——与人工在 `20-filled-review.png` 上核对「附件已挂」同一判据。
     仿真表单是同步的，没有异步上传完成信号可等，故检查文件控件确实持有文件。
     """
-    held = file_input.evaluate("el => el.files.length")
     if mock:
+        held = file_input.evaluate("el => el.files.length")
         if held != 1:
             raise RuntimeError(f"附件未进入文件控件（files.length={held}）: {filename}")
         return
-    field = F.get("attach", "")
+    if UI == UI_LEGACY:
+        field = F.get("attach", "")
+    else:
+        field = (NX_TOP.format(code=CODES["attach"])
+                 if CODES.get("attach") else "")
     completed_selector = (
         f"{field} " if field else "") + (
         ".h3-upload-list__item.is-success .h3-upload-list__item-name")
@@ -780,11 +1176,12 @@ def do_fill(report_path, url, save_draft, new_record=False):
             shot(page, "00-form-open")
 
             log(f"报工开始日期 {w['start']}")
-            fill_ant_date(fr, page, fr.locator(F["start_date"]), w["start"])
+            fill_date_field(fr, page, fr.locator(sel_top("start_date")), w["start"])
 
             if attach_required:
                 if editing:
-                    removers = fr.locator(f'{F["attach"]} {ATTACH_REMOVE_SELECTOR}')
+                    removers = fr.locator(
+                        f'{sel_top("attach")} {ATTACH_REMOVE_SELECTOR}')
                     for _ in range(5):          # 逐个移除已挂附件，避免新旧并存
                         if not removers.count():
                             break
@@ -792,21 +1189,19 @@ def do_fill(report_path, url, save_draft, new_record=False):
                         page.wait_for_timeout(1200)
                     log("已移除草稿中的旧附件")
                 log(f"上传附件 {attach.name}")
-                file_input = attachment_locator(fr)
-                file_input.set_input_files(str(attach))
-                verify_attachment_uploaded(
-                    fr, page, file_input, attach.name, mock)
+                upload_attachment(fr, page, attach, mock)
             else:
                 log("未配置 form_fields.attach：本表单无附件字段，跳过上传")
 
             note = report.get("special_note", "")
             if note:
                 log("特殊情况说明")
-                fr.locator(f'{F["note"]} textarea, {F["note"]} input').first.fill(note)
+                fr.locator(
+                    f'{sel_top("note")} textarea, {sel_top("note")} input'
+                ).first.fill(note)
 
             log(f"工作详情 {len(report['days'])} 行")
-            # 只取外层行：行内滚动容器与行同名 .subgrid-sheet__row，直匹配会翻倍并覆盖上一行
-            rows = fr.locator(f"{SUB} .ant-spin-container > .subgrid-sheet__row")
+            rows = grid_rows(fr)
             fit_subgrid_page_size(fr, page, len(report["days"]))
             if editing and rows.count() > len(report["days"]):
                 shot(page, "99-error")
@@ -816,9 +1211,7 @@ def do_fill(report_path, url, save_draft, new_record=False):
             for i, d in enumerate(report["days"]):
                 if i >= rows.count():  # 首行表单自带，后续行点「新增」并确认行数真的涨了
                     for attempt in range(3):
-                        fr.locator(SUB).get_by_text(
-                            CONFIG["form_texts"]["add_row"],
-                            exact=False).first.click()
+                        add_grid_row(fr, page)
                         page.wait_for_timeout(300 if mock else 1200)
                         if rows.count() >= i + 1:
                             break
@@ -826,15 +1219,23 @@ def do_fill(report_path, url, save_draft, new_record=False):
                         raise RuntimeError(f"点「新增」3 次后子表仍只有 {rows.count()} 行（期望 ≥{i+1}）")
                 row = rows.nth(i)
                 log(f"  行{i+1}: {d['date']} {d['status']} {d['hours']}h")
-                fill_ant_date(fr, page, row.locator(F["row_date"]), d["date"])
-                pick_dropdown(fr, page, row.locator(F["row_type"]).first, d["project_type"])
+                fill_date_field(fr, page, row.locator(sel_cell("row_date")),
+                                d["date"])
+                pick_enum(fr, page, row.locator(sel_cell("row_type")).first,
+                          d["project_type"])
                 if d.get("project"):
-                    pick_dropdown(fr, page, row.locator(F["row_project"]).first,
-                                  d["project"])
-                pick_dropdown(fr, page, row.locator(F["row_status"]).first, d["status"])
-                row.locator(f'{F["row_hours"]} input').first.fill(str(d["hours"]))
+                    pick_project(fr, page,
+                                 row.locator(sel_cell("row_project")).first,
+                                 d["project"])
+                pick_enum(fr, page, row.locator(sel_cell("row_status")).first,
+                          d["status"])
+                row.locator(
+                    f'{sel_cell("row_hours")} input').first.fill(str(d["hours"]))
                 content = d.get("content", "")
-                row.locator(f'{F["row_content"]} textarea, {F["row_content"]} input').first.fill(content)
+                row.locator(
+                    f'{sel_cell("row_content")} textarea, '
+                    f'{sel_cell("row_content")} input').first.fill(content)
+                close_overlays(page, fr)
 
             shot(page, "20-filled-review")
             log("已填完，核对 output/shots/20-filled-review.png")
@@ -842,8 +1243,7 @@ def do_fill(report_path, url, save_draft, new_record=False):
             if not save_draft:
                 log("未保存（默认只填不存）。人工确认内容并检查旧草稿后，加 --draft --confirmed")
                 return
-            btn_name = CONFIG["form_texts"]["save_draft"]
-            fr.get_by_text(btn_name, exact=True).first.click()
+            click_save_draft(fr, page)
             # 轮询等结果而非定长等待：慢的时候 4s 不够（误判失败），快的时候白等。
             page.wait_for_timeout(500)
             deadline = time.time() + (0 if mock else 20)

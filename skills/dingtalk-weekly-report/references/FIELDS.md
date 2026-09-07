@@ -117,6 +117,11 @@
 
 ## 通用 DOM 约束
 
+> 氚云有**两套并存的前端**：旧版（表单在 `FormAdapter` iframe 内）与 2026-09 起的新版
+> （URL 前缀 `/nx/`，表单在主 frame）。**字段编码在两套里是同一个**，所以 `config.json`
+> 不用改；变的只是「用哪个属性去找它」。`fill_form.py` 运行时以「哪里能找到开始日期标签」
+> 探测变体——不靠 URL 猜，灰度期两套可能同时存在。下面先列旧版约束，新版差异见后一节。
+
 - 表单通常在 URL 含 `FormAdapter` 的 iframe 内渲染。
 - 子表行使用 `[id="<subgrid_id>"] .ant-spin-container > .subgrid-sheet__row`，避免命中行内
   同名滚动容器。
@@ -137,3 +142,38 @@
   `.ant-pagination-options-size-changer`，选项在 `li.ant-select-dropdown-menu-item`）。
   行计数与 nth 定位只看当前页；「新增」超出当前页容量会自动跳到最后一页。>10 行填表
   必须先把每页条数调大到同屏（`fit_subgrid_page_size` 已内置处理）。
+
+
+## 新版（nx）DOM 差异
+
+| 对象 | 旧版 | 新版 |
+|---|---|---|
+| 表单载体 | `FormAdapter` iframe | 主 frame |
+| 顶层控件 | `[id="<code>"]` | `.h3-control-adapter[data-test-key="<code>"]` |
+| 子表容器 | `[id="<subgrid_id>"]` | `.form-grid-view[data-test-key="<subgrid_id>"]` |
+| 子表行 | `.ant-spin-container > .subgrid-sheet__row` | `.fixed-table__body .fixed-table__row`（虚拟滚动，`data-row-index` 从 1 起） |
+| 子表列 | `[id="<code>"]` | `[field="<code>"]`（`.fixed-table__cell`，横向也是绝对定位虚拟化） |
+| 日期 | `.ant-calendar-input` 输入 + 回车 | 只读 `ant-picker`：点开后在 `.ant-picker-dropdown` 里点 `td[title="YYYY-MM-DD"]`；目标月不同要按 `.ant-picker-header-prev-btn/-next-btn` 翻页 |
+| 枚举下拉 | `h3-dropdown` 精确文本 | `.ant-select` → `.ant-select-dropdown .ant-select-item-option` |
+| 项目/产品名称 | 同枚举下拉 | 关联选择：`.ant-dropdown` 内带 `.h3-dropdown-content__search input` 的 **radio 列表**，选项是 `label.ant-radio-wrapper` |
+| 附件 | `input[type=file]` | 无原生 input，走 file chooser |
+| 暂存按钮 | `暂 存`（antd 双字按钮插空格） | `暂存` |
+| 行状态（列表页） | `.cell-status` 文字 | `span.sort-num-status` **色块**，文字只在页脚图例 `.grid-footer .status-info .status-item` |
+
+新版特有的坑（每条都真机踩过）：
+
+- **新手引导 `.guide-wrapper` 是全屏遮罩**，不关掉时每一次 click 都被它吃掉；报错是
+  "intercepts pointer events" 而不是「找不到元素」，极易误判成选择器写错。
+  关法：循环点 `.guide-skip, .guide-close` 直到消失（引导是分步的）。
+- **收起浮层不要按 Escape**——实测会连整个新增弹窗一起关掉；改点子表标题等中性区域。
+- **附件上传的点击处理器挂在 `.upload-trigger-click` 里面那个 `svg` 上**：点外层 div
+  既不报错也不弹文件选择器。按「svg → click 容器 → trigger」由内到外逐个试。
+- **关联选择按 `.content` 的 `title` 精确匹配**，不要用 `inner_text`：命中词会被包进
+  `<span class="highlight">`，且原文里的连续空格在 `white-space: pre` 下不可靠。
+  搜索框整串搜常搜不到，先用首个 token（如项目编号）再退回整串。
+- **行状态是颜色**：运行时从页脚图例建「颜色 → 状态」映射再翻译，**不硬编码 RGB**
+  （换主题即失效）。认不出的颜色一律留空、按「不是草稿」处理——编辑既有记录会覆盖真实
+  申报，猜错一次就是改掉别人已生效的周报。
+- **列表首屏比旧版慢**：固定 `sleep 3s` 时 `.tg-row` 仍是 0，会把「有草稿」误判成「没有」
+  进而多建一条撞周报唯一性判定。必须按元素轮询等渲染。
+- `span.tg-link` / `.tg-cell.tg-c-<N>` 这套列表网格两版**通用**，不用改。

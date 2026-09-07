@@ -16,7 +16,13 @@ sys.path.insert(0, str(SKILL / "scripts"))
 
 import fill_form
 from fill_form import (
+    _css_background,
     attachment_enabled,
+    click_save_draft,
+    read_row_statuses,
+    sel_cell,
+    sel_grid,
+    sel_top,
     redact,
     do_login_sms,
     looks_logged_in,
@@ -59,6 +65,10 @@ class FakeLocator:
 
     def count(self):
         return len(self.items)
+
+    @property
+    def first(self):
+        return self.items[0]
 
     def nth(self, index):
         return self.items[index]
@@ -409,6 +419,157 @@ class FillFormLogicTests(unittest.TestCase):
             with patch("fill_form.getpass", return_value=" "):
                 with self.assertRaisesRegex(SystemExit, "未输入"):
                     prompt_auth_url()
+
+
+
+
+class NxUiVariantTests(unittest.TestCase):
+    """新版（nx）氚云 UI 适配的纯逻辑部分。
+
+    2026-09 氚云把表单从 FormAdapter iframe 迁到主 frame，控件身份从 `id` 换成
+    `data-test-key` / `field`。字段编码没变，所以这里守的是「同一个编码在两种 UI 下
+    各自拼成什么选择器」，以及新版特有的「状态是色块不是文字」怎么翻译。
+    """
+
+    CODES = {
+        "subgrid_id": "sub-code", "attach": "attach-code",
+        "start_date": "start-code", "row_date": "rowdate-code",
+    }
+    LEGACY_F = {
+        "attach": '[id="attach-code"]', "start_date": '[id="start-code"]',
+        "row_date": '[id="rowdate-code"]',
+    }
+
+    def test_selectors_switch_by_ui_variant(self):
+        with patch.object(fill_form, "CODES", self.CODES), \
+                patch.object(fill_form, "F", self.LEGACY_F), \
+                patch.object(fill_form, "SUB", '[id="sub-code"]'):
+            with patch.object(fill_form, "UI", fill_form.UI_LEGACY):
+                self.assertEqual(sel_top("start_date"), '[id="start-code"]')
+                self.assertEqual(sel_grid(), '[id="sub-code"]')
+                self.assertEqual(sel_cell("row_date"), '[id="rowdate-code"]')
+            with patch.object(fill_form, "UI", fill_form.UI_NX):
+                self.assertEqual(
+                    sel_top("start_date"),
+                    '.h3-control-adapter[data-test-key="start-code"]')
+                self.assertEqual(
+                    sel_grid(), '.form-grid-view[data-test-key="sub-code"]')
+                self.assertEqual(sel_cell("row_date"), '[field="rowdate-code"]')
+
+    def test_css_background_normalises_and_drops_empty(self):
+        cases = {
+            "background: rgb(255, 117, 39);": "rgb(255,117,39)",
+            "BACKGROUND:  #FF7527 ": "#ff7527",
+            "background: none;": "",
+            "background: transparent;": "",
+            "color: red;": "",
+            "": "",
+        }
+        for style, expected in cases.items():
+            with self.subTest(style=style):
+                self.assertEqual(_css_background(style), expected)
+
+
+class RowStatusTests(unittest.TestCase):
+    """列表行状态：旧版是文字，新版是色块 + 页脚图例。"""
+
+    class Page:
+        def __init__(self, selectors):
+            self.selectors = selectors
+
+        def locator(self, selector):
+            return FakeLocator(self.selectors.get(selector, ()))
+
+    class LegendItem:
+        def __init__(self, color, text):
+            self._color, self._text = color, text
+
+        def locator(self, selector):
+            if selector == ".icon":
+                return FakeLocator([FakeItem(attrs={"style": self._color})])
+            return FakeLocator([FakeItem(text=self._text)])
+
+    def test_legacy_reads_status_text(self):
+        page = self.Page({
+            fill_form.LIST_STATUS_CELL: [FakeItem("草稿"), FakeItem("已生效")],
+        })
+        self.assertEqual(read_row_statuses(page), ["草稿", "已生效"])
+
+    def test_nx_translates_swatch_colour_via_footer_legend(self):
+        page = self.Page({
+            fill_form.NX_LEGEND_ITEM: [
+                self.LegendItem("background: rgb(255, 117, 39);", "草稿"),
+                self.LegendItem("background: rgb(0, 128, 0);", "已生效"),
+            ],
+            fill_form.NX_LIST_STATUS: [
+                FakeItem(attrs={"style": "background: rgb(0, 128, 0);"}),
+                FakeItem(attrs={"style": "background: rgb(255, 117, 39);"}),
+            ],
+        })
+        self.assertEqual(read_row_statuses(page), ["已生效", "草稿"])
+
+    def test_nx_unknown_colour_is_not_guessed_into_a_status(self):
+        """认不出的颜色必须留空。
+
+        编辑既有记录会**覆盖真实申报**，所以宁可返回空串让调用方按「不是草稿」处理，
+        也不能猜——猜错一次就是改掉别人已生效的周报。
+        """
+        page = self.Page({
+            fill_form.NX_LEGEND_ITEM: [
+                self.LegendItem("background: rgb(255, 117, 39);", "草稿"),
+            ],
+            fill_form.NX_LIST_STATUS: [
+                FakeItem(attrs={"style": "background: none;"}),
+                FakeItem(attrs={"style": "background: rgb(1, 2, 3);"}),
+            ],
+        })
+        self.assertEqual(read_row_statuses(page), ["", ""])
+
+
+class SaveButtonTests(unittest.TestCase):
+    """暂存按钮：旧版 antd 双字按钮带空格（`暂 存`），新版没有。"""
+
+    class Frame:
+        def __init__(self, buttons, exact_hits=()):
+            self.buttons = list(buttons)
+            self.exact_hits = list(exact_hits)
+            self.clicked = None
+
+        def get_by_text(self, text, exact=False):
+            return FakeLocator(self.exact_hits)
+
+        def locator(self, selector):
+            assert selector == "button", selector
+            return FakeLocator(self.buttons)
+
+    class Button(FakeItem):
+        def __init__(self, text, sink):
+            super().__init__(text=text)
+            self.sink = sink
+
+        def click(self):
+            self.sink.append(self.text)
+
+    def _frame_with(self, texts):
+        sink = []
+        frame = self.Frame([self.Button(t, sink) for t in texts])
+        return frame, sink
+
+    def test_matches_new_ui_text_without_spaces(self):
+        frame, sink = self._frame_with(["提交", "暂存"])
+        with patch.object(fill_form, "CONFIG",
+                          {"form_texts": {"save_draft": "暂 存"}}):
+            click_save_draft(frame, FakePage())
+        self.assertEqual(sink, ["暂存"])
+
+    def test_never_falls_back_onto_submit(self):
+        """兜底只做「去空白后相等」，不做包含匹配——`提交` 就在隔壁。"""
+        frame, sink = self._frame_with(["提交", "提交后新增下一条"])
+        with patch.object(fill_form, "CONFIG",
+                          {"form_texts": {"save_draft": "暂 存"}}):
+            with self.assertRaisesRegex(RuntimeError, "暂 存"):
+                click_save_draft(frame, FakePage())
+        self.assertEqual(sink, [])
 
 
 if __name__ == "__main__":
