@@ -342,7 +342,7 @@ class FillFormLogicTests(unittest.TestCase):
     UPLOAD_EVIDENCE_SELECTOR = (
         'attach-field .h3-upload-list__item.is-success '
         '.h3-upload-list__item-name, '
-        'attach-field li.file-list-item .title-item')
+        'attach-field .file-card-item .title-item')
 
     def test_real_controlled_input_may_clear_after_consuming_file(self):
         """真实受控组件会清空 input；可见附件名才是上传完成证据。"""
@@ -360,7 +360,7 @@ class FillFormLogicTests(unittest.TestCase):
         只写旧版形态时，新版会退回「文件名出现在页面任意位置」这种弱判据——
         toast、别的控件里出现同名文本都会被当成上传成功。
         """
-        self.assertIn("li.file-list-item .title-item",
+        self.assertIn(".file-card-item .title-item",
                       self.UPLOAD_EVIDENCE_SELECTOR)
         with patch.object(fill_form, "F", {"attach": "attach-field"}), \
                 patch.object(fill_form, "UI", fill_form.UI_LEGACY):

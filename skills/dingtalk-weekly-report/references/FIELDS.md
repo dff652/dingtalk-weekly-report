@@ -159,7 +159,7 @@
 | 附件 | `input[type=file]` | 无原生 input，走 file chooser |
 | 暂存按钮 | `暂 存`（antd 双字按钮插空格） | `暂存` |
 | 行状态（列表页） | `.cell-status` 文字 | `span.sort-num-status` **色块**，文字只在页脚图例 `.grid-footer .status-info .status-item` |
-| 已挂附件项 | `.h3-upload-list__item` | `li.file-list-item`（容器 `.preview-file.file-card.has-file`，文件名在 `.title-item` 的 `title`） |
+| 已挂附件项 | `.h3-upload-list__item` | `.file-card-item`（新建态外包 `ul.file-list>li`、编辑态外包 `div.file-list>div`，文件名在 `.title-item` 的 `title`） |
 | 移除附件按钮 | `.anticon-close` | `svg.action-item.delete-action`（同排还有 `.desc-action` / `.download-action`，别点错） |
 
 新版特有的坑（每条都真机踩过）：

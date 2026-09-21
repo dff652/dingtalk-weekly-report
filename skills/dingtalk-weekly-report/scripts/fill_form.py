@@ -793,8 +793,28 @@ def nx_pick_date(page, scope, value):
         f"日期写入后未生效：期望 {value}，实际 {target.input_value() or '(空)'}")
 
 
+def _norm(text):
+    """归一化空白后比较：项目名原文含连续空格，DOM 与 config 的空白形态不一定逐字相同。"""
+    return re.sub(r"\s+", " ", text or "").strip()
+
+
+def cell_shows(scope, value):
+    """单元格当前是否**已经**是目标值。
+
+    编辑既有草稿时大多数单元格的值本来就对。再点一遍不只是白费——新版这两个控件是
+    `ant-select-multiple`：已选项会被浮层过滤掉（实测浮层为空，选不中而报错），
+    真点中了又等于**取消选中**，必填项静默变空。所以值已对就不要动它。
+    """
+    try:
+        return _norm(scope.inner_text()) == _norm(value)
+    except PWError:
+        return False
+
+
 def nx_pick_select(page, scope, value):
     """新版枚举下拉（项目类型 / 工作状态）：点开控件 → 在浮层里按选项文本精确点选。"""
+    if cell_shows(scope, value):
+        return
     dismiss_guide(page)
     scope.locator(".ant-select").first.click()
     page.wait_for_timeout(900)
@@ -816,6 +836,11 @@ def nx_pick_select(page, scope, value):
             continue
         el.click()
         page.wait_for_timeout(500)
+        # 回读：多选控件点中已选项等于取消选中，不回读就会把必填项静默清空
+        if not cell_shows(scope, value):
+            raise RuntimeError(
+                f"选了「{value}」但单元格回读不符，当前是"
+                f"「{_norm(scope.inner_text()) or '(空)'}」")
         return
     seen = [opts.nth(i).inner_text().strip() for i in range(min(opts.count(), 20))]
     raise RuntimeError(f"下拉无选项「{value}」；浮层里可见的是 {seen}")
@@ -827,6 +852,8 @@ def nx_pick_relevance(page, scope, value):
     按 `.content` 的 `title` **精确**匹配，不用 inner_text——命中词会被包进
     `<span class="highlight">`，且原文里的连续空格在 `white-space: pre` 下不可靠。
     """
+    if cell_shows(scope, value):
+        return
     dismiss_guide(page)
     scope.locator(".ant-select").first.click()
     page.wait_for_timeout(1200)
@@ -856,6 +883,10 @@ def nx_pick_relevance(page, scope, value):
             if (content.get_attribute("title") or "").strip() == value.strip():
                 el.click()
                 page.wait_for_timeout(700)
+                if not cell_shows(scope, value):
+                    raise RuntimeError(
+                        f"选了「{value}」但单元格回读不符，当前是"
+                        f"「{_norm(scope.inner_text()) or '(空)'}」")
                 return
     raise RuntimeError(f"关联选择里找不到「{value}」（已试搜索词 {list(dict.fromkeys(terms))}）")
 
@@ -1048,6 +1079,26 @@ def remove_existing_attachments(fr, page, tries=5):
     log(f"已移除草稿中的旧附件 {before} 个")
 
 
+def fill_row_content(fr, page, row, content):
+    """写子表行的「主要工作内容」。
+
+    **休假行在新版表单里没有这个输入框**——状态选「休假」后该列整格为空，
+    共享校验也正好允许休假行的 content 为空（`dtwr_validation` 对 leave_status 放行）。
+    所以：字段不存在且内容为空 → 跳过；内容非空却找不到输入框 → fail-loud，
+    那说明表单形态变了，不能当成"已经填过了"。
+    """
+    box = row.locator(f'{sel_cell("row_content")} textarea, '
+                      f'{sel_cell("row_content")} input')
+    if box.count():
+        box.first.fill(content)
+        return
+    if content:
+        raise RuntimeError(
+            "该行没有「主要工作内容」输入框，但本行内容非空——"
+            f"拒绝静默跳过（内容前 30 字：{content[:30]}）")
+    log("    该行无「主要工作内容」输入框（休假行），跳过")
+
+
 def fit_subgrid_page_size(fr, page, need):
     """子表默认每页 10 行，超出会分页——行计数与 nth 定位都只看得到当前页
     （真机踩坑：第 11 行一点「新增」就翻到第 2 页，可见行数反而变少，
@@ -1137,7 +1188,7 @@ def verify_attachment_uploaded(fr, page, file_input, filename, mock,
     # 新版 `li.file-list-item` 里的 `.title-item`（title 属性带完整文件名）。
     completed_selector = (
         f"{prefix}.h3-upload-list__item.is-success .h3-upload-list__item-name, "
-        f"{prefix}li.file-list-item .title-item")
+        f"{prefix}.file-card-item .title-item")
     deadline = time.time() + timeout_ms / 1000
     while True:
         completed = fr.locator(completed_selector)
@@ -1290,10 +1341,7 @@ def do_fill(report_path, url, save_draft, new_record=False):
                           d["status"])
                 row.locator(
                     f'{sel_cell("row_hours")} input').first.fill(str(d["hours"]))
-                content = d.get("content", "")
-                row.locator(
-                    f'{sel_cell("row_content")} textarea, '
-                    f'{sel_cell("row_content")} input').first.fill(content)
+                fill_row_content(fr, page, row, d.get("content", ""))
                 close_overlays(page, fr)
 
             shot(page, "20-filled-review")
@@ -1547,7 +1595,10 @@ LIST_DRAFT_STATUS = "草稿"
 # 新旧两套形态并列：旧版 `.h3-upload-list__item` + `.anticon-close`；
 # 新版 `li.file-list-item` + `svg.action-item.delete-action`（真机确认旧版那两个类名
 # 在新版是 0 命中——只写旧版的话，移除会静默什么都不做然后再传一份，落成双附件）。
-ATTACH_ITEM_SELECTOR = ".h3-upload-list__item, li.file-list-item"
+# `.file-card-item` 是**两种渲染形态通用**的那一层：新建表单上传后外面包 `ul.file-list > li`，
+# 编辑既有记录时外面是 `div.file-list > div`（没有 ul/li）。按 `li.file-list-item` 写只在
+# 新建路径成立，编辑路径会数出 0 个附件 → 跳过移除 → 再传一份 → 落成双附件。
+ATTACH_ITEM_SELECTOR = ".h3-upload-list__item, .file-card-item"
 ATTACH_REMOVE_SELECTOR = (".h3-icon-close, .anticon-close, "
                           ".file-actions .delete-action")
 # 列表网格「已经画出来了」的判据：表头即可，**行数允许是 0**（新用户一条记录都没有也是
