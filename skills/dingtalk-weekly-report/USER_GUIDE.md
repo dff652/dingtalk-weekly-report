@@ -23,7 +23,30 @@ Agent 流程见同目录 `SKILL.md`；字段见 `references/FIELDS.md`。
 
 ## 2. 安装（一次）
 
-### 2.1 推荐：skills hub / `npx skills`（GitHub）
+### 2.1 curl 统一安装与更新（Linux / macOS / WSL）
+
+首次安装和以后更新使用同一条命令；从 `main` 下载技能包，安装到 Claude、Codex 和 Agents
+目录。首次会建立私有 `$WORK`、venv 和 Chromium；更新时先做无安装体检，通过则不重装运行环境。
+`config.json`、周报和登录态保留在技能包之外，不会随更新覆盖。
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/dff652/dingtalk-weekly-report/main/install-online.sh | bash
+```
+
+若只更新 Codex 安装目录：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/dff652/dingtalk-weekly-report/main/install-online.sh | bash -s -- --codex-only
+```
+
+若本机同时使用
+`~/.agents/skills`，建议用默认命令同步三个目录，避免同名技能版本不一致。`--ref`
+可固定到确实存在的 Git tag 或 commit；`--skill-only` 只替换技能代码，跳过运行环境检查。
+`--ref` 固定技能包来源；若还要固定安装脚本本身，把上面 URL 中的 `main` 换成同一个
+已存在的 tag。运行前可先查看脚本源码。新代码只有在推送到 GitHub 后，
+上述 curl 命令才会取得；维护仓的未推送改动请用 §2.4 的本地安装命令。
+
+### 2.2 skills hub / `npx skills`（GitHub）
 
 ```bash
 npx skills add https://github.com/dff652/dingtalk-weekly-report \
@@ -61,7 +84,7 @@ bash ~/.claude/skills/dingtalk-weekly-report/bootstrap.sh --diagnose
 tail -n 80 "$(cat ~/.config/dtwr/root)/output/bootstrap.log"
 ```
 
-### 2.2 只给仓库 URL：复制给 AI
+### 2.3 只给仓库 URL：复制给 AI
 
 ```text
 请根据 https://github.com/dff652/dingtalk-weekly-report 安装 skill dingtalk-weekly-report：
@@ -69,12 +92,12 @@ tail -n 80 "$(cat ~/.config/dtwr/root)/output/bootstrap.log"
 2) 若无 ~/.codex/skills/dingtalk-weekly-report：ln -sfn ~/.claude/skills/dingtalk-weekly-report ~/.codex/skills/dingtalk-weekly-report（先 mkdir -p ~/.codex/skills）
 3) bash ~/.claude/skills/dingtalk-weekly-report/bootstrap.sh
 4) 通过 configure.py 引导填写本人有权使用的表单 URL、字段 ID、按钮文本、枚举与项目并完成钉钉登录；Claude 用 /dingtalk-weekly-report、Codex 用 $dingtalk-weekly-report（或 /skills 选择）做周报；只 --draft --confirmed；脚本无提交能力；内容人审；不得猜测组织字段，不得保存或接收 entry/auth 链接。
-5) 按本指南 2.5 Verify 自检并汇报。
+5) 按本指南 2.6 Verify 自检并汇报。
 ```
 
 AI **不能**代替：项目下拉原文、扫码、人审、钉钉提交。
 
-### 2.3 回退：zip / 本地 install
+### 2.4 回退：zip / 本地 install
 
 ```bash
 # 解压 pack-skill 产物后
@@ -84,7 +107,12 @@ bash install.sh && bash bootstrap.sh
 Windows：`.\install.ps1` → `.\bootstrap.ps1`  
 维护仓：`bash install.sh --link`（仓库根）
 
-### 2.4 装到哪里、怎么触发
+维护仓当前源码更新到 Codex：`bash install.sh --codex-only --force`；若 Codex 当前从
+`~/.agents/skills` 读取，再运行 `bash install.sh --agents-only --force`。用
+`bash ~/.codex/skills/dingtalk-weekly-report/bootstrap.sh --diagnose` 检查现有环境；
+不要在更新技能代码后无条件重装 `.venv`。
+
+### 2.5 装到哪里、怎么触发
 
 | 工具 | 路径 | 触发 |
 |------|------|------|
@@ -92,7 +120,7 @@ Windows：`.\install.ps1` → `.\bootstrap.ps1`
 | Codex | `~/.codex/skills/…`（建议显式补链）及/或 `~/.agents/skills/…` | `$dingtalk-weekly-report` 或 `/skills` 选择 |
 | Agents | `~/.agents/skills/…` | 视工具 |
 
-### 2.5 Verify（自检）
+### 2.6 Verify（自检）
 
 ```bash
 [ -f ~/.claude/skills/dingtalk-weekly-report/SKILL.md ] && echo "Claude skill OK" || echo "Claude skill MISSING"
@@ -261,8 +289,8 @@ python3 "$SKILL/scripts/print_form_rows.py" weeks/week_report_YYYYMMDD.json   # 
 
 | 现象 | 处理 |
 |------|------|
-| npx 只写了 `~/.agents/skills` | 先用 `npx skills list -g` 确认 Agents 含 Codex；仅当 Codex 确实无法发现时做 §2.1 补链 |
-| Codex 无 skill | 做 §2.1 补链；或 `install.sh --force` |
+| npx 只写了 `~/.agents/skills` | 先用 `npx skills list -g` 确认 Agents 含 Codex；仅当 Codex 确实无法发现时做 §2.2 补链 |
+| Codex 无 skill | 做 §2.2 补链；或 `install.sh --force` |
 | `node:util` 缺 `styleText` / `EBADENGINE` | Node 过旧；`skills@1.5.20` 升到 Node `>=22.20.0` |
 | 更新 Skill 后是否要重装环境 | 不需要；先运行 `bootstrap.sh --diagnose`，通过后直接使用 |
 | Chromium 下载处长时间无新输出 | 查看 `$WORK/output/bootstrap.log` 的当前阶段和原始安装输出；首次下载或 Playwright 版本变化可能较慢，健康环境会直接复用 |

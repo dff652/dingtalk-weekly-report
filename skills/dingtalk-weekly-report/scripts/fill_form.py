@@ -806,6 +806,12 @@ def cell_shows(scope, value):
     真点中了又等于**取消选中**，必填项静默变空。所以值已对就不要动它。
     """
     try:
+        # nx 的多选控件同时渲染 aria-live 镜像和可见标签；读整个 cell 的
+        # inner_text 会得到「值 值」，误判为未选中。只读可见标签的 title。
+        selected = scope.locator(".ant-select-selection-overflow-item .select-tag[title]")
+        if selected.count():
+            return (selected.count() == 1
+                    and _norm(selected.first.get_attribute("title")) == _norm(value))
         return _norm(scope.inner_text()) == _norm(value)
     except PWError:
         return False

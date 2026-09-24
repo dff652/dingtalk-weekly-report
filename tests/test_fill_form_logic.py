@@ -19,6 +19,7 @@ import fill_form
 from fill_form import (
     _css_background,
     attachment_enabled,
+    cell_shows,
     find_editable_draft,
     remove_existing_attachments,
     click_save_draft,
@@ -105,6 +106,19 @@ class FakePage:
         self.waits += 1
 
 
+class FakeSelectCell:
+    def __init__(self, text, selected=()):
+        self.text = text
+        self.selected = selected
+
+    def inner_text(self):
+        return self.text
+
+    def locator(self, selector):
+        assert selector == ".ant-select-selection-overflow-item .select-tag[title]"
+        return FakeLocator(FakeItem(attrs={"title": text}) for text in self.selected)
+
+
 class FakeFileInput:
     """只实现 verify_attachment_uploaded 用到的 evaluate。"""
 
@@ -116,6 +130,12 @@ class FakeFileInput:
 
 
 class FillFormLogicTests(unittest.TestCase):
+    def test_nx_select_readback_uses_selected_tag_not_duplicate_cell_text(self):
+        value = "公司和部门运营活动"
+        self.assertTrue(cell_shows(FakeSelectCell(f"{value} {value}", [value]), value))
+        self.assertFalse(cell_shows(FakeSelectCell(f"{value} {value}", ["其他类型"]), value))
+        self.assertFalse(cell_shows(FakeSelectCell(f"{value} {value}", [value, value]), value))
+
     def test_status_tells_agent_which_user_information_to_request(self):
         config = json.loads(
             (SKILL / "assets/config.example.json").read_text(encoding="utf-8"))

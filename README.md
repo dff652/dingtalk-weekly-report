@@ -14,7 +14,7 @@
 工具没有提交能力，最终提交始终由用户在钉钉中亲手完成。
 
 > [skills.sh](https://skills.sh/dff652/dingtalk-weekly-report/dingtalk-weekly-report) ·
-> [v0.3.0 Release](https://github.com/dff652/dingtalk-weekly-report/releases/tag/v0.3.0) ·
+> [版本与更新](skills/dingtalk-weekly-report/USER_GUIDE.md#2-安装一次) ·
 > [Apache-2.0](LICENSE) · Copyright 2026 dff652
 
 ## 它守住的三条边界
@@ -41,8 +41,15 @@
 
 ## 快速开始
 
-需要 [Node.js](https://nodejs.org/) 和 [uv](https://docs.astral.sh/uv/)。
-本项目验收使用的 `skills@1.5.20` 要求 Node.js `>=22.20.0`。
+可用 curl 统一安装或更新（Linux、macOS、WSL；首次建立运行环境还需
+[uv](https://docs.astral.sh/uv/)）：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/dff652/dingtalk-weekly-report/main/install-online.sh | bash
+```
+
+也可使用 [Node.js](https://nodejs.org/) 的 skills hub；本项目验收使用的
+`skills@1.5.20` 要求 Node.js `>=22.20.0`。
 
 ```bash
 npx skills add dff652/dingtalk-weekly-report
